@@ -106,7 +106,7 @@ class Analyse:
             )
             
             # 2. Minimum hits
-            has_hits = selector.has_n_hits(data["trk"], n_hits=20)
+            has_hits = selector.has_n_hits(data["trk"], n_hits=21)
             cut_manager.add_cut(
                 name="has_hits",
                 description="Minimum of 20 active hits in the tracker",
@@ -510,104 +510,11 @@ class Utils():
             print_prefix="[PostProcess]",
             verbosity=self.verbosity
         )
-        # Selector 
-        self.selector = Select(verbosity=0)
+        
         # Printer
         self.printer = Print(verbose=True)
         # Confirm
         self.logger.log(f"Initialised", "info")
-
-    def get_background_events(self, results, printout=True, out_path=None): 
-        """
-        Write background event info
-
-        Args: 
-            results (list): list of results 
-            out_path: File path for txt output 
-        """
-        output = []
-        count = 0
-        
-        for i, result in enumerate(results): 
-            
-            data = ak.Array(result["filtered_data"])
-            
-            if len(data) == 0:
-                continue
-
-            # Get tracker entrance times
-            trk_front = self.selector.select_surface(data["trkfit"], sid=0)
-            track_time = data["trkfit"]["trksegs"]["time"][trk_front]
-            # Get coinc entrance times
-            coinc_time = data["crv"]["crvcoincs.time"]
-            
-            # Extract values
-            track_time_str = "" 
-            coinc_time_str = ""
-            
-            # Extract floats from track_time (nested structure: [[[values]], [[values]]])
-            track_floats = []
-            for nested in track_time:
-                for sublist in nested:
-                    for val in sublist:
-                        track_floats.append(float(val))
-            
-            # Extract floats from coinc_time (structure: [[], []])
-            coinc_floats = []
-            for sublist in coinc_time:
-                for val in sublist:
-                    coinc_floats.append(float(val))
-            
-            # Format as strings with precision
-            if track_floats:
-                track_time_str = ", ".join([f"{val:.6f}" for val in track_floats])
-            
-            if coinc_floats:
-                coinc_time_str = ", ".join([f"{val:.6f}" for val in coinc_floats])
-        
-            # Calculate dt
-            dt_str = ""
-            if track_floats and coinc_floats:
-                # Calculate dt between first track time and first coinc time
-                dt_value = abs(track_floats[0] - coinc_floats[0])
-                dt_str = f"{dt_value:.6f}"
-            
-            output.append(f"  Index:            {i}")
-            output.append(f"  Subrun:           {data["evt"]["subrun"]}")
-            output.append(f"  Event:            {data["evt"]["event"]}")
-            output.append(f"  File:             {result["file_id"]}")
-            output.append(f"  Track time [ns]:  {track_time_str}") 
-            output.append(f"  Coinc time [ns]:  {coinc_time_str if len(coinc_time_str)>0 else None}") 
-            output.append(f"  dt [ns]:          {dt_str if len(dt_str)>0 else "N/A"}")
-            output.append("-" * 40)
-
-            count += 1
-        
-        output = "\n".join(output)
-        
-        # Print 
-        if printout:
-            self.logger.log(f"Info for {count} background events :", "info")
-            print(output)
-        
-        # Write to file
-        if out_path:
-            with open(out_path, "w") as f:
-                f.write(output)
-        
-            self.logger.log(f"Wrote {out_path}", "success")
-
-    def get_verbose_background_events(self, data, out_path):
-
-        # Redirect stdout to file
-        with open(out_path, "w") as f:
-            old_stdout = sys.stdout
-            sys.stdout = f
-            self.printer.print_n_events(data, n_events=len(data))
-            # Restore stdout
-            sys.stdout = old_stdout
-            self.logger.log(f"Wrote {out_path}", "success")
-    
 
     def get_kN(self, df_stats, numerator_name=None, denominator_name=None):
         """
@@ -633,33 +540,6 @@ class Utils():
         # Get denominator
         denominator_row = df_stats[df_stats["Cut"] == denominator_name]
         N = denominator_row["Events Passing"].iloc[0]
-    
-        # Hard to do this and handle all edge cases
-        # # Get numerator
-        # k = None
-        # if numerator_name: # Use specified numerator
-        # numerator_row = df_stats[df_stats["Cut"] == numerator_name]
-        # k = numerator_row["Events Passing"].iloc[0]
-        # else: 
-        #     if not signal: # Use last row
-        #         last_row = df_stats.iloc[-1]
-        #         k = last_row["Events Passing"]
-        #     else: # Use penultimate row
-        #         penultimate_row = df_stats.iloc[-2]
-        #         k = penultimate_row["Events Passing"]
-                
-        # # Get denominator
-        # N = None
-        # if denominator_name:  # Use specified denominator
-        #     denominator_row = df_stats[df_stats["Cut"] == denominator_name]
-        #     N = denominator_row["Events Passing"].iloc[0]
-        # else: 
-        #     if not signal: # Use penultimate row
-        #         penultimate_row = df_stats.iloc[-2]
-        #         N = penultimate_row["Events Passing"]
-        #     else: # Use first row
-        #         first_row = df_stats.iloc[0]
-        #         N = first_row["Events Passing"]
         
         return k, N
     
@@ -720,87 +600,49 @@ class Utils():
         
         return pd.DataFrame(results)
 
+    def write_background_events(self, info, printout=True, out_path=None): 
+        """
+        Write background event info
 
-    
-    # def get_background_events(self, results, printout=True, out_path=None): 
-    #     """
-    #     Write background event info
+        Args: 
+            info (str): info string from postprocessing 
+            printout (bool, opt): print output to screen
+            out_path: File path for txt output 
+        """        
+        # Print 
+        if printout:
+            self.logger.log(f"Background event info:", "info")
+            print(info)
+        
+        # Write to file
+        if out_path:
+            with open(out_path, "w") as f:
+                f.write(info)
+        
+            self.logger.log(f"\tWrote {out_path}", "success")
+            
+    def write_verbose_background_events(self, data, out_path, override=False):
+        """
+        Write verbose background event info
 
-    #     Args: 
-    #         results (list): list of results 
-    #         out_path: File path for txt output 
-    #     """
-    #     output = []
-    #     count = 0
-        
-    #     for i, result in enumerate(results): 
+        Args: 
+            data (ak.Array): the data array  output to screen
+            out_path: File path for txt output 
+        """  
+        # semi-abitrary check to make sure the printout isn't too long
+        max_len = 25
+        if len(data) > max_len and not override: 
+            self.logger.log(f">{max_len} events! Are you sure you want to proceed?\n\tIf yes, set 'override' to True", "warning")
+            return 
             
-    #         data = ak.Array(result["filtered_data"])
-            
-    #         if len(data) == 0:
-    #             continue
-
-    #         # Get tracker entrance times
-    #         trk_front = self.selector.select_surface(data["trkfit"], sid=0)
-    #         track_time = data["trkfit"]["trksegs"]["time"][trk_front]
-    #         # Get coinc entrance times
-    #         coinc_time = data["crv"]["crvcoincs.time"]
-            
-    #         # Extract values
-    #         track_time_str = "" 
-    #         coinc_time_str = ""
-            
-    #         # Extract floats from track_time (nested structure: [[[values]], [[values]]])
-    #         track_floats = []
-    #         for nested in track_time:
-    #             for sublist in nested:
-    #                 for val in sublist:
-    #                     track_floats.append(float(val))
-            
-    #         # Extract floats from coinc_time (structure: [[], []])
-    #         coinc_floats = []
-    #         for sublist in coinc_time:
-    #             for val in sublist:
-    #                 coinc_floats.append(float(val))
-            
-    #         # Format as strings with precision
-    #         if track_floats:
-    #             track_time_str = ", ".join([f"{val:.6f}" for val in track_floats])
-            
-    #         if coinc_floats:
-    #             coinc_time_str = ", ".join([f"{val:.6f}" for val in coinc_floats])
-        
-    #         # Calculate dt
-    #         dt_str = ""
-    #         if track_floats and coinc_floats:
-    #             # Calculate dt between first track time and first coinc time
-    #             dt_value = abs(track_floats[0] - coinc_floats[0])
-    #             dt_str = f"{dt_value:.6f}"
-            
-    #         output.append(f"  Index:            {i}")
-    #         output.append(f"  Subrun:           {data["evt"]["subrun"]}")
-    #         output.append(f"  Event:            {data["evt"]["event"]}")
-    #         output.append(f"  File:             {result["file_id"]}")
-    #         output.append(f"  Track time [ns]:  {track_time_str}") 
-    #         output.append(f"  Coinc time [ns]:  {coinc_time_str if len(coinc_time_str)>0 else None}") 
-    #         output.append(f"  dt [ns]:          {dt_str if len(dt_str)>0 else "N/A"}")
-    #         output.append("-" * 40)
-
-    #         count += 1
-        
-    #     output = "\n".join(output)
-        
-    #     # Print 
-    #     if printout:
-    #         self.logger.log(f"Info for {count} background events :", "info")
-    #         print(output)
-        
-    #     # Write to file
-    #     if out_path:
-    #         with open(fout_name, "w") as f:
-    #             f.write(output)
-        
-    #         self.logger.log(f"\tWrote {out_path}", "success")
+        # Redirect stdout to file
+        with open(out_path, "w") as f:
+            old_stdout = sys.stdout
+            sys.stdout = f
+            self.printer.print_n_events(data, n_events=len(data))
+            # Restore stdout
+            sys.stdout = old_stdout
+            self.logger.log(f"Wrote {out_path}", "success")
             
     # # This could be quite nice, but it needs the full analysis config including everything which could be a bit complex. 
     # # Need to think about this. 
