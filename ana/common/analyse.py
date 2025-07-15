@@ -18,7 +18,7 @@ from cut_manager import CutManager
 class Analyse:
     """Class to handle analysis functions
     """
-    def __init__(self, on_spill=False, event_subrun=None, verbosity=1):
+    def __init__(self, on_spill=False, event_subrun=None, eff_scan=False, verbosity=1):
         """Initialise the analysis handler
         
         Args:
@@ -42,6 +42,7 @@ class Analyse:
         
         # Analysis configuration
         self.on_spill = on_spill  # Default to off-spill 
+        self.eff_scan = eff_scan # PEs/layer scan
         self.event_subrun = event_subrun # event selection (for debugging)
         self.logger.log(f"Initialised with on_spill={self.on_spill}", "info")
     
@@ -143,16 +144,19 @@ class Analyse:
             # 4. Downstream tracks only through tracker entrance 
             self.logger.log("Defining downstream tracks cut", "max")
             # is_downstream = (data["trkfit"]["trksegs"]["mom"]["fCoordinates"]["fZ"] > 0)
-            is_downstream = selector.is_downstream(data["trkfit"]) # at tracker entrance
+            is_downstream = selector.is_downstream(data["trkfit"]) 
+
+            # probably what it should be, surely
+            # is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1) # trk level
+
             has_downstream = ak.any(is_downstream, axis=-1)
             
             cut_manager.add_cut(
                 name="downstream",
-                description="Downstream tracks (p_z > 0 through tracker)",
-                mask=has_downstream 
+                description="Downstream (p_z > 0 at tracker entrance)",
+                mask=has_downstream #  is_downstream 
             )
 
-            # trksegs-level definition
             data["is_downstream"] = is_downstream
             # trk-level definition
             data["has_downstream"] = has_downstream
@@ -189,7 +193,7 @@ class Analyse:
             # data["no_pileup"] = no_pileup
             
             # 3. Minimum hits
-            has_hits = selector.has_n_hits(data["trk"], n_hits=21)
+            has_hits = selector.has_n_hits(data["trk"], n_hits=20)
             cut_manager.add_cut(
                 name="has_hits",
                 description="Minimum of 20 active hits in the tracker",
@@ -249,8 +253,14 @@ class Analyse:
             )
             
             # 8. Pitch angle
-            within_pitch_angle = ((0.5577350 < data["trkfit"]["trksegpars_lh"]["tanDip"]) & 
-                                  (data["trkfit"]["trksegpars_lh"]["tanDip"] < 1.0))
+            # pvec = self.vector.get_vector(data["trkfit"]["trksegs"], "mom")
+            # pt = np.sqrt(pvec["x"]**2 + pvec["y"]**2) 
+            # pz = pvec["z"] 
+            # pitch_angle = pz/pt 
+            pitch_angle = data["trkfit"]["trksegpars_lh"]["tanDip"]
+            
+            
+            within_pitch_angle = ((0.5577350 < pitch_angle) & (pitch_angle < 1.0))
         
             # trk-level definition (the actual cut) 
             within_pitch_angle = ak.all(~at_trk_front | within_pitch_angle, axis=-1)
@@ -464,7 +474,7 @@ class Analyse:
             self.logger.log(f"Error filling histograms: {e}", "error")
             return None
         
-    def execute(self, data, file_id, cuts_to_toggle=None):
+    def execute(self, data, file_id, cuts_to_toggle=None, veto=True):
         """Perform complete analysis on an array
         
         Args:
@@ -511,18 +521,21 @@ class Analyse:
             data_CE = self.apply_cuts(data, cut_manager) # Just CE-like tracks 
             
             # Turn on veto 
-            data_CE_unvetoed = None
+            data_CE_unvetoed = data_CE
+            
             cut_manager.toggle_cut({"unvetoed" : True})
-            # Mark CE-like tracks (useful for debugging 
+            # Mark unvetoed CE-like tracks (useful for debugging 
             data["unvetoed_CE_like"] = cut_manager.combine_cuts(active_only=True)
             # Apply cuts
             data_CE_unvetoed = self.apply_cuts(data, cut_manager) 
-        
             
             # Create histograms
             self.logger.log("Creating histograms", "max")
             histograms = self.create_histograms(data, data_CE, data_CE_unvetoed)
-            
+
+            if not veto: # this is super ugly 
+                data_CE_unvetoed = data_CE
+                
             # Compile all results
             self.logger.log("Analysis completed", "success")
 
@@ -564,19 +577,6 @@ class Utils():
         # Confirm
         self.logger.log(f"Initialised", "info")
 
-    # FIXME: does this belong here???
-    def get_verbose_background_events(self, data, out_path):
-
-        # Redirect stdout to file
-        with open(out_path, "w") as f:
-            old_stdout = sys.stdout
-            sys.stdout = f
-            self.printer.print_n_events(data, n_events=len(data))
-            # Restore stdout
-            sys.stdout = old_stdout
-            self.logger.log(f"Wrote {out_path}", "success")
-    
-
     def get_kN(self, df_stats, numerator_name=None, denominator_name=None):
         """
         Retrieve efficiency data from DataFrame
@@ -601,33 +601,6 @@ class Utils():
         # Get denominator
         denominator_row = df_stats[df_stats["Cut"] == denominator_name]
         N = denominator_row["Events Passing"].iloc[0]
-    
-        # Hard to do this and handle all edge cases
-        # # Get numerator
-        # k = None
-        # if numerator_name: # Use specified numerator
-        # numerator_row = df_stats[df_stats["Cut"] == numerator_name]
-        # k = numerator_row["Events Passing"].iloc[0]
-        # else: 
-        #     if not signal: # Use last row
-        #         last_row = df_stats.iloc[-1]
-        #         k = last_row["Events Passing"]
-        #     else: # Use penultimate row
-        #         penultimate_row = df_stats.iloc[-2]
-        #         k = penultimate_row["Events Passing"]
-                
-        # # Get denominator
-        # N = None
-        # if denominator_name:  # Use specified denominator
-        #     denominator_row = df_stats[df_stats["Cut"] == denominator_name]
-        #     N = denominator_row["Events Passing"].iloc[0]
-        # else: 
-        #     if not signal: # Use penultimate row
-        #         penultimate_row = df_stats.iloc[-2]
-        #         N = penultimate_row["Events Passing"]
-        #     else: # Use first row
-        #         first_row = df_stats.iloc[0]
-        #         N = first_row["Events Passing"]
         
         return k, N
     
@@ -688,87 +661,49 @@ class Utils():
         
         return pd.DataFrame(results)
 
+    def write_background_events(self, info, printout=True, out_path=None): 
+        """
+        Write background event info
 
-    
-    # def get_background_events(self, results, printout=True, out_path=None): 
-    #     """
-    #     Write background event info
+        Args: 
+            info (str): info string from postprocessing 
+            printout (bool, opt): print output to screen
+            out_path: File path for txt output 
+        """        
+        # Print 
+        if printout:
+            self.logger.log(f"Background event info:", "info")
+            print(info)
+        
+        # Write to file
+        if out_path:
+            with open(out_path, "w") as f:
+                f.write(info)
+        
+            self.logger.log(f"\tWrote {out_path}", "success")
+            
+    def write_verbose_background_events(self, data, out_path, override=False):
+        """
+        Write verbose background event info
 
-    #     Args: 
-    #         results (list): list of results 
-    #         out_path: File path for txt output 
-    #     """
-    #     output = []
-    #     count = 0
-        
-    #     for i, result in enumerate(results): 
+        Args: 
+            data (ak.Array): the data array  output to screen
+            out_path: File path for txt output 
+        """  
+        # semi-abitrary check to make sure the printout isn't too long
+        max_len = 25
+        if len(data) > max_len and not override: 
+            self.logger.log(f">{max_len} events! Are you sure you want to proceed?\n\tIf yes, set 'override' to True", "warning")
+            return 
             
-    #         data = ak.Array(result["filtered_data"])
-            
-    #         if len(data) == 0:
-    #             continue
-
-    #         # Get tracker entrance times
-    #         trk_front = self.selector.select_surface(data["trkfit"], sid=0)
-    #         track_time = data["trkfit"]["trksegs"]["time"][trk_front]
-    #         # Get coinc entrance times
-    #         coinc_time = data["crv"]["crvcoincs.time"]
-            
-    #         # Extract values
-    #         track_time_str = "" 
-    #         coinc_time_str = ""
-            
-    #         # Extract floats from track_time (nested structure: [[[values]], [[values]]])
-    #         track_floats = []
-    #         for nested in track_time:
-    #             for sublist in nested:
-    #                 for val in sublist:
-    #                     track_floats.append(float(val))
-            
-    #         # Extract floats from coinc_time (structure: [[], []])
-    #         coinc_floats = []
-    #         for sublist in coinc_time:
-    #             for val in sublist:
-    #                 coinc_floats.append(float(val))
-            
-    #         # Format as strings with precision
-    #         if track_floats:
-    #             track_time_str = ", ".join([f"{val:.6f}" for val in track_floats])
-            
-    #         if coinc_floats:
-    #             coinc_time_str = ", ".join([f"{val:.6f}" for val in coinc_floats])
-        
-    #         # Calculate dt
-    #         dt_str = ""
-    #         if track_floats and coinc_floats:
-    #             # Calculate dt between first track time and first coinc time
-    #             dt_value = abs(track_floats[0] - coinc_floats[0])
-    #             dt_str = f"{dt_value:.6f}"
-            
-    #         output.append(f"  Index:            {i}")
-    #         output.append(f"  Subrun:           {data["evt"]["subrun"]}")
-    #         output.append(f"  Event:            {data["evt"]["event"]}")
-    #         output.append(f"  File:             {result["file_id"]}")
-    #         output.append(f"  Track time [ns]:  {track_time_str}") 
-    #         output.append(f"  Coinc time [ns]:  {coinc_time_str if len(coinc_time_str)>0 else None}") 
-    #         output.append(f"  dt [ns]:          {dt_str if len(dt_str)>0 else "N/A"}")
-    #         output.append("-" * 40)
-
-    #         count += 1
-        
-    #     output = "\n".join(output)
-        
-    #     # Print 
-    #     if printout:
-    #         self.logger.log(f"Info for {count} background events :", "info")
-    #         print(output)
-        
-    #     # Write to file
-    #     if out_path:
-    #         with open(fout_name, "w") as f:
-    #             f.write(output)
-        
-    #         self.logger.log(f"\tWrote {out_path}", "success")
+        # Redirect stdout to file
+        with open(out_path, "w") as f:
+            old_stdout = sys.stdout
+            sys.stdout = f
+            self.printer.print_n_events(data, n_events=len(data))
+            # Restore stdout
+            sys.stdout = old_stdout
+            self.logger.log(f"Wrote {out_path}", "success")
             
     # # This could be quite nice, but it needs the full analysis config including everything which could be a bit complex. 
     # # Need to think about this. 
