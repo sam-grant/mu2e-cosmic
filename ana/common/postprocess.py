@@ -33,6 +33,7 @@ class PostProcess():
         
         # Check if we have results
         if not results:
+            self.logger.log(f"results is None", "warning") 
             return None
             
         # Loop through all files
@@ -66,6 +67,7 @@ class PostProcess():
         
         # Check if we have results
         if not results:
+            self.logger.log(f"results is None", "warning") 
             return None
         
         # Loop through all files
@@ -90,6 +92,12 @@ class PostProcess():
         """
         Combine cuts stats into a list, then combine the cuts with CutManager
         """
+
+        # Check if we have results
+        if not results:
+            self.logger.log(f"results is None", "warning") 
+            return None
+            
         stats = [] 
         if isinstance(results, list): 
             for result in results: 
@@ -112,6 +120,12 @@ class PostProcess():
             results (list): list of results 
             out_path: File path for txt output 
         """
+
+        # Check if we have results
+        if not results:
+            self.logger.log(f"results is None", "warning") 
+            return None
+            
         output = []
         count = 0
         
