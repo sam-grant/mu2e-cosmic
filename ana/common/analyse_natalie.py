@@ -123,17 +123,35 @@ class Analyse:
                              (data["trkfit"]["trksegs"]["time"] < 1650))
             
                 # trk-level definition (the actual cut)
-                # within_t0 = ak.all(~at_trk_front | within_t0, axis=-1)
+                within_t0 = ak.all(~at_trk_front | within_t0, axis=-1)
 
                 # Closer to C++ 
                 # This lets reflections pass 
-                within_t0 = ak.any(at_trk_front & within_t0, axis=-1)
+                # within_t0 = ak.any(at_trk_front & within_t0, axis=-1)
     
                 cut_manager.add_cut( 
                     name="within_t0",
                     description="t0 at tracker entrance (640 < t_0 < 1650 ns)",
                     mask=within_t0 
                 )
+
+            # One reconstructed electron track / event 
+
+            # Track-level definition
+            one_reco_electron = ak.sum(is_reco_electron, axis=-1) == 1
+            # Broadcast to track level
+            one_reco_electron_per_event, _ = ak.broadcast_arrays(one_reco_electron, is_reco_electron) # this returns a tuple
+            cut_manager.add_cut(
+                name="one_reco_electron",
+                description="One reco electron / event",
+                mask=one_reco_electron_per_event 
+            )
+
+            # Append track-level definition
+            data["one_reco_electron"] = one_reco_electron
+
+            # Append event-level definition
+            data["one_reco_electron_per_event"] = one_reco_electron_per_event
 
             # 5. Loop helix maximum radius
             within_lhr_max = ((450 < data["trkfit"]["trksegpars_lh"]["maxr"]) & 
@@ -142,8 +160,8 @@ class Analyse:
             # trk-level definition (the actual cut)
             # within_lhr_max = ak.all(~at_trk_front | within_lhr_max, axis=-1)
             # Closer to C++ 
-            # within_lhr_max = ak.all(~at_trk_front | within_lhr_max, axis=-1)
-            within_lhr_max = ak.any(at_trk_front & within_lhr_max, axis=-1)
+            within_lhr_max = ak.all(~at_trk_front | within_lhr_max, axis=-1)
+            # within_lhr_max = ak.any(at_trk_front & within_lhr_max, axis=-1)
 
             # Loop for the first time this is true
 
@@ -205,9 +223,9 @@ class Analyse:
             within_d0 = (data["trkfit"]["trksegpars_lh"]["d0"] < 100)
         
             # trk-level definition (the actual cut)
-            # within_d0 = ak.all(~at_trk_front | within_d0, axis=-1) 
+            within_d0 = ak.all(~at_trk_front | within_d0, axis=-1) 
             # Closer to C++ 
-            within_d0 = ak.any(at_trk_front & within_d0, axis=-1)
+            # within_d0 = ak.any(at_trk_front & within_d0, axis=-1)
             cut_manager.add_cut(
                 name="within_d0",
                 description="Distance of closest approach (d_0 < 100 mm)",
@@ -220,9 +238,9 @@ class Analyse:
                                   (data["trkfit"]["trksegpars_lh"]["tanDip"] < 1.0))
         
             # trk-level definition (the actual cut) 
-            # within_pitch_angle = ak.all(~at_trk_front | within_pitch_angle, axis=-1)
+            within_pitch_angle = ak.all(~at_trk_front | within_pitch_angle, axis=-1)
             # Closer to C++ 
-            within_pitch_angle = ak.any(at_trk_front & within_pitch_angle, axis=-1)
+            # within_pitch_angle = ak.any(at_trk_front & within_pitch_angle, axis=-1)
             cut_manager.add_cut(
                 name="within_pitch_angle",
                 description="Extrapolated pitch angle (0.5577350 < tan(theta_Dip) < 1.0)",
@@ -241,24 +259,6 @@ class Analyse:
             data["good_trkqual"] = good_trkqual
 
 
-            # One reconstructed electron track / event 
-
-            # Track-level definition
-            one_reco_electron = ak.sum(is_reco_electron, axis=-1) == 1
-            # Broadcast to track level
-            one_reco_electron_per_event, _ = ak.broadcast_arrays(one_reco_electron, is_reco_electron) # this returns a tuple
-            cut_manager.add_cut(
-                name="one_reco_electron",
-                description="One reco electron / event",
-                mask=one_reco_electron_per_event 
-            )
-
-            # Append track-level definition
-            data["one_reco_electron"] = one_reco_electron
-
-            # Append event-level definition
-            data["one_reco_electron_per_event"] = one_reco_electron_per_event
-
             # 9. Downstream tracks only through tracker entrance 
             # Does this implicitly include single tracks 
             self.logger.log("Defining downstream tracks cut", "max")
@@ -274,8 +274,6 @@ class Analyse:
                 mask=has_downstream 
             )
             
-
-
             # 10. Electron tracks 
             
             # Truth track parent is electron 
