@@ -6,13 +6,19 @@ from cut_manager import CutManager
 class PostProcess():
     """Class for postprocessing
     """
-    def __init__(self, verbosity=1):
+    def __init__(self, info=False, verbosity=1):
         """Initialise
+
+            Arg:
+                info (optional, bool): background event info
+                verbosity (optional, int): printout level
         """
         # Verbosity 
         self.verbosity = verbosity
         # Selector 
         self.selector = Select(verbosity=0)
+        # Background info
+        self.info = info
         # Start logger
         self.logger = Logger(
             print_prefix="[PostProcess]",
@@ -27,6 +33,7 @@ class PostProcess():
         
         # Check if we have results
         if not results:
+            self.logger.log(f"results is None", "warning") 
             return None
             
         # Loop through all files
@@ -60,6 +67,7 @@ class PostProcess():
         
         # Check if we have results
         if not results:
+            self.logger.log(f"results is None", "warning") 
             return None
         
         # Loop through all files
@@ -84,6 +92,12 @@ class PostProcess():
         """
         Combine cuts stats into a list, then combine the cuts with CutManager
         """
+
+        # Check if we have results
+        if not results:
+            self.logger.log(f"results is None", "warning") 
+            return None
+            
         stats = [] 
         if isinstance(results, list): 
             for result in results: 
@@ -106,6 +120,12 @@ class PostProcess():
             results (list): list of results 
             out_path: File path for txt output 
         """
+
+        # Check if we have results
+        if not results:
+            self.logger.log(f"results is None", "warning") 
+            return None
+            
         output = []
         count = 0
         
@@ -169,19 +189,6 @@ class PostProcess():
         self.logger.log(f"Retrieved background event info", "success")
 
         return output 
-        
-        # # Print 
-        # if printout:
-        #     self.logger.log(f"Info for {count} background events :", "info")
-        #     print(output)
-        
-        # # Write to file
-        # if out_path:
-        #     with open(out_path, "w") as f:
-        #         f.write(output)
-        
-        #     self.logger.log(f"Wrote {out_path}", "success")
-
 
     def execute(self, results): 
         """ 
@@ -197,7 +204,7 @@ class PostProcess():
         combined_array = self.combine_arrays(results)
         combined_hists = self.combine_hists(results)
         combined_stats = self.combine_cut_stats(results)
-        combined_background_info = None # self.get_background_events(results) # HACK TO STOP IT WRITING GB OF DATA FOR LOOSE CUTS
+        combined_background_info = self.get_background_events(results) if self.info else None 
         
         self.logger.log(f"Postprocessing complete:\n\treturning tuple of combined arrays, combined histograms, and combined cut stats", "success")
         return combined_array, combined_hists, combined_stats, combined_background_info

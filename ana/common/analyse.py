@@ -6,6 +6,8 @@ import numpy as np
 import hist
 import gc
 import sys 
+import os
+import yaml 
 
 from pyutils.pyselect import Select
 from pyutils.pyvector import Vector
@@ -13,12 +15,10 @@ from pyutils.pylogger import Logger
 from pyutils.pyprint import Print
 from cut_manager import CutManager
 
-# FIXME: doing a lot of copy operations is not very efficient, but I am not sure if there is an alternative
-
 class Analyse:
     """Class to handle analysis functions
     """
-    def __init__(self, on_spill=False, event_subrun=None, verbosity=1):
+    def __init__(self, on_spill=False, event_subrun=None, cut_params_path="cuts.yaml", verbosity=1):
         """Initialise the analysis handler
         
         Args:
@@ -43,6 +43,27 @@ class Analyse:
         # Analysis configuration
         self.on_spill = on_spill  # Default to off-spill 
         self.event_subrun = event_subrun # event selection (for debugging)
+
+        # Get cut params
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        cut_params_path = os.path.join(script_dir, cut_params_path) 
+        with open(cut_params_path, "r") as file:
+            params = yaml.safe_load(file)
+                
+            # Load cut parameters
+            cuts = params["cuts"]
+            self.track_pdg = cuts["track_pdg"]
+            self.lower_nactive = cuts["lower_nactive"]
+            self.lower_trkqual = cuts["lower_trkqual"]
+            self.lower_t0_ns = cuts["lower_t0_ns"]
+            self.upper_t0_ns = cuts["upper_t0_ns"]
+            self.lower_maxr_mm = cuts["lower_maxr_mm"]
+            self.upper_maxr_mm = cuts["upper_maxr_mm"]
+            self.upper_d0_mm = cuts["upper_d0_mm"]
+            self.lower_tanDip = cuts["lower_tanDip"]
+            self.upper_tanDip = cuts["upper_tanDip"]
+            self.veto_dt_ns = cuts["veto_dt_ns"]
+
         self.logger.log(f"Initialised with on_spill={self.on_spill}", "info")
     
     def define_cuts(self, data, cut_manager, on_spill=None):
@@ -82,7 +103,7 @@ class Analyse:
             # 1. Electron tracks 
             
             # Truth track parent is electron 
-            is_electron = data["trkmc"]["trkmcsim"]["pdg"] == 11
+            is_electron = data["trkmc"]["trkmcsim"]["pdg"] == self.track_pdg
             is_trk_parent = data["trkmc"]["trkmcsim"]["nhits"] == ak.max(data["trkmc"]["trkmcsim"]["nhits"], axis=-1)
             is_trk_parent_electron = is_electron & is_trk_parent 
             has_trk_parent_electron = ak.any(is_trk_parent_electron, axis=-1) # Any tracks with electron parents?
@@ -132,7 +153,7 @@ class Analyse:
             # 3. Track fit quality
             # All tracks must have a fit quality of better than 80% or better
             # good_trkqual = (data["trk"]["trkqual.result"] > 0.8)
-            good_trkqual = selector.select_trkqual(data["trk"], quality=0.8)
+            good_trkqual = selector.select_trkqual(data["trk"], quality=self.lower_trkqual)
             cut_manager.add_cut(
                 name="good_trkqual",
                 description="Track quality (quality > 0.8)",
@@ -144,18 +165,19 @@ class Analyse:
             self.logger.log("Defining downstream tracks cut", "max")
             # is_downstream = (data["trkfit"]["trksegs"]["mom"]["fCoordinates"]["fZ"] > 0)
             is_downstream = selector.is_downstream(data["trkfit"]) # at tracker entrance
-            has_downstream = ak.any(is_downstream, axis=-1)
+            is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1)
+            # has_downstream = ak.any(is_downstream, axis=-1)
             
             cut_manager.add_cut(
                 name="downstream",
-                description="Downstream tracks (p_z > 0 through tracker)",
-                mask=has_downstream 
+                description="Downstream tracks (p_z > 0 at tracker entrance)",
+                mask=is_downstream 
             )
 
             # trksegs-level definition
             data["is_downstream"] = is_downstream
             # trk-level definition
-            data["has_downstream"] = has_downstream
+            # data["has_downstream"] = has_downstream
 
             # No reflections through tracker entrance
             # This one doesn't really work
@@ -189,7 +211,7 @@ class Analyse:
             # data["no_pileup"] = no_pileup
             
             # 3. Minimum hits
-            has_hits = selector.has_n_hits(data["trk"], n_hits=21)
+            has_hits = selector.has_n_hits(data["trk"], n_hits=self.lower_nactive)
             cut_manager.add_cut(
                 name="has_hits",
                 description="Minimum of 20 active hits in the tracker",
@@ -201,11 +223,13 @@ class Analyse:
                 self.logger.log("Defining time cut (on-spill specific)", "info")
 
                 # trksegs level
-                within_t0 = ((640 < data["trkfit"]["trksegs"]["time"]) & 
-                             (data["trkfit"]["trksegs"]["time"] < 1650))
+                within_t0 = ((self.lower_t0_ns < data["trkfit"]["trksegs"]["time"]) & 
+                             (data["trkfit"]["trksegs"]["time"] < self.upper_t0_ns))
             
                 # trk-level definition (the actual cut)
                 within_t0 = ak.all(~at_trk_front | within_t0, axis=-1)
+                # within_t0 = ak.any(at_trk_front & within_t0, axis=-1)
+
                 cut_manager.add_cut( 
                     name="within_t0",
                     description="t0 at tracker entrance (640 < t_0 < 1650 ns)",
@@ -213,9 +237,9 @@ class Analyse:
                 )
                 
             # 6. Loop helix maximum radius
-            within_lhr_max = ((450 < data["trkfit"]["trksegpars_lh"]["maxr"]) & 
-                              (data["trkfit"]["trksegpars_lh"]["maxr"] < 680)) # changed from 650
-        
+            within_lhr_max = ((self.lower_maxr_mm < data["trkfit"]["trksegpars_lh"]["maxr"]) & 
+                              (data["trkfit"]["trksegpars_lh"]["maxr"] < self.upper_maxr_mm)) # changed from 650
+            
             # trk-level definition (the actual cut)
             within_lhr_max = ak.all(~at_trk_front | within_lhr_max, axis=-1)
             cut_manager.add_cut(
@@ -224,20 +248,20 @@ class Analyse:
                 mask=within_lhr_max
             )
 
-            # 6.5. Loose loop helix maximum radius
-            within_lhr_max_loose = (data["trkfit"]["trksegpars_lh"]["maxr"] < 680) 
+            # # 6.5. Loose loop helix maximum radius
+            # within_lhr_max_loose = (data["trkfit"]["trksegpars_lh"]["maxr"] < self.upper_maxr_mm) 
         
-            # trk-level definition (the actual cut) 
-            within_lhr_max_loose = ak.all(~at_trk_front | within_lhr_max_loose, axis=-1)
-            cut_manager.add_cut(
-                name="within_lhr_max_loose",
-                description="Loop helix maximum radius (R_max < 680 mm)",
-                mask=within_lhr_max_loose,
-                active=False # OFF by default
-            )
+            # # trk-level definition (the actual cut) 
+            # within_lhr_max_loose = ak.all(~at_trk_front | within_lhr_max_loose, axis=-1)
+            # cut_manager.add_cut(
+            #     name="within_lhr_max_loose",
+            #     description="Loop helix maximum radius (R_max < 680 mm)",
+            #     mask=within_lhr_max_loose,
+            #     active=False # OFF by default
+            # )
             
             # 7. Distance from origin
-            within_d0 = (data["trkfit"]["trksegpars_lh"]["d0"] < 100)
+            within_d0 = (data["trkfit"]["trksegpars_lh"]["d0"] < self.upper_d0_mm)
         
             # trk-level definition (the actual cut)
             within_d0 = ak.all(~at_trk_front | within_d0, axis=-1) 
@@ -249,8 +273,8 @@ class Analyse:
             )
             
             # 8. Pitch angle
-            within_pitch_angle = ((0.5577350 < data["trkfit"]["trksegpars_lh"]["tanDip"]) & 
-                                  (data["trkfit"]["trksegpars_lh"]["tanDip"] < 1.0))
+            within_pitch_angle = ((self.lower_tanDip < data["trkfit"]["trksegpars_lh"]["tanDip"]) & 
+                                  (data["trkfit"]["trksegpars_lh"]["tanDip"] < self.upper_tanDip))
         
             # trk-level definition (the actual cut) 
             within_pitch_angle = ak.all(~at_trk_front | within_pitch_angle, axis=-1)
@@ -260,22 +284,22 @@ class Analyse:
                 mask=within_pitch_angle
             )
 
-            # 8.5. Loose pitch angle
-            within_pitch_angle_loose = (data["trkfit"]["trksegpars_lh"]["tanDip"] < 2.0)
+            # # 8.5. Loose pitch angle
+            # within_pitch_angle_loose = (data["trkfit"]["trksegpars_lh"]["tanDip"] < 2.0)
         
-            # trk-level definition (the actual cut) 
-            within_pitch_angle_loose = ak.all(~at_trk_front | within_pitch_angle_loose, axis=-1)
-            cut_manager.add_cut(
-                name="within_pitch_angle_loose",
-                description="Extrapolated pitch angle (tan(theta_Dip) < 2.0)",
-                mask=within_pitch_angle_loose,
-                active=False # OFF by default
-            )
+            # # trk-level definition (the actual cut) 
+            # within_pitch_angle_loose = ak.all(~at_trk_front | within_pitch_angle_loose, axis=-1)
+            # cut_manager.add_cut(
+            #     name="within_pitch_angle_loose",
+            #     description="Extrapolated pitch angle (tan(theta_Dip) < 2.0)",
+            #     mask=within_pitch_angle_loose,
+            #     active=False # OFF by default
+            # )
 
             # 9. CRV veto: |dt| < 150 ns (dt = coinc time - track t0) 
             # Check if EACH track is within 150 ns of ANY coincidence 
             
-            dt_threshold = 150
+            dt_threshold = self.veto_dt_ns
             
             # Get track and coincidence times
             trk_times = data["trkfit"]["trksegs"]["time"][at_trk_front]  # events × tracks × segments
@@ -564,19 +588,6 @@ class Utils():
         # Confirm
         self.logger.log(f"Initialised", "info")
 
-    # FIXME: does this belong here???
-    def get_verbose_background_events(self, data, out_path):
-
-        # Redirect stdout to file
-        with open(out_path, "w") as f:
-            old_stdout = sys.stdout
-            sys.stdout = f
-            self.printer.print_n_events(data, n_events=len(data))
-            # Restore stdout
-            sys.stdout = old_stdout
-            self.logger.log(f"Wrote {out_path}", "success")
-    
-
     def get_kN(self, df_stats, numerator_name=None, denominator_name=None):
         """
         Retrieve efficiency data from DataFrame
@@ -601,33 +612,6 @@ class Utils():
         # Get denominator
         denominator_row = df_stats[df_stats["Cut"] == denominator_name]
         N = denominator_row["Events Passing"].iloc[0]
-    
-        # Hard to do this and handle all edge cases
-        # # Get numerator
-        # k = None
-        # if numerator_name: # Use specified numerator
-        # numerator_row = df_stats[df_stats["Cut"] == numerator_name]
-        # k = numerator_row["Events Passing"].iloc[0]
-        # else: 
-        #     if not signal: # Use last row
-        #         last_row = df_stats.iloc[-1]
-        #         k = last_row["Events Passing"]
-        #     else: # Use penultimate row
-        #         penultimate_row = df_stats.iloc[-2]
-        #         k = penultimate_row["Events Passing"]
-                
-        # # Get denominator
-        # N = None
-        # if denominator_name:  # Use specified denominator
-        #     denominator_row = df_stats[df_stats["Cut"] == denominator_name]
-        #     N = denominator_row["Events Passing"].iloc[0]
-        # else: 
-        #     if not signal: # Use penultimate row
-        #         penultimate_row = df_stats.iloc[-2]
-        #         N = penultimate_row["Events Passing"]
-        #     else: # Use first row
-        #         first_row = df_stats.iloc[0]
-        #         N = first_row["Events Passing"]
         
         return k, N
     
@@ -688,87 +672,49 @@ class Utils():
         
         return pd.DataFrame(results)
 
+    def write_background_events(self, info, printout=True, out_path=None): 
+        """
+        Write background event info
 
-    
-    # def get_background_events(self, results, printout=True, out_path=None): 
-    #     """
-    #     Write background event info
+        Args: 
+            info (str): info string from postprocessing 
+            printout (bool, opt): print output to screen
+            out_path: File path for txt output 
+        """        
+        # Print 
+        if printout:
+            self.logger.log(f"Background event info:", "info")
+            print(info)
+        
+        # Write to file
+        if out_path:
+            with open(out_path, "w") as f:
+                f.write(info)
+        
+            self.logger.log(f"\tWrote {out_path}", "success")
+            
+    def write_verbose_background_events(self, data, out_path, override=False):
+        """
+        Write verbose background event info
 
-    #     Args: 
-    #         results (list): list of results 
-    #         out_path: File path for txt output 
-    #     """
-    #     output = []
-    #     count = 0
-        
-    #     for i, result in enumerate(results): 
+        Args: 
+            data (ak.Array): the data array  output to screen
+            out_path: File path for txt output 
+        """  
+        # semi-abitrary check to make sure the printout isn't too long
+        max_len = 25
+        if len(data) > max_len and not override: 
+            self.logger.log(f">{max_len} events! Are you sure you want to proceed?\n\tIf yes, set 'override' to True", "warning")
+            return 
             
-    #         data = ak.Array(result["filtered_data"])
-            
-    #         if len(data) == 0:
-    #             continue
-
-    #         # Get tracker entrance times
-    #         trk_front = self.selector.select_surface(data["trkfit"], sid=0)
-    #         track_time = data["trkfit"]["trksegs"]["time"][trk_front]
-    #         # Get coinc entrance times
-    #         coinc_time = data["crv"]["crvcoincs.time"]
-            
-    #         # Extract values
-    #         track_time_str = "" 
-    #         coinc_time_str = ""
-            
-    #         # Extract floats from track_time (nested structure: [[[values]], [[values]]])
-    #         track_floats = []
-    #         for nested in track_time:
-    #             for sublist in nested:
-    #                 for val in sublist:
-    #                     track_floats.append(float(val))
-            
-    #         # Extract floats from coinc_time (structure: [[], []])
-    #         coinc_floats = []
-    #         for sublist in coinc_time:
-    #             for val in sublist:
-    #                 coinc_floats.append(float(val))
-            
-    #         # Format as strings with precision
-    #         if track_floats:
-    #             track_time_str = ", ".join([f"{val:.6f}" for val in track_floats])
-            
-    #         if coinc_floats:
-    #             coinc_time_str = ", ".join([f"{val:.6f}" for val in coinc_floats])
-        
-    #         # Calculate dt
-    #         dt_str = ""
-    #         if track_floats and coinc_floats:
-    #             # Calculate dt between first track time and first coinc time
-    #             dt_value = abs(track_floats[0] - coinc_floats[0])
-    #             dt_str = f"{dt_value:.6f}"
-            
-    #         output.append(f"  Index:            {i}")
-    #         output.append(f"  Subrun:           {data["evt"]["subrun"]}")
-    #         output.append(f"  Event:            {data["evt"]["event"]}")
-    #         output.append(f"  File:             {result["file_id"]}")
-    #         output.append(f"  Track time [ns]:  {track_time_str}") 
-    #         output.append(f"  Coinc time [ns]:  {coinc_time_str if len(coinc_time_str)>0 else None}") 
-    #         output.append(f"  dt [ns]:          {dt_str if len(dt_str)>0 else "N/A"}")
-    #         output.append("-" * 40)
-
-    #         count += 1
-        
-    #     output = "\n".join(output)
-        
-    #     # Print 
-    #     if printout:
-    #         self.logger.log(f"Info for {count} background events :", "info")
-    #         print(output)
-        
-    #     # Write to file
-    #     if out_path:
-    #         with open(fout_name, "w") as f:
-    #             f.write(output)
-        
-    #         self.logger.log(f"\tWrote {out_path}", "success")
+        # Redirect stdout to file
+        with open(out_path, "w") as f:
+            old_stdout = sys.stdout
+            sys.stdout = f
+            self.printer.print_n_events(data, n_events=len(data))
+            # Restore stdout
+            sys.stdout = old_stdout
+            self.logger.log(f"Wrote {out_path}", "success")
             
     # # This could be quite nice, but it needs the full analysis config including everything which could be a bit complex. 
     # # Need to think about this. 
