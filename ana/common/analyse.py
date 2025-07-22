@@ -66,7 +66,7 @@ class Analyse:
 
         self.logger.log(f"Initialised with on_spill={self.on_spill}", "info")
     
-    def define_cuts(self, data, cut_manager, on_spill=None):
+    def define_cuts(self, data, cut_manager):
         """Define analysis cuts
 
         Note that all cuts here need to be defined at trk level. 
@@ -79,270 +79,288 @@ class Analyse:
             data (ak.Array): data to apply cuts to
             cut_manager: The CutManager instance to use
             on_spill (bool, optional): Whether to apply on-spill specific cuts
+
+        Note 1: for track-level masks I typically use ak.all(~at_trk_front | trksegs_condition, axis=-1), which requires that all
+        segments at the tracker entrance fulfill this condition. This is more robust than ak.any(at_trk_front & trksegs_condition, axis=-1), 
+        since it implicitly handles reflections. 
+
+        Note 2: the cut order should not matter, but I have 
         """
-        
-        if on_spill is None:
-            on_spill = self.on_spill
 
-        self.logger.log(f"Defining cuts (on_spill={on_spill})", "info")
-            
-        selector = self.selector
-
-        # Track segments cuts
+        ###################################################
+        # 1. Select electron track fit hypothesis  
+        ###################################################
         try:
-            
-            # Tracker surfaces
-            at_trk_front = selector.select_surface(data["trkfit"], sid=0) #
-            at_trk_mid = selector.select_surface(data["trkfit"], sid=1)
-            at_trk_back = selector.select_surface(data["trkfit"], sid=2)
-            in_trk = (at_trk_front | at_trk_mid | at_trk_back)
-
-            # Append: this is useful for plotting and debugging
-            data["at_trk_front"] = at_trk_front
-
-            # 1. Electron tracks 
-            
-            # Truth track parent is electron 
-            is_electron = data["trkmc"]["trkmcsim"]["pdg"] == self.track_pdg
-            is_trk_parent = data["trkmc"]["trkmcsim"]["nhits"] == ak.max(data["trkmc"]["trkmcsim"]["nhits"], axis=-1)
-            is_trk_parent_electron = is_electron & is_trk_parent 
-            has_trk_parent_electron = ak.any(is_trk_parent_electron, axis=-1) # Any tracks with electron parents?
-        
-            cut_manager.add_cut(
-                name="is_truth_electron", 
-                description="Track parents are electrons (truth PID)", 
-                mask=has_trk_parent_electron 
-            )
-
-            # Append track-level definition
-            data["is_truth_electron"] = has_trk_parent_electron
-
-            # Reco track fit is electron 
-            is_reco_electron = selector.is_electron(data["trk"])
-            data["is_reco_electron"] = is_reco_electron
-        
+            # Track level definition
+            is_reco_electron = self.selector.is_electron(data["trk"])
+            # Add cut 
             cut_manager.add_cut(
                 name="is_reco_electron", 
-                description="Tracks are assumed to be electrons (trk)", 
+                description="Electron track fits", 
                 mask=is_reco_electron 
             )
-
-            # Append track-level definition
+            # Append mask for debugging
             data["is_reco_electron"] = is_reco_electron
+        except Exception as e:
+            self.logger.log(f"Error defining 'is_reco_electron': {e}", "error") 
+            return None  
 
-            # 2. One reconstructed electron track / event 
-            # Regardless of quality
-
-            # Track-level definition
-            one_reco_electron = ak.sum(is_reco_electron, axis=-1) == 1
-            # Broadcast to track level
-            one_reco_electron_per_event, _ = ak.broadcast_arrays(one_reco_electron, is_reco_electron) # this returns a tuple
-            
+        ###################################################
+        # 2. Tracks intersect tracker entrance
+        ###################################################
+        try:
+            # Track segments level definition
+            at_trk_front = self.selector.select_surface(data["trkfit"], sid=0) 
+            # at_trk_mid = self.self.selector.select_surface(data["trkfit"], sid=1)
+            # at_trk_back = self.self.selector.select_surface(data["trkfit"], sid=2)
+            # in_trk = (at_trk_front | at_trk_mid | at_trk_back)
+            # Track level definition 
+            has_trk_front = ak.any(at_trk_front, axis=-1)
+            # Add cut 
             cut_manager.add_cut(
-                name="one_reco_electron",
-                description="One reco electron / event",
-                mask=one_reco_electron_per_event 
+                name="has_trk_front", 
+                description="Tracks intersect tracker entrance", 
+                mask=has_trk_front 
             )
-
-            # Append track-level definition
-            data["one_reco_electron"] = one_reco_electron
-
-            # Append event-level definition
-            data["one_reco_electron_per_event"] = one_reco_electron_per_event
-
-            # 3. Track fit quality
-            # All tracks must have a fit quality of better than 80% or better
-            # good_trkqual = (data["trk"]["trkqual.result"] > 0.8)
-            good_trkqual = selector.select_trkqual(data["trk"], quality=self.lower_trkqual)
+            # Append for debugging
+            data["at_trk_front"] = at_trk_front
+            data["has_trk_front"] = has_trk_front
+        except Exception as e:
+            self.logger.log(f"Error defining 'has_trk_front': {e}", "error") 
+            return None  
+            
+        ###################################################
+        # 3. Track fit hypothesis quality
+        ###################################################
+        try: 
+            # Track level mask
+            good_trkqual = self.selector.select_trkqual(data["trk"], quality=self.lower_trkqual)
+            # Add cut 
             cut_manager.add_cut(
                 name="good_trkqual",
-                description="Track quality (quality > 0.8)",
+                description=f"Track fit quality > {self.lower_trkqual})",
                 mask=good_trkqual 
             )
+            # Append for debugging
             data["good_trkqual"] = good_trkqual
-
-            # 4. Downstream tracks only through tracker entrance 
-            self.logger.log("Defining downstream tracks cut", "max")
-            # is_downstream = (data["trkfit"]["trksegs"]["mom"]["fCoordinates"]["fZ"] > 0)
-            is_downstream = selector.is_downstream(data["trkfit"]) # at tracker entrance
-            is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1)
-            # has_downstream = ak.any(is_downstream, axis=-1)
+        except Exception as e:
+            self.logger.log(f"Error defining 'good_trkqual': {e}", "error") 
+            return None  
             
+
+        ###################################################
+        # 4. Time at tracker entrance (t0)
+        ###################################################
+        try:
+            if self.on_spill:
+                # Track segments level definition
+                within_t0 = ((self.lower_t0_ns < data["trkfit"]["trksegs"]["time"]) & 
+                             (data["trkfit"]["trksegs"]["time"] < self.upper_t0_ns))
+                # Track level definition
+                within_t0 = ak.all(~at_trk_front | within_t0, axis=-1)
+                # Add cut 
+                cut_manager.add_cut( 
+                    name="within_t0",
+                    description=f"t0 at tracker entrance ({self.lower_t0_ns} < t_0 < {self.upper_t0_ns} ns)",
+                    mask=within_t0 
+                )
+                # Append for debugging
+                data["within_t0"] = within_t0
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_t0': {e}", "error") 
+            return None  
+
+        ###################################################
+        # 5. Downstream tracks at the tracker entrance 
+        ###################################################
+        try:
+            # Track segments level mask
+            is_downstream = self.selector.is_downstream(data["trkfit"]) 
+            # Track level mask
+            is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1) 
+            # Add cut 
             cut_manager.add_cut(
                 name="downstream",
                 description="Downstream tracks (p_z > 0 at tracker entrance)",
                 mask=is_downstream 
             )
-
-            # trksegs-level definition
-            data["is_downstream"] = is_downstream
-            # trk-level definition
-            # data["has_downstream"] = has_downstream
-
-            # No reflections through tracker entrance
-            # This one doesn't really work
-            # self.logger.log("Defining reflection cut", "max")
-            # is_reflected = selector.is_reflected(data["trkfit"])
-            
-            # cut_manager.add_cut(
-            #     name="not_reflected",
-            #     description="No reflected tracks",
-            #     mask=~is_reflected 
-            # )
-
-            # # trk definition
-            # data["is_reflected"] = is_reflected
-            
-            # One quality electron track / event 
-            # We definitely do not want this one
-            # It excludes potential signals if you happen to have a good muon fit to an electron track
-            # self.logger.log("Defining pileup cut", "max")
-            # no_pileup = ak.sum(good_trkqual & is_reco_electron, axis=-1) == 1 
-            # # Broadcast to track level
-            # no_pileup, _ = ak.broadcast_arrays(no_pileup, good_trkqual) # this returns a tuple
-
-            # cut_manager.add_cut(
-            #     name="no_pileup",
-            #     description="One quality e- track / event",
-            #     mask=no_pileup 
-            # )
-            
             # Append for debugging
-            # data["no_pileup"] = no_pileup
-            
-            # 3. Minimum hits
-            has_hits = selector.has_n_hits(data["trk"], n_hits=self.lower_nactive)
+            data["is_downstream"] = is_downstream
+        except Exception as e:
+            self.logger.log(f"Error defining 'is_downstream': {e}", "error") 
+            return None  
+
+        ###################################################
+        # 6. Minimum active hits
+        ###################################################
+        try:
+            # Track level definition 
+            has_hits = self.selector.has_n_hits(data["trk"], n_hits=self.lower_nactive)
+            # Add cut
             cut_manager.add_cut(
                 name="has_hits",
-                description="Minimum of 20 active hits in the tracker",
+                description=f">= {self.lower_nactive} active tracker hits",
                 mask=has_hits 
             )
-        
-            if on_spill:
-                # 4. Time at tracker entrance (trk level)
-                self.logger.log("Defining time cut (on-spill specific)", "info")
-
-                # trksegs level
-                within_t0 = ((self.lower_t0_ns < data["trkfit"]["trksegs"]["time"]) & 
-                             (data["trkfit"]["trksegs"]["time"] < self.upper_t0_ns))
+            # Append for debugging
+            data["has_hits"] = has_hits
+        except Exception as e:
+            self.logger.log(f"Error defining 'has_hits': {e}", "error") 
+            return None  
             
-                # trk-level definition (the actual cut)
-                within_t0 = ak.all(~at_trk_front | within_t0, axis=-1)
-                # within_t0 = ak.any(at_trk_front & within_t0, axis=-1)
-
-                cut_manager.add_cut( 
-                    name="within_t0",
-                    description="t0 at tracker entrance (640 < t_0 < 1650 ns)",
-                    mask=within_t0 
-                )
-                
-            # 6. Loop helix maximum radius
-            within_lhr_max = ((self.lower_maxr_mm < data["trkfit"]["trksegpars_lh"]["maxr"]) & 
-                              (data["trkfit"]["trksegpars_lh"]["maxr"] < self.upper_maxr_mm)) # changed from 650
-            
-            # trk-level definition (the actual cut)
-            within_lhr_max = ak.all(~at_trk_front | within_lhr_max, axis=-1)
-            cut_manager.add_cut(
-                name="within_lhr_max",
-                description="Loop helix maximum radius (450 < R_max < 680 mm)",
-                mask=within_lhr_max
-            )
-
-            # # 6.5. Loose loop helix maximum radius
-            # within_lhr_max_loose = (data["trkfit"]["trksegpars_lh"]["maxr"] < self.upper_maxr_mm) 
-        
-            # # trk-level definition (the actual cut) 
-            # within_lhr_max_loose = ak.all(~at_trk_front | within_lhr_max_loose, axis=-1)
-            # cut_manager.add_cut(
-            #     name="within_lhr_max_loose",
-            #     description="Loop helix maximum radius (R_max < 680 mm)",
-            #     mask=within_lhr_max_loose,
-            #     active=False # OFF by default
-            # )
-            
-            # 7. Distance from origin
+        ###################################################
+        # 7. Extrapolated distance of closest approach
+        ###################################################
+        try:
+            # Track segments level definition
             within_d0 = (data["trkfit"]["trksegpars_lh"]["d0"] < self.upper_d0_mm)
-        
-            # trk-level definition (the actual cut)
+
+            # Track level definition
             within_d0 = ak.all(~at_trk_front | within_d0, axis=-1) 
+
+            # Add cut 
             cut_manager.add_cut(
                 name="within_d0",
-                description="Distance of closest approach (d_0 < 100 mm)",
+                description=f"Distance of closest approach (d_0 < {self.upper_d0_mm} mm)",
                 mask=within_d0 
                 
             )
-            
-            # 8. Pitch angle
+            # Append for debugging
+            data["within_d0"] = within_d0
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_d0': {e}", "error") 
+            return None  
+
+        ###################################################
+        # 8. Pitch angle
+        ###################################################
+        try:
+            # Define pitch angle
+            pvec = self.vector.get_vector(data["trkfit"]["trksegs"], "mom")
+            pt = np.sqrt(pvec["x"]**2 + pvec["y"]**2) 
+            pz = data["trkfit"]["trksegs"]["mom"]["fCoordinates"]["fZ"]
+            pitch_angle = pz/pt 
+            # Old track segments definition (tanDip has a bug in EventNtuple)
             within_pitch_angle = ((self.lower_tanDip < data["trkfit"]["trksegpars_lh"]["tanDip"]) & 
                                   (data["trkfit"]["trksegpars_lh"]["tanDip"] < self.upper_tanDip))
-        
-            # trk-level definition (the actual cut) 
+            # Correct definition
+            # within_pitch_angle = ((self.lower_tanDip < pitch_angle) & (pitch_angle < self.upper_tanDip))
+            # Track level definition
             within_pitch_angle = ak.all(~at_trk_front | within_pitch_angle, axis=-1)
+            # Add cut 
             cut_manager.add_cut(
                 name="within_pitch_angle",
-                description="Extrapolated pitch angle (0.5577350 < tan(theta_Dip) < 1.0)",
+                description=f"Extrapolated pitch angle ({self.lower_tanDip} < tan(theta_Dip) < {self.upper_tanDip})",
                 mask=within_pitch_angle
             )
+            # Append 
+            data["within_pitch_angle"] = within_pitch_angle
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_pitch_angle': {e}", "error") 
+            return None  
 
-            # # 8.5. Loose pitch angle
-            # within_pitch_angle_loose = (data["trkfit"]["trksegpars_lh"]["tanDip"] < 2.0)
-        
-            # # trk-level definition (the actual cut) 
-            # within_pitch_angle_loose = ak.all(~at_trk_front | within_pitch_angle_loose, axis=-1)
-            # cut_manager.add_cut(
-            #     name="within_pitch_angle_loose",
-            #     description="Extrapolated pitch angle (tan(theta_Dip) < 2.0)",
-            #     mask=within_pitch_angle_loose,
-            #     active=False # OFF by default
-            # )
+        ###################################################
+        # 9. Loop helix maximimum radius 
+        ###################################################
+        try:
+            # Track segmentslevel definition 
+            within_lhr_max = ((self.lower_maxr_mm < data["trkfit"]["trksegpars_lh"]["maxr"]) & 
+                              (data["trkfit"]["trksegpars_lh"]["maxr"] < self.upper_maxr_mm))
+            # Track level definition 
+            within_lhr_max = ak.all(~at_trk_front | within_lhr_max, axis=-1)
+            # Add cut 
+            cut_manager.add_cut(
+                name="within_lhr_max",
+                description=f"Loop helix maximum radius ({self.lower_maxr_mm} < R_max < {self.upper_maxr_mm} mm)",
+                mask=within_lhr_max
+            )
+            # Append for debugging
+            data["within_lhr_max"] = within_lhr_max
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_lhr_max': {e}", "error") 
+            return None  
+            
+        ###################################################
+        # 10. Track "PID" from truth track parents 
+        ###################################################
+        try:
+            # Truth track parent is electron 
+            is_electron = data["trkmc"]["trkmcsim"]["pdg"] == self.track_pdg
+            is_trk_parent = data["trkmc"]["trkmcsim"]["nhits"] == ak.max(data["trkmc"]["trkmcsim"]["nhits"], axis=-1)
+            is_trk_parent_electron = is_electron & is_trk_parent 
+            has_trk_parent_electron = ak.any(is_trk_parent_electron, axis=-1) 
+            # Add cut 
+            cut_manager.add_cut(
+                name="is_truth_electron", 
+                description="Track parents are electrons (truth PID)", 
+                mask=has_trk_parent_electron 
+            )
+            # Append for debugging
+            data["is_truth_electron"] = has_trk_parent_electron
+        except Exception as e:
+            self.logger.log(f"Error defining 'is_truth_electron': {e}", "error") 
+            return None  
 
-            # 9. CRV veto: |dt| < 150 ns (dt = coinc time - track t0) 
-            # Check if EACH track is within 150 ns of ANY coincidence 
-            
-            dt_threshold = self.veto_dt_ns
-            
+        ###################################################
+        # 11. One electron track fit / event 
+        # This deals with split reflected tracks
+        # TODO: make this dependent on a deltaT
+        ###################################################
+        try: 
+            # Event-level definition
+            one_reco_electron_per_event = ak.sum(is_reco_electron, axis=-1) == 1
+            # Broadcast to track level
+            one_reco_electron, _ = ak.broadcast_arrays(one_reco_electron_per_event, is_reco_electron) # this returns a tuple
+            # Add cut 
+            cut_manager.add_cut(
+                name="one_reco_electron",
+                description="One reco electron / event",
+                mask=one_reco_electron 
+            )
+            # Append for debugging 
+            data["one_reco_electron"] = one_reco_electron
+            data["one_reco_electron_per_event"] = one_reco_electron_per_event
+        except Exception as e:
+            self.logger.log(f"Error defining 'one_reco_electron': {e}", "error") 
+            return None  
+
+        ###################################################
+        # 12. CRV veto: |dt| < 150 ns 
+        # Check if EACH track is within 150 ns of ANY coincidence 
+        ###################################################
+        try:
             # Get track and coincidence times
             trk_times = data["trkfit"]["trksegs"]["time"][at_trk_front]  # events × tracks × segments
             coinc_times = data["crv"]["crvcoincs.time"]                  # events × coincidences
-            
             # Broadcast CRV times to match track structure, so that we can compare element-wise
-            # FIXME: should use ak.broadcast
+            # Could use ak.broadcast?
             coinc_broadcast = coinc_times[:, None, None, :]  # Add dimensions for tracks and segments
             trk_broadcast = trk_times[:, :, :, None]         # Add dimension for coincidences
-
             # coinc_broadcast shape is [E, 1, 1, C] 
             # trk_broadcast shape is [E, T, S, 1]
-            
             # Calculate time differences
             dt = abs(trk_broadcast - coinc_broadcast)
-            
             # Check if within threshold
-            within_threshold = dt < dt_threshold
-
-            # For plotting: find the coincidences within threshold 
-            # coinc_veto = ak.any(within_threshold, axis=(1, 2))  # [E, C]
-            # data["coinc_veto"] = coinc_veto
-            
+            within_threshold = dt < self.veto_dt_ns
             # Reduce one axis at a time 
             # First reduce over coincidences (axis=3)
             any_coinc = ak.any(within_threshold, axis=3)
-            
             # Then reduce over trks (axis=2) 
             veto = ak.any(any_coinc, axis=2)
-
-            data["unvetoed"] = ~veto
-
+            # Add cut 
             cut_manager.add_cut(
                 name="unvetoed",
-                description="No veto: |dt| >= 150 ns",
+                description=f"No veto: |dt| >= {self.veto_dt_ns} ns",
                 mask=~veto
             )
-            
-            self.logger.log("All cuts defined", "success")
-            
+            # Append for debugging
+            data["unvetoed"] = ~veto
         except Exception as e:
-            self.logger.log(f"Error defining cuts: {e}", "error") 
+            self.logger.log(f"Error defining 'unvetoed': {e}", "error") 
             return None  
+
+        # Done 
+        self.logger.log("All cuts defined", "success")
         
     def apply_cuts(self, data, cut_manager, group=None, active_only=True):
 
@@ -437,7 +455,7 @@ class Analyse:
             # Process and fill histograms in batches
             def _fill_hist(data, label): 
                 """ Nested helper function to fill hists """
-
+                
                 # Tracks must be electron candidates at the tracker entrance
                 is_electron = selector.is_electron(data["trk"])  
                 data["trkfit"] = data["trkfit"][is_electron]
@@ -466,11 +484,11 @@ class Analyse:
                 import gc
                 gc.collect()
                     
-            # All need to be at tracker entrance
-            # 1. First process "all tracks" data
+            # Fill histograms
             _fill_hist(data, "All") 
             _fill_hist(data_CE, "CE-like")
-            _fill_hist(data_CE_unvetoed, "Unvetoed CE-like")
+            if data_CE_unvetoed:
+                _fill_hist(data_CE_unvetoed, "Unvetoed CE-like")
     
             self.logger.log("Histograms filled", "success")
 
@@ -487,7 +505,7 @@ class Analyse:
             # Handle any errors that occur during processing
             self.logger.log(f"Error filling histograms: {e}", "error")
             return None
-        
+
     def execute(self, data, file_id, cuts_to_toggle=None):
         """Perform complete analysis on an array
         
@@ -499,72 +517,148 @@ class Analyse:
         Returns:
             dict: Complete analysis results
         """
-
         self.logger.log(f"Beginning analysis execution for file: {file_id}", "info") 
         
         try:
-
-            # Create a unique cut manager for this file
+            # Initialise cut manager and apply any prefiltering
             cut_manager = CutManager(verbosity=self.verbosity)
-
-            # Optional prefiltering 
+            
             if self.event_subrun is not None: 
-                mask = ((data["evt"]["event"] == self.event_subrun[0]) & (data["evt"]["subrun"] == self.event_subrun[1]))
+                mask = ((data["evt"]["event"] == self.event_subrun[0]) & 
+                       (data["evt"]["subrun"] == self.event_subrun[1]))
                 data = data[mask]
-
+            
             # Define cuts
             self.logger.log("Defining cuts", "max")
             self.define_cuts(data, cut_manager)
 
-            # Set activate cuts
+            # Toggle cuts
             if cuts_to_toggle: 
                 cut_manager.toggle_cut(cuts_to_toggle) 
+
+            # Retrieve initial veto status (for cut plots)
+            veto = cut_manager.cuts["unvetoed"]["active"]
             
-            # Calculate cut stats
+            # Calculate cut statistics
             self.logger.log("Getting cut stats", "max")
             cut_stats = cut_manager.calculate_cut_stats(data, progressive=True, active_only=True)
-
-            # Apply CE-like cuts
+            
+            # Apply CE-like cuts (without veto)
             self.logger.log("Applying cuts", "max")
-
-            # Turn off veto 
-            cut_manager.toggle_cut({"unvetoed" : False})
-            # Mark CE-like tracks (useful for debugging 
+            cut_manager.toggle_cut({"unvetoed": False})
             data["CE_like"] = cut_manager.combine_cuts(active_only=True)
-            # Apply cuts
-            data_CE = self.apply_cuts(data, cut_manager) # Just CE-like tracks 
+            data_CE = self.apply_cuts(data, cut_manager)
             
-            # Turn on veto 
+            # Apply vetoed cuts if needed
             data_CE_unvetoed = None
-            cut_manager.toggle_cut({"unvetoed" : True})
-            # Mark CE-like tracks (useful for debugging 
-            data["unvetoed_CE_like"] = cut_manager.combine_cuts(active_only=True)
-            # Apply cuts
-            data_CE_unvetoed = self.apply_cuts(data, cut_manager) 
-        
+            if veto:  
+                self.logger.log("Applying veto cuts", "max")  
+                cut_manager.toggle_cut({"unvetoed": True})
+                data["unvetoed_CE_like"] = cut_manager.combine_cuts(active_only=True)
+                data_CE_unvetoed = self.apply_cuts(data, cut_manager)
             
-            # Create histograms
+            # Create histograms and compile results
             self.logger.log("Creating histograms", "max")
             histograms = self.create_histograms(data, data_CE, data_CE_unvetoed)
-            
-            # Compile all results
-            self.logger.log("Analysis completed", "success")
 
+            # Store results
             result = {
                 "file_id": file_id,
                 "cut_stats": cut_stats,
-                "filtered_data": data_CE_unvetoed, 
+                "filtered_data": data_CE_unvetoed if veto else data_CE, 
                 "histograms": histograms
             }
-
-            # Force garbage collection
-            gc.collect()
             
+            self.logger.log("Analysis completed", "success")
+            gc.collect()
             return result
             
         except Exception as e:
             self.logger.log(f"Error during analysis execution: {e}", "error")  
             return None
+            
+    # def execute(self, data, file_id, cuts_to_toggle=None):
+    #     """Perform complete analysis on an array
+        
+    #     Args:
+    #         data: The data to analyse
+    #         file_id: Identifier for the file
+    #         cuts_to_toggle: Dict of cut name with active state  
+            
+    #     Returns:
+    #         dict: Complete analysis results
+    #     """
+
+    #     self.logger.log(f"Beginning analysis execution for file: {file_id}", "info") 
+        
+    #     try:
+
+    #         # Create a unique cut manager for this file
+    #         cut_manager = CutManager(verbosity=self.verbosity)
+
+    #         # Optional prefiltering 
+    #         if self.event_subrun is not None: 
+    #             mask = ((data["evt"]["event"] == self.event_subrun[0]) & (data["evt"]["subrun"] == self.event_subrun[1]))
+    #             data = data[mask]
+
+    #         # Define cuts
+    #         self.logger.log("Defining cuts", "max")
+    #         self.define_cuts(data, cut_manager)
+
+    #         # Set activate cuts
+    #         if cuts_to_toggle: 
+    #             cut_manager.toggle_cut(cuts_to_toggle) 
+
+    #         # Get initial veto status
+    #         veto = cut_manager.cuts["unvetoed"]["active"]
+            
+    #         # Calculate cut stats
+    #         self.logger.log("Getting cut stats", "max")
+    #         cut_stats = cut_manager.calculate_cut_stats(data, progressive=True, active_only=True)
+            
+    #         # Apply CE-like cuts
+    #         self.logger.log("Applying cuts", "max")
+    #         # Turn off veto 
+    #         cut_manager.toggle_cut({"unvetoed" : False})
+    #         # Mark CE-like tracks (useful for debugging 
+    #         data["CE_like"] = cut_manager.combine_cuts(active_only=True)
+    #         # Apply cuts
+    #         data_CE = self.apply_cuts(data, cut_manager) # Just CE-like tracks 
+            
+    #         # Only create vetoed dataset if needed
+    #         data_CE_unvetoed = None
+    #         if veto:  
+    #             self.logger.log("Applying veto cuts", "max")  
+    #             # Turn on veto 
+    #             cut_manager.toggle_cut({"unvetoed" : True})
+    #             # Mark CE-like tracks (useful for debugging 
+    #             data["unvetoed_CE_like"] = cut_manager.combine_cuts(active_only=True)
+    #             # Apply cuts
+    #             data_CE_unvetoed = self.apply_cuts(data, cut_manager)
+            
+    #         # Create histograms
+    #         self.logger.log("Creating histograms", "max")
+    #         histograms = self.create_histograms(data, data_CE, data_CE_unvetoed)
+
+    #         # Store results
+    #         result = {
+    #             "file_id": file_id,
+    #             "cut_stats": cut_stats,
+    #             "filtered_data": data_CE_unvetoed if veto else data_CE, 
+    #             "histograms": histograms
+    #         }
+            
+    #         # Print sucesss
+    #         self.logger.log("Analysis completed", "success")
+
+    #         # Force garbage collection
+    #         gc.collect()
+            
+    #         return result
+            
+    #     except Exception as e:
+    #         self.logger.log(f"Error during analysis execution: {e}", "error")  
+    #         return None
 
 class Utils():
     """
