@@ -16,7 +16,7 @@ from cut_configs import cut_configs
 
 # Get today"s date in MM-DD-YY format
 today = datetime.now().strftime("%m-%d-%y")
-tag = "test_" + today
+tag = "cut_scan_" + today
 ds_type = "offspill"
 
 # Create your custom processor class
@@ -40,8 +40,8 @@ class CosmicProcessor(Skeleton):
 
         # Now override parameters from the Skeleton with the ones we need
         # Data selection configuration 
-        # self.defname = "nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.root"
-        self.file_name = "/exp/mu2e/data/users/sgrant/mu2e_cosmic_ana/data/nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00050440.root"
+        self.defname = "nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.root"
+        # self.file_name = "/exp/mu2e/data/users/sgrant/mu2e_cosmic_ana/data/nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00050440.root"
         
         self.branches = { 
             "evt" : [
@@ -68,9 +68,9 @@ class CosmicProcessor(Skeleton):
                 "trkmcsim"
             ]
         }
-        self.use_remote = False     # Use remote file via mdh
+        self.use_remote = True     # Use remote file via mdh
         self.location = "disk"     # File location
-        self.max_workers = 1      # Limit the number of workers
+        self.max_workers = 50      # Limit the number of workers
         self.verbosity = 2         # Set verbosity 
         self.use_processes = True  # Use processes rather than threads
         
@@ -174,10 +174,10 @@ def main():
         analysis_results = cosmic_processor.execute()
     
         # Initialise postprocessor 
-        postprocessor = PostProcess()
+        postprocessor = PostProcess(info=False)
     
         # Execute postprocessor
-        data, hists, stats, info = postprocessor.execute(analysis_results)
+        data, hists, stats, _ = postprocessor.execute(analysis_results)
     
         # Return dict 
         results_to_save = {
@@ -185,8 +185,7 @@ def main():
             "config": cut_config,
             "data": data,
             "hists": hists,
-            "stats": stats,
-            "info": info
+            "stats": stats
         }
 
         save_results(

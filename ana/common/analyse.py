@@ -424,10 +424,6 @@ class Analyse:
             dict: Dictionary of histograms
         """
         self.logger.log("Creating histograms", "info")
-        
-        # Tools 
-        selector = self.selector 
-        vector = self.vector
 
         hist_labels = ["All", "CE-like", "Unvetoed CE-like"]
 
@@ -451,16 +447,14 @@ class Analyse:
                 hist.axis.StrCategory(hist_labels, name="selection", label="Selection")
             )
 
-
-            # Process and fill histograms in batches
+            # Process and fill histograms
             def _fill_hist(data, label): 
                 """ Nested helper function to fill hists """
-                
                 # Tracks must be electron candidates at the tracker entrance
-                is_electron = selector.is_electron(data["trk"])  
+                is_electron = self.selector.is_electron(data["trk"])  
                 data["trkfit"] = data["trkfit"][is_electron]
-                at_trk_front = selector.select_surface(data["trkfit"], sid=0)              
-                mom = vector.get_mag(data["trkfit"]["trksegs"][at_trk_front], "mom")
+                at_trk_front = self.selector.select_surface(data["trkfit"], sid=0)              
+                mom = self.vector.get_mag(data["trkfit"]["trksegs"][at_trk_front], "mom")
                 crv_z = ak.flatten(data["crv"]["crvcoincs.pos.fCoordinates.fZ"], axis=None)
                 
                 # Flatten 
@@ -487,7 +481,7 @@ class Analyse:
             # Fill histograms
             _fill_hist(data, "All") 
             _fill_hist(data_CE, "CE-like")
-            if data_CE_unvetoed:
+            if len(data_CE_unvetoed) > 0:
                 _fill_hist(data_CE_unvetoed, "Unvetoed CE-like")
     
             self.logger.log("Histograms filled", "success")
@@ -550,7 +544,7 @@ class Analyse:
             data_CE = self.apply_cuts(data, cut_manager)
             
             # Apply vetoed cuts if needed
-            data_CE_unvetoed = None
+            data_CE_unvetoed = {}
             if veto:  
                 self.logger.log("Applying veto cuts", "max")  
                 cut_manager.toggle_cut({"unvetoed": True})
