@@ -68,23 +68,19 @@ class Analyse:
     
     def define_cuts(self, data, cut_manager):
         """Define analysis cuts
-
-        Note that all cuts here need to be defined at trk level. 
-
-        Also note that the tracking algorthm produces cut for upstream/downstream muon/electrons and then uses trkqual to guess the right one
-        trkqual needs to be good before making a selection 
-        this is particulary important for the pileup cut, since it needs to be selected from tracks which are above 90% or whatever 
         
         Args:
-            data (ak.Array): data to apply cuts to
-            cut_manager: The CutManager instance to use
-            on_spill (bool, optional): Whether to apply on-spill specific cuts
+            data (ak.Array): Array to cut 
+            cut_manager: CutManager instance
 
-        Note 1: for track-level masks I typically use ak.all(~at_trk_front | trksegs_condition, axis=-1), which requires that all
-        segments at the tracker entrance fulfill this condition. This is more robust than ak.any(at_trk_front & trksegs_condition, axis=-1), 
-        since it implicitly handles reflections. 
+        Raises: 
+            Exception per cut definition
 
-        Note 2: the cut order should not matter, but I have 
+        * All cuts need to be defined at track level
+        * Tracking algorthm fits upstream/downstream muon/electrons and then uses trkqual find the correct fit hypthosis
+        * For track-level masks I often use ak.all(~at_trk_front | trksegs_condition, axis=-1), which requires that all
+        segments at the tracker entrance fulfill this condition. I think this is more robust than ak.any(at_trk_front &
+        trksegs_condition, axis=-1), since it implicitly handles reflections. 
         """
 
         ###################################################
@@ -241,10 +237,10 @@ class Analyse:
             pz = data["trkfit"]["trksegs"]["mom"]["fCoordinates"]["fZ"]
             pitch_angle = pz/pt 
             # Old track segments definition (tanDip has a bug in EventNtuple)
-            within_pitch_angle = ((self.lower_tanDip < data["trkfit"]["trksegpars_lh"]["tanDip"]) & 
-                                  (data["trkfit"]["trksegpars_lh"]["tanDip"] < self.upper_tanDip))
+            # within_pitch_angle = ((self.lower_tanDip < data["trkfit"]["trksegpars_lh"]["tanDip"]) & 
+            #                       (data["trkfit"]["trksegpars_lh"]["tanDip"] < self.upper_tanDip))
             # Correct definition
-            # within_pitch_angle = ((self.lower_tanDip < pitch_angle) & (pitch_angle < self.upper_tanDip))
+            within_pitch_angle = ((self.lower_tanDip < pitch_angle) & (pitch_angle < self.upper_tanDip))
             # Track level definition
             within_pitch_angle = ak.all(~at_trk_front | within_pitch_angle, axis=-1)
             # Add cut 
@@ -557,10 +553,10 @@ class Analyse:
 
             # Store results
             result = {
-                "file_id": file_id,
-                "cut_stats": cut_stats,
-                "filtered_data": data_CE_unvetoed if veto else data_CE, 
-                "histograms": histograms
+                "id": file_id,
+                "stats": cut_stats,
+                "data": data_CE_unvetoed if veto else data_CE, 
+                "hists": histograms
             }
             
             self.logger.log("Analysis completed", "success")
@@ -802,7 +798,7 @@ class Utils():
             self.printer.print_n_events(data, n_events=len(data))
             # Restore stdout
             sys.stdout = old_stdout
-            self.logger.log(f"Wrote {out_path}", "success")
+            self.logger.log(f"\tWrote {out_path}", "success")
             
     # # This could be quite nice, but it needs the full analysis config including everything which could be a bit complex. 
     # # Need to think about this. 
