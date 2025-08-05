@@ -9,9 +9,9 @@ class PostProcess():
     def __init__(self, info=False, verbosity=1):
         """Initialise
 
-            Arg:
-                info (optional, bool): background event info
-                verbosity (optional, int): printout level
+            Args:
+                info (opt, bool): Background event info. Defaults to False.
+                verbosity (opt, int): Printout level. Defaults to 1.
         """
         # Verbosity 
         self.verbosity = verbosity
@@ -28,6 +28,8 @@ class PostProcess():
 
     def combine_arrays(self, results):
         """Combine filtered arrays from multiple files
+        Args: 
+            results (list): List of results 
         """
         arrays = []
         
@@ -38,7 +40,7 @@ class PostProcess():
             
         # Loop through all files
         for result in results: #
-            array = ak.Array(result["filtered_data"])
+            array = ak.Array(result["data"])
             if len(array) == 0:
                 continue
             # Concatenate arrays
@@ -73,11 +75,11 @@ class PostProcess():
         # Loop through all files
         for result in results: # 
             # Skip if no histograms in this file
-            if 'histograms' not in result or not result['histograms']:
+            if "hists" not in result or not result["hists"]:
                 continue
             
             # Process each histogram type
-            for hist_name, hist_obj in result['histograms'].items():
+            for hist_name, hist_obj in result["hists"].items():
                 if hist_name not in combined_hists:
                     # First time seeing this histogram type, initialise
                     combined_hists[hist_name] = hist_obj.copy()
@@ -88,7 +90,7 @@ class PostProcess():
         self.logger.log(f"Combined {len(combined_hists)} histograms over {len(results)} results", "success")
         return combined_hists
 
-    def combine_cut_stats(self, results):
+    def combine_cut_stats(self, results, active_only=True):
         """
         Combine cuts stats into a list, then combine the cuts with CutManager
         """
@@ -101,16 +103,22 @@ class PostProcess():
         stats = [] 
         if isinstance(results, list): 
             for result in results: 
-                if "cut_stats" in result: 
-                    stats.append(result["cut_stats"])
+                if "stats" in result: 
+                    stats.append(result["stats"])
         else: 
-            stats.append(results["cut_stats"])
+            stats.append(results["stats"])
 
+        # Get cut manager
         cut_manager = CutManager()
+
+        # Combine
         combined_stats = cut_manager.combine_cut_stats(stats)
 
+        # Format as DataFrame
+        df_combined_stats = cut_manager.cut_stats_to_df(combined_stats, active_only=active_only)
+
         self.logger.log(f"Combined cut statistics", "success")
-        return combined_stats
+        return df_combined_stats
 
     def get_background_events(self, results): # , printout=True, out_path=None): 
         """
@@ -131,13 +139,13 @@ class PostProcess():
         
         for i, result in enumerate(results): 
             
-            data = ak.Array(result["filtered_data"])
+            data = ak.Array(result["data"])
             
             if len(data) == 0:
                 continue
 
             # Get tracker entrance times
-            trk_front = self.selector.select_surface(data["trkfit"], sid=0)
+            trk_front = self.selector.select_surface(data["trkfit"], surface_name="TT_Front")
             track_time = data["trkfit"]["trksegs"]["time"][trk_front]
             # Get coinc entrance times
             coinc_time = data["crv"]["crvcoincs.time"]
@@ -176,7 +184,7 @@ class PostProcess():
             output.append(f"  Index:            {i}")
             output.append(f"  Subrun:           {data["evt"]["subrun"]}")
             output.append(f"  Event:            {data["evt"]["event"]}")
-            output.append(f"  File:             {result["file_id"]}")
+            output.append(f"  File:             {result["id"]}")
             output.append(f"  Track time [ns]:  {track_time_str}") 
             output.append(f"  Coinc time [ns]:  {coinc_time_str if len(coinc_time_str)>0 else None}") 
             output.append(f"  dt [ns]:          {dt_str if len(dt_str)>0 else "N/A"}")
@@ -201,10 +209,18 @@ class PostProcess():
         if not isinstance(results, list):
             results = [results]
     
-        combined_array = self.combine_arrays(results)
+        combined_events = self.combine_arrays(results)
         combined_hists = self.combine_hists(results)
         combined_stats = self.combine_cut_stats(results)
         combined_background_info = self.get_background_events(results) if self.info else None 
+
+        output = {
+            "events" : combined_events,
+            "hists" : combined_hists,
+            "stats" : combined_stats,
+            "info" : combined_background_info
+        }
         
-        self.logger.log(f"Postprocessing complete:\n\treturning tuple of combined arrays, combined histograms, and combined cut stats", "success")
-        return combined_array, combined_hists, combined_stats, combined_background_info
+        self.logger.log(f"Postprocessing complete:\n\treturning dict of combined event arrays, histograms, cut stats, and background info", "success")
+        
+        return output

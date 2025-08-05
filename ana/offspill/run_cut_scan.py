@@ -12,7 +12,7 @@ from analyse import Analyse
 from postprocess import PostProcess
 
 # CUT CONFIGS
-from cut_configs import cut_configs
+from cut_scan_configs import cut_scan_configs
 
 # Get today"s date in MM-DD-YY format
 today = datetime.now().strftime("%m-%d-%y")
@@ -159,7 +159,7 @@ def save_results(results, out_path):
         
 def main(): 
         
-    for i_cut, cut_config in enumerate(cut_configs): 
+    for i_cut, cut_config in enumerate(cut_scan_configs): 
     
         # Printout 
         logger.log(f"Running cut config: {cut_config}", "info")
@@ -193,7 +193,7 @@ def main():
             f"../../pkl/{ds_type}/results_cut_config_{i_cut}_{tag}.pkl"
         )
 
-        logger.log(f"Completed config {i_cut+1}/{len(cut_configs)}", "success")
+        logger.log(f"Completed config {i_cut+1}/{len(cut_scan_configs)}", "success")
 
     logger.log(f"Done", "success") 
 

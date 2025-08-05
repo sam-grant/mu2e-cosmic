@@ -1,0 +1,52 @@
+# Samuel Grant 2025
+# Define cutsets for cosmic-ray-induced background analysis
+
+# Define baseline defaults (do not edit!)
+defaults: 
+    description: "Baseline defaults"
+    thresholds:
+        track_pdg: 11 
+        lo_nactive: 21 
+        lo_trkqual: 0.8
+        lo_t0_ns: 640
+        hi_t0_ns: 1650
+        lo_maxr_mm: 450
+        hi_maxr_mm: 680
+        hi_d0_mm: 100
+        lo_tanDip: 0.5577350
+        hi_tanDip: 1.0 
+        veto_dt_ns: 150
+        lo_ext_win_mevc: 100
+        hi_ext_win_mevc: 110
+        lo_sig_win_mevc: 103.6
+        hi_sig_win_mevc: 104.9
+    active:
+        is_reco_electron: true
+        has_trk_front: true
+        good_trkqual: true
+        within_t0: true
+        is_downstream: true
+        has_hits: true
+        within_d0: true
+        within_pitch_angle: true
+        within_lhr_max: true
+        is_truth_electron: true
+        one_reco_electron: true
+        unvetoed: true
+        within_ext_win: true
+        within_sig_win: true
+
+# Define custom cutsets which are overridden from defaults
+# You can turn cuts off and edit thresholds here
+cutsets:
+    alpha: 
+        description: 
+            "baseline cutset with loop helix parameters"      
+    beta: 
+        description: 
+            "alpha with no R_max cut"
+        active:
+            within_lhr_max: false
+        
+    
+    

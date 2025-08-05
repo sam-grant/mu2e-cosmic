@@ -1,5 +1,3 @@
-# from cut_manager import CutManager
-
 import json
 import awkward as ak
 import csv
@@ -47,7 +45,6 @@ class CutManager:
         self.logger.log(f"Added cut {name} with index {next_idx}", "info")
         # return self # This would allow method chaining, could be useful maybe?
         
-    
     def get_cut_mask(self, name):
         """Utility to return the Boolean mask for a specific cut.
         
@@ -60,59 +57,6 @@ class CutManager:
         else:
             self.logger.log(f"Cut '{name}' not defined", "error")
             return None 
-    
-    # def set_active_cut(self, name, active=True):
-    #     """Utility to set a cut as active or inactive 
-
-    #     Args: 
-    #         name (str): Name of the cut
-    #         active (bool, optional): Whether the cut should be active. Default is True.
-    #     """
-    #     if name in self.cuts:
-    #         self.cuts[name]["active"] = active
-    #     else:
-    #         self.logger.log(f"Cut '{name}' not defined", "error")
-    #         return None 
-
-    # Original method
-    # def toggle_cut(self, cut_names, active=False):
-    #     """Utility to set cut(s) as inactive or active 
-    
-    #     Args: 
-    #         name (str or list): Name of the cut, or list of cut names
-    #         active (bool, optional): Whether the cut(s) should be active. Default is True.
-    #     """
-    #     # Handle single cut name
-    #     if isinstance(cut_names, str):
-    #         cut_names = [cut_names] 
-            
-    #     # Handle list of cut names
-    #     elif isinstance(cut_names, list):
-    #         cut_names = cut_names
-    #     else:
-    #         self.logger.log(f"Invalid input type for cut name(s): {type(cut_names)}", "error")
-    #         return False
-        
-    #     # Process each cut name
-    #     success = True
-    #     bad_cuts = []
-        
-    #     for cut_name in cut_names:
-    #         if cut_name in self.cuts:
-    #             self.cuts[cut_name]["active"] = active
-    #         else:
-    #             bad_cuts.append(cut_name)
-    #             success = False
-        
-    #     # Log results
-    #     if len(bad_cuts) > 0:
-    #         self.logger.log(f"Cut(s) not valid: {bad_cuts}", "error")
-        
-    #     if success:
-    #         action = "activated" if active else "deactivated"
-    #         self.logger.log(f"Successfully {action} cut(s): {cut_names}", "info")
-        
-    #     return success
 
     def toggle_cut(self, cut_dict):
         """Utility to set cut(s) as inactive or active based on input dictionary
@@ -245,7 +189,6 @@ class CutManager:
             
             stats.append({
                 "name": name,
-                "active": cut_info["active"],
                 "description": cut_info["description"],
                 "mask": current_mask,
                 "events_passing": int(events_passing),
@@ -254,78 +197,40 @@ class CutManager:
             })
         
         return stats
-    
-    def get_cut_stats(self, data=None, stats=None, progressive=True, active_only=False, printout=False):
-        """ Get cut statistics for each cut.
+        
+    def cut_stats_to_df(self, stats, active_only=True):
+        """ Format cut statistics as DataFrame 
         
         Args:
-            data (awkward.Array): Data array
-            progressive (bool, optional): If True, apply cuts progressively; if False, apply each cut independently
-            print_info: Print cut stat info
+            stats (dict): Dictionary of cut statisics 
+            active_only (bool, opt): Active cuts only 
         Returns:
             pd.DataFrame containing stats
         """
 
-        self.logger.log(f"Printing cut statistics", "max")
-        
-        # Input validation
-        sources = sum(x is not None for x in [data, stats]) 
-        if sources != 1:
-            self.logger.log(f"Please provide exactly one of 'data' or 'stats'", "error")
-            return None
+        self.logger.log(f"Formatting cut statistics as DataFrame", "info")
 
-        if not stats:
-            stats = self.calculate_cut_stats(data, progressive, active_only)
-
-        if active_only:
-            active_stats = []
-            for stat in stats:
-                # Always include "No cuts" entry
-                if stat["name"] == "No cuts":
-                    active_stats.append(stat)
-                # Include only active cuts
-                elif stat.get("active", True): 
-                    active_stats.append(stat)
-            stats = active_stats
-
-        if printout:
-            # Print header
-            self.logger.log(f"Cut statistics", "info")
-            print("-" * 110)
-            header = "{:<20} {:<20} {:<20} {:<20} {:<30}".format(
-                "Cut", "Events passing", "Absolute frac. [%]", "Relative frac. [%]", "Description")
-            print(header)
-            print("-" * 110)
-            # Print each cut's statistics
-            for stat in stats:
-                row = "{:<20} {:<20} {:<20.2f} {:<20.2f} {:<30}".format(
-                    stat["name"],
-                    stat["events_passing"], 
-                    stat["absolute_frac"], 
-                    stat["relative_frac"], 
-                    stat["description"])
-                print(row)
-            print("-" * 110)
-            
-            # Print final statistics
-            if len(stats) > 1:
-                first_events = stats[0]["events_passing"]
-                last_events = stats[-1]["events_passing"]
-                overall_eff = last_events / first_events * 100 if first_events > 0 else 0
-                
-                self.logger.log(f"Summary: {last_events}/{first_events} events remaining ({overall_eff:.2f}%)", "info")
-
-        # Return DataFrame
         try:
+            # Filter inactive cuts
+            if active_only:
+                active_stats = []
+                for stat in stats:
+                    # Always include "No cuts" entry
+                    if stat["name"] == "No cuts":
+                        active_stats.append(stat)
+                    # Include only active cuts
+                    elif stat.get("active", True): 
+                        active_stats.append(stat)
+                stats = active_stats
+            
             data = []
             for stat in stats:
                 data.append({
-                    'Cut': stat["name"],
-                    'Active': stat.get("active", True),
-                    'Events Passing': stat["events_passing"],
-                    'Absolute Frac. [%]': round(stat["absolute_frac"], 2),
-                    'Relative Frac. [%]': round(stat["relative_frac"], 2),
-                    'Description': stat["description"]
+                    "Cut": stat["name"],
+                    "Events Passing": stat["events_passing"],
+                    "Absolute Frac. [%]": round(stat["absolute_frac"], 2),
+                    "Relative Frac. [%]": round(stat["relative_frac"], 2),
+                    "Description": stat["description"]
                 })
             
             df = pd.DataFrame(data)
@@ -335,28 +240,6 @@ class CutManager:
         except Exception as e:
             self.logger.log(f"Error creating DataFrame: {e}", "error")
             return None
-                
-    def save_cuts(self, file_name):
-        """ Save the current cut configuration to a JSON file.
-        
-        Args:
-            file_name (str): File path to save the configuration
-        """
-        config = {
-            "cuts": {}
-        }
-        
-        for name, info in self.cuts.items():
-            config["cuts"][name] = {
-                "description": info["description"],
-                "active": info["active"],
-                "idx": info["idx"]
-            }
-        
-        with open(file_name, 'w') as f:
-            json.dump(config, f, indent=2)
-
-        self.logger.log(f"Saved cut configuration to {file_name}", "success")
 
     def combine_cut_stats(self, stats_list, active_only=True):
         """Combine a list of cut statistics after multiprocessing 
@@ -395,39 +278,39 @@ class CutManager:
         # Use the template to initialize combined stats
         combined_stats = []
         for cut in template_stats:
-            # Create a copy without the mask (which we don't need)
-            cut_copy = {k: v for k, v in cut.items() if k != 'mask'}
+            # Create a copy without the mask (which we don"t need)
+            cut_copy = {k: v for k, v in cut.items() if k != "mask"}
             # Reset the event count
-            cut_copy['events_passing'] = 0
+            cut_copy["events_passing"] = 0
             combined_stats.append(cut_copy)
         
         # Create a mapping of cut names to indices in combined_stats 
-        cut_name_to_index = {cut['name']: i for i, cut in enumerate(combined_stats)}
+        cut_name_to_index = {cut["name"]: i for i, cut in enumerate(combined_stats)}
         
         # Sum up events_passing for each cut across all files
         for stats in stats_list:  # Now this is filtered!
             for cut in stats:
-                cut_name = cut['name']
+                cut_name = cut["name"]
                 # Only process cuts that are in our combined_stats
                 if cut_name in cut_name_to_index:
                     idx = cut_name_to_index[cut_name]
-                    combined_stats[idx]['events_passing'] += cut['events_passing']
+                    combined_stats[idx]["events_passing"] += cut["events_passing"]
         
         # Recalculate percentages
-        if combined_stats and combined_stats[0]['events_passing'] > 0:
-            total_events = combined_stats[0]['events_passing']
+        if combined_stats and combined_stats[0]["events_passing"] > 0:
+            total_events = combined_stats[0]["events_passing"]
             
             for i, cut in enumerate(combined_stats):
-                events = cut['events_passing']
+                events = cut["events_passing"]
                 
                 # Absolute percentage
-                cut['absolute_frac'] = (events / total_events) * 100.0
+                cut["absolute_frac"] = (events / total_events) * 100.0
                 
                 # Relative percentage
                 if i == 0:  # "No cuts"
-                    cut['relative_frac'] = 100.0
+                    cut["relative_frac"] = 100.0
                 else:
-                    prev_events = combined_stats[i-1]['events_passing']
-                    cut['relative_frac'] = (events / prev_events) * 100.0 if prev_events > 0 else 0.0
+                    prev_events = combined_stats[i-1]["events_passing"]
+                    cut["relative_frac"] = (events / prev_events) * 100.0 if prev_events > 0 else 0.0
         
         return combined_stats
