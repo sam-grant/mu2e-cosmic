@@ -1,6 +1,23 @@
-# mu2e_cosmic_ana
+# mu2e-cosmic
 
-## Overview
+<!-- ## Overview
+
+mu2e-cosmic/
+├── README.md
+├── requirements.txt
+├── src/
+│   ├── __init__.py
+│   ├── core/
+│   └── utils/              
+│       ├── __init__.py
+│       ├── plotting.py
+│       ├── data.py
+│       └── helpers.py
+├── run/
+├── notebooks/
+└── config/
+
+
 
 This repository contains code intended for **analyses of sensitivity to cosmic-ray-induced backgrounds at the Mu2e experiment and the performance of the Cosmic Ray Veto (CRV) system** using both on-spill and off-spill datasets. The analysis framework allows users to explore the cut strategies for signal-like track selection and cosmic ray induced background rejection. 
 
@@ -42,4 +59,4 @@ The tools in this repository were originally developed by **Sam Grant** and exte
   
 ---
 
-This toolkit is designed to be **modular** and **user-friendly** for collaborators working on Mu2e cosmic-ray-induced backgrounds.
+This toolkit is designed to be **modular** and **user-friendly** for collaborators working on Mu2e cosmic-ray-induced backgrounds. -->
