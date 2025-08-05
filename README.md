@@ -1,5 +1,65 @@
 # mu2e-cosmic
 
+```
+├── setup.sh
+├── README.md
+├── src
+│   ├── core
+│   │   ├── analyse.py
+│   │   ├── cut_manager.py
+│   │   ├── __init__.py
+│   │   ├── io_manager.py
+│   │   ├── postprocess.py
+│   │   ├── process.py
+│   ├── __init__.py
+│   └── utils
+│       ├── draw.py
+│       ├── efficiency.py
+│       ├── __init__.py
+│       ├── mu2e.mplstyle
+├── config
+│   ├── ana
+│   │   ├── alpha_CRY_offspill-LH_as.yaml
+│   │   ├── alpha_CRY_onspill-LH_au.yaml
+│   │   ├── alpha_CRY_onspill-LH_aw.yaml
+│   │   ├── alpha_CRY_signal-LH_aq.yaml
+│   │   └── test.yaml
+│   └── common
+│       └── cuts.yaml
+├── run
+│   ├── alpha_CRY_offspill-LH_as.log
+│   ├── alpha_CRY_onspill-LH_au.log
+│   ├── alpha_CRY_onspill-LH_aw.log
+│   ├── alpha_CRY_signal-LH_aq.log
+│   ├── run.py
+│   ├── run.sh
+│   └── run_test.py
+├── notebooks
+│   ├── ana
+│   │   ├── ana_template.ipynb
+│   │   ├── ana_test.ipynb
+│   ├── comp
+│   │   ├── count_tracks.ipynb
+│   │   ├── tandip.ipynb
+│   │   ├── test.csv
+│   │   ├── test_lhrmax_indexing.ipynb
+│   │   ├── track_cuts_1.ipynb
+│   │   ├── track_cuts_2.ipynb
+│   │   └── trkqual_and_t0.ipynb
+│   └── models
+│       ├── 1e-4efficiencyplot.ipynb
+│       ├── ineff_uncertainty_wilson.png
+│       ├── IneffUncvsWallTime.png
+│       ├── ineff_vs_walltime.ipynb
+│       ├── IneffvWalltime.ipynb
+│       ├── walltime_offspill_as_alpha.ipynb
+│       └── walltime_offspill_as_beta.ipynb
+├── output
+│   ├── images -> /exp/mu2e/data/users/sgrant/mu2e-cosmic/images
+│   ├── logs -> /exp/mu2e/data/users/sgrant/mu2e-cosmic/logs
+│   └── results -> /exp/mu2e/data/users/sgrant/mu2e-cosmic/results
+```
+
 <!-- ## Overview
 
 mu2e-cosmic/
