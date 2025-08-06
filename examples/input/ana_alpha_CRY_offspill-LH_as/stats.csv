@@ -1,0 +1,15 @@
+Cut,Events Passing,Absolute Frac. [%],Relative Frac. [%],Description
+No cuts,5754129,100.0,100.0,No selection applied
+is_reco_electron,5351815,93.01,93.01,Electron track fits
+has_trk_front,5246599,91.18,98.03,Tracks intersect tracker entrance
+good_trkqual,985883,17.13,18.79,Track fit quality > 0.8
+is_downstream,675042,11.73,68.47,Downstream tracks (p_z > 0 at tracker entrance)
+has_hits,673612,11.71,99.79,>20 active tracker hits
+within_d0,133000,2.31,19.74,Distance of closest approach (d_0 < 100 mm)
+within_pitch_angle,69885,1.21,52.55,Extrapolated pitch angle (0.557735 < tan(theta_Dip) < 1.0)
+within_lhr_max,55915,0.97,80.01,Loop helix maximum radius (450 < R_max < 680 mm)
+is_truth_electron,35469,0.62,63.43,Track parents are electrons (truth PID)
+one_reco_electron,19428,0.34,54.77,One reco electron / event
+unvetoed,7,0.0,0.04,No veto: |dt| >= 150 ns
+within_ext_win,1,0.0,14.29,Extended window (100 < p < 110 MeV/c)
+within_sig_win,0,0.0,0.0,Signal window (103.6 < p < 104.9 MeV/c)

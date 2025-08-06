@@ -1,0 +1,56 @@
+  Index:            9
+  Subrun:           [4846]
+  Event:            [283585]
+  File:             nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00000075.root
+  Track time [ns]:  59076.573926
+  Coinc time [ns]:  None
+  dt [ns]:          N/A
+----------------------------------------
+  Index:            195
+  Subrun:           [18802]
+  Event:            [50292]
+  File:             nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00015287.root
+  Track time [ns]:  86861.975560
+  Coinc time [ns]:  None
+  dt [ns]:          N/A
+----------------------------------------
+  Index:            218
+  Subrun:           [19742]
+  Event:            [359830]
+  File:             nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00015581.root
+  Track time [ns]:  31331.604162
+  Coinc time [ns]:  None
+  dt [ns]:          N/A
+----------------------------------------
+  Index:            236
+  Subrun:           [23219]
+  Event:            [61287]
+  File:             nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00020143.root
+  Track time [ns]:  69952.545425
+  Coinc time [ns]:  None
+  dt [ns]:          N/A
+----------------------------------------
+  Index:            285
+  Subrun:           [29493]
+  Event:            [178482]
+  File:             nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00024992.root
+  Track time [ns]:  48105.620811
+  Coinc time [ns]:  None
+  dt [ns]:          N/A
+----------------------------------------
+  Index:            364
+  Subrun:           [37020]
+  Event:            [103500]
+  File:             nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00033246.root
+  Track time [ns]:  27292.053050
+  Coinc time [ns]:  27124.876953
+  dt [ns]:          167.176097
+----------------------------------------
+  Index:            769
+  Subrun:           [78889]
+  Event:            [161916]
+  File:             nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00070146.root
+  Track time [ns]:  59258.775336
+  Coinc time [ns]:  None
+  dt [ns]:          N/A
+----------------------------------------
