@@ -9,41 +9,23 @@ import yaml
 import shutil
 import argparse
 from pathlib import Path
+
 # Mu2e
 from pyutils.pylogger import Logger
-# Internal
+
+# Internal (core)
 sys.path.append("../src/core")
 from process import CosmicProcessor 
 from postprocess import PostProcess 
-from io_manager import Write
+
+# Internal (utils)
 sys.path.append("../src/utils")
+from config_manager import ConfigManager
+from io_manager import Write
 from run_logger import RunLogger
 
 # Create logger once at module level
 logger = Logger(print_prefix="[run]")
-
-def load_config(config_path):
-    """Load config with fallback locations"""
-    
-    # List of paths to try (in order)
-    paths = [
-        config_path,                                    # User-provided path
-        os.path.join("../config/ana", config_path),     # Relative fallback
-        os.path.join("config", "ana", config_path),     # From repo root
-        os.path.join(os.path.dirname(__file__), "..", "..", "config", "ana", config_path)  # Script-relative
-    ]
-    
-    # Iterate through paths
-    for path in paths:
-        if os.path.exists(path):
-            logger.log(f"Loading config from: {path}", "info")
-            with open(path, "r") as f:
-                config = yaml.safe_load(f)
-                # Return both config and the actual path used
-                return config, os.path.abspath(path)
-    
-    # If we get here, file wasn't found anywhere
-    raise FileNotFoundError(f"Config file '{config_path}' not found in any of: {paths}")
 
 def main():
     """Run core analysis"""
@@ -60,17 +42,15 @@ def main():
     # Set up logging (always enabled)
     tee = RunLogger(log_file_path)
     sys.stdout = tee
-    # sys.stderr = tee  # Also capture tqdm progress bars
     
     try:
-        # Load configuration, returns both config and path
-        config, actual_config_path = load_config(args.config)
-        
-        config_str = yaml.dump(config, default_flow_style=False, indent=2)
-        logger.log(f"Starting analysis with configuration:\n{config_str}", "info")
+        # Load configuration from manager
+        config_manager = ConfigManager(args.config)
+        config = config_manager.config
+        actual_config_path = config_manager.config_path
         
         # Initialise processor with config parameters
-        cosmic_processor = CosmicProcessor(**config["processor"]) 
+        cosmic_processor = CosmicProcessor(**config["process"]) 
         
         # Run main processing and analysis
         results_per_file = cosmic_processor.execute()
@@ -83,7 +63,7 @@ def main():
         
         # Save results
         writer = Write(**config["output"])
-        writer.save_all(results)
+        writer.write_all(results)
         
         # Create output directory
         out_path = Path(config["output"]["out_path"])
@@ -98,7 +78,7 @@ def main():
             shutil.copy2(log_file_path, out_path / log_filename)
             logger.log(f"Copied log file to {out_path / log_filename}", "info")
         
-        logger.log(f"Analysis complete, wrote results to {config['output']['out_path']}", "success")
+        logger.log(f"Analysis complete, wrote results to {config["output"]["out_path"]}", "success")
         
     except Exception as e:
         logger.log(f"Analysis failed: {e}", "error")

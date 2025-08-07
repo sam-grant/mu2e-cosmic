@@ -5,10 +5,10 @@
 # The configuration is divided into three main sections: 
 # processor settings, postprocessing options, and output paths.
 # 
-# Naming: <cutset_name>_<dataset>.yaml
-#
+# Naming: <cutset_name>_<generator>_<spill-reco>_<MDC-tag>.yaml
+# E.g.: alpha_CRY_offspill-LH_as.yaml
 
-processor:
+process:
     # See src/core/process.py
     # Args:
     #     defname (str, opt): Dataset definition name. Defaults to None.
@@ -27,9 +27,16 @@ processor:
     use_remote: false
 
 postprocess:
-    # info should be false when running with no veto or loose cuts
-    info: true
+    # See src/core/postprocess.py
+    # Args:
+    #     write_events (bool, opt): Write background event info. Defaults to False.
+    #     generated_events (int, opt): Number of generated events. Defaults to 4e6.
+    #     veto (bool, opt): Whether running with CRV veto. Defaults to True.
+    #     wilson (bool, opt): Whether to use Wilson or Poisson for efficiency uncertainty. Defaults to True.
+    #     verbosity (int, opt): Printout level. Defaults to 1.
+    write_events: true
+    generated_events: 4926
 
 output:
-    # Define a unique output path
-    out_path: "../out/results/test"
+    # Define a unique output path relative to the run directory
+    out_path: "../output/results/test"

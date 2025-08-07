@@ -14,12 +14,16 @@ from pyutils.pyselect import Select
 from pyutils.pyvector import Vector
 from pyutils.pylogger import Logger
 from pyutils.pyprint import Print
+
+# Add relative path to utils
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(script_dir, "..", "utils"))
 from cut_manager import CutManager
 
 class Analyse:
-    """Class to handle analysis functions
+    """Class to handle analysis method and flow
     """
-    def __init__(self, on_spill=False, cut_config_path="../config/common/cuts.yaml", cutset_name="alpha", verbosity=1):
+    def __init__(self, on_spill=False, cut_config_path="../../config/common/cuts.yaml", cutset_name="alpha", verbosity=1):
         """Initialise the analysis handler
         
         Args:
@@ -43,7 +47,10 @@ class Analyse:
             verbosity=self.verbosity
         )
 
+        # TODO: put load_cuts in config_manager.py or cut_manager.py, whichever makes more sense.
+
         # Helper sets cut parameters, self.track_pdg, self.lo_nactive, etc.
+        self.cut_config = {"description": "FAILED TO LOAD"}  # Default fallback
         self._load_cuts()
         
         self.logger.log(
@@ -56,61 +63,59 @@ class Analyse:
         )
 
     def _load_cuts(self):
-        """Load cut configuration from YAML. Supports baseline + derived cutsets."""
-        try:
-            # Find cut config file
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            default_path = os.path.join(script_dir, "../config", "common", "cuts.yaml")
-    
-            # Resolve path
-            cut_config_path = os.path.expanduser(self.cut_config_path or default_path)
-            if not os.path.exists(cut_config_path):
-                self.logger.log(f"Cut config file not found: {cut_config_path}", "error")
-                return None
-    
+        """Load cut configuration from YAML. Supports baseline and derived cutsets."""
+
+        # Resolve path to cut config file
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        cut_config_path = os.path.join(script_dir, self.cut_config_path or "../../config/common/cuts.yaml")
+        
+        if not os.path.exists(cut_config_path):
+            self.logger.log(f"Cut config file not found: {cut_config_path}", "error")
+            sys.exit(1) # Stop process
+        else:
             self.cut_config_path = cut_config_path
-    
-            # Load YAML
-            with open(self.cut_config_path, "r") as f:
-                config = yaml.safe_load(f)
-    
-            # Check if baseline exists
-            if "defaults" not in config:
-                self.logger.log("No 'baseline' configuration found in YAML", "error")
-                return False
-    
-            # Start with baseline config
-            if self.cutset_name == "defaults":
-                final_config = config["defaults"]
-            else:
-                # Check if cutset exists
-                if "cutsets" not in config or self.cutset_name not in config["cutsets"]:
-                    self.logger.log(f"Cutset '{self.cutset_name}' not found in config", "error")
-                    return False
-                
-                # Deep copy baseline to avoid modifying original
-                final_config = copy.deepcopy(config["defaults"])
-                override_config = config["cutsets"][self.cutset_name]
-    
-                # Merge overrides
-                for section in ["thresholds", "active"]:
-                    if section in override_config:
-                        final_config[section].update(override_config[section])
-                
-                # Update description if provided
-                if "description" in override_config:
-                    final_config["description"] = override_config["description"]
-    
-            # Assign internal variables
-            self.thresholds = final_config["thresholds"]
-            self.active_cuts = final_config["active"]
-            self.cut_config = final_config
-    
-            return True
-    
-        except Exception as e:
-            self.logger.log(f"Error loading cuts: {e}", "error")
-            return False
+
+        # Load YAML
+        with open(self.cut_config_path, "r") as f:
+            config = yaml.safe_load(f)
+
+        # Check if baseline exists
+        if "defaults" not in config:
+            self.logger.log("No 'baseline' configuration found in YAML", "error")
+            sys.exit(1) # Stop process
+
+        # Start with baseline config
+        if self.cutset_name == "defaults":
+            final_config = config["defaults"]
+        else:
+            # Check if cutset exists
+            if "cutsets" not in config or self.cutset_name not in config["cutsets"]:
+                self.logger.log(f"Cutset '{self.cutset_name}' not found in config", "error")
+                sys.exit(1) # Stop process
+            
+            # Deep copy baseline to avoid modifying original
+            final_config = copy.deepcopy(config["defaults"])
+            override_config = config["cutsets"][self.cutset_name]
+
+            # Merge overrides
+            for section in ["thresholds", "active"]:
+                if section in override_config:
+                    final_config[section].update(override_config[section])
+            
+            # Update description if provided
+            if "description" in override_config:
+                final_config["description"] = override_config["description"]
+
+        # Assign internal variables
+        self.thresholds = final_config["thresholds"]
+        self.active_cuts = final_config["active"]
+        self.cut_config = final_config
+
+        # return True
+
+    # except Exception as e:
+    #     self.logger.log(f"Error loading cuts: {e}", "error")
+    #     return False
             
     def define_cuts(self, data, cut_manager):
         """Define analysis cuts
@@ -124,11 +129,11 @@ class Analyse:
 
         * All cuts need to be defined at track level
         * Tracking algorthm fits upstream/downstream muon/electrons and then uses trkqual find the correct fit hypthosis
-        * For track-level masks I often use ak.all(~at_trk_front | trksegs_condition, axis=-1), which requires that all
+        * For track-level masks I use ak.all(~at_trk_front | trksegs_condition, axis=-1), which requires that all
         segments at the tracker entrance fulfill this condition. I think this is more robust than ak.any(at_trk_front &
         trksegs_condition, axis=-1), since it implicitly handles reflections. 
+        
         """
-
         ###################################################
         # 1. Select electron track fit hypothesis  
         ###################################################
@@ -146,7 +151,7 @@ class Analyse:
             data["is_reco_electron"] = is_reco_electron
         except Exception as e:
             self.logger.log(f"Error defining 'is_reco_electron': {e}", "error") 
-            return None  
+            raise  
 
         ###################################################
         # 2. Tracks intersect tracker entrance
@@ -172,7 +177,7 @@ class Analyse:
             data["has_trk_front"] = has_trk_front
         except Exception as e:
             self.logger.log(f"Error defining 'has_trk_front': {e}", "error") 
-            return None  
+            raise 
             
         ###################################################
         # 3. Track fit hypothesis quality
@@ -191,9 +196,8 @@ class Analyse:
             data["good_trkqual"] = good_trkqual
         except Exception as e:
             self.logger.log(f"Error defining 'good_trkqual': {e}", "error") 
-            return None  
-            
-
+            raise  
+        
         ###################################################
         # 4. Time at tracker entrance (t0)
         ###################################################
@@ -216,7 +220,7 @@ class Analyse:
                 data["within_t0"] = within_t0
         except Exception as e:
             self.logger.log(f"Error defining 'within_t0': {e}", "error") 
-            return None  
+            raise  
 
         ###################################################
         # 5. Downstream tracks at the tracker entrance 
@@ -237,7 +241,7 @@ class Analyse:
             data["is_downstream"] = is_downstream
         except Exception as e:
             self.logger.log(f"Error defining 'is_downstream': {e}", "error") 
-            return None  
+            raise  
 
         ###################################################
         # 6. Minimum active hits
@@ -256,7 +260,7 @@ class Analyse:
             data["has_hits"] = has_hits
         except Exception as e:
             self.logger.log(f"Error defining 'has_hits': {e}", "error") 
-            return None  
+            raise 
             
         ###################################################
         # 7. Extrapolated distance of closest approach
@@ -279,7 +283,7 @@ class Analyse:
             data["within_d0"] = within_d0
         except Exception as e:
             self.logger.log(f"Error defining 'within_d0': {e}", "error") 
-            return None  
+            raise  
 
         ###################################################
         # 8. Pitch angle
@@ -309,7 +313,7 @@ class Analyse:
             data["within_pitch_angle"] = within_pitch_angle
         except Exception as e:
             self.logger.log(f"Error defining 'within_pitch_angle': {e}", "error") 
-            return None  
+            raise  
 
         ###################################################
         # 9. Loop helix maximimum radius 
@@ -332,7 +336,7 @@ class Analyse:
             data["within_lhr_max"] = within_lhr_max
         except Exception as e:
             self.logger.log(f"Error defining 'within_lhr_max': {e}", "error") 
-            return None  
+            raise 
             
         ###################################################
         # 10. Track "PID" from truth track parents 
@@ -354,7 +358,7 @@ class Analyse:
             data["is_truth_electron"] = has_trk_parent_electron
         except Exception as e:
             self.logger.log(f"Error defining 'is_truth_electron': {e}", "error") 
-            return None  
+            raise  
 
         ###################################################
         # 11. One electron track fit / event 
@@ -378,7 +382,7 @@ class Analyse:
             data["one_reco_electron_per_event"] = one_reco_electron_per_event
         except Exception as e:
             self.logger.log(f"Error defining 'one_reco_electron': {e}", "error") 
-            return None  
+            raise   
 
         ###################################################
         # 12. CRV veto: |dt| < 150 ns 
@@ -414,7 +418,7 @@ class Analyse:
             data["unvetoed"] = ~veto
         except Exception as e:
             self.logger.log(f"Error defining 'unvetoed': {e}", "error") 
-            return None  
+            raise  
 
         ###################################################
         # 13. Extended window 
@@ -438,7 +442,7 @@ class Analyse:
             data["within_ext_win"] = within_ext_win
         except Exception as e:
             self.logger.log(f"Error defining 'within_ext_win': {e}", "error") 
-            return None 
+            raise 
 
         ###################################################
         # 14. Signal window 
@@ -463,7 +467,7 @@ class Analyse:
             data["within_sig_win"] = within_sig_win
         except Exception as e:
             self.logger.log(f"Error defining 'within_sig_win': {e}", "error") 
-            return None 
+            raise 
 
         # Done 
         self.logger.log("All cuts defined", "success")
@@ -510,7 +514,7 @@ class Analyse:
             
         except Exception as e:
             self.logger.log(f"Error applying cuts: {e}", "error") 
-            return None
+            raise
             
     def create_histograms(self, data, data_CE, data_CE_unvetoed): # , data_CE_ext, data_CE_sig):
         
@@ -527,9 +531,6 @@ class Analyse:
         hist_labels = ["All", "CE-like", "Unvetoed"]
 
         try: 
-
-            #### Create histogram objects:
-        
             # Full momentum range histogram
             h1_mom_full_range = hist.Hist(
                 hist.axis.Regular(30, 0, 300, name="momentum", label="Momentum [MeV/c]"),
@@ -556,7 +557,7 @@ class Analyse:
 
             # Process and fill selection
             # Is there a better way?
-            def _fill_selection(data, label): 
+            def fill_selection(data, label): 
                 """ Nested helper function to fill hists """
                 
                 # Tracks must be electron candidates at the tracker entrance
@@ -590,10 +591,10 @@ class Analyse:
                 gc.collect()
                     
             # Fill histograms
-            _fill_selection(data, hist_labels[0]) 
-            _fill_selection(data_CE, hist_labels[1])
+            fill_selection(data, hist_labels[0]) 
+            fill_selection(data_CE, hist_labels[1])
             if len(data_CE_unvetoed) > 0:
-                _fill_selection(data_CE_unvetoed, hist_labels[2])
+                fill_selection(data_CE_unvetoed, hist_labels[2])
             
             self.logger.log("Histograms filled", "success")
 
@@ -611,7 +612,7 @@ class Analyse:
         except Exception as e:
             # Handle any errors that occur during processing
             self.logger.log(f"Error filling histograms: {e}", "error")
-            return None
+            raise
 
     def execute(self, data, file_id, cuts_to_toggle=None):
         """Perform complete analysis on an array
@@ -637,22 +638,23 @@ class Analyse:
             #     data = data[mask]
             
             # Define cuts
-            self.logger.log("Defining cuts", "max")
+            self.logger.log(f"Defining cuts", "max")
             self.define_cuts(data, cut_manager)
 
             # Toggle cuts
             if cuts_to_toggle: 
+                self.logger.log(f"Toggling cuts", "max")
                 cut_manager.toggle_cut(cuts_to_toggle) 
 
             # Retrieve initial veto status (for cut plots)
             veto = cut_manager.cuts["unvetoed"]["active"]
             
-            # Calculate full cut statistics
-            self.logger.log("Getting cut stats", "max")
-            cut_stats = cut_manager.calculate_cut_stats(data, progressive=True, active_only=True)
+            # Create cut flow
+            self.logger.log("Creating cut flow", "max")
+            cut_flow = cut_manager.create_cut_flow(data)
             
             # Apply CE-like cuts (without veto & momentum windows)
-            self.logger.log("Applying cuts", "max")
+            self.logger.log("Applying CE-like cuts", "max")
             # Turn off veto and momentum windows
             cut_manager.toggle_cut(
                 {
@@ -683,11 +685,12 @@ class Analyse:
             )
 
             # Store results
+            self.logger.log("Creating result", "max")
             result = {
                 "id": file_id,
-                "stats": cut_stats,
-                "data": data_CE_unvetoed if veto else data_CE, 
-                "hists": histograms
+                "cut_flow": cut_flow,
+                "hists": histograms,
+                "events": data_CE_unvetoed if veto else data_CE
             }
             
             self.logger.log("Analysis completed", "success")
@@ -696,4 +699,4 @@ class Analyse:
             
         except Exception as e:
             self.logger.log(f"Error during analysis execution: {e}", "error")  
-            return None
+            raise

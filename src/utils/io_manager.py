@@ -25,9 +25,9 @@ class Write:
             verbosity=verbosity
         )
 
-        self.logger.log(f"Initialised", "success")
+        self.logger.log(f"Initialised with out_path={out_path}", "success")
 
-    def save_all_pkl(self, results, out_name="results.pkl"):
+    def write_pkl(self, results, out_name="results.pkl"):
         """Save all analysis outputs to pickle.
 
         Note that pickle provides limited portability. 
@@ -44,36 +44,58 @@ class Write:
             # Confirm 
             self.logger.log(f"Wrote results {out_path}", "success")
         except Exception as e: 
-            self.logger.log(f"Failed to write results to pickle: {e}", "error")            
+            self.logger.log(f"Failed to write results to pickle: {e}", "error")      
 
-    def save_events_parquet(self, events, out_name="events.parquet"):
-        """Save filtered awkward array to Parquet
-            Args: 
-                data (ak.Array): Awkward array.
-                out_name (str, opt): Output file name. Defaults to "events.parquet".
-        
+    def _write_df_to_csv(self, df, out_name):
+        """Helper to write DataFrame to CSV
+
+        Args: 
+            df (pd.DataFrame): DataFrame.
+            out_name (str): Output file name. 
+        """
+        # Define output file 
+        out_path = os.path.join(self.out_path, out_name)
+        # Convert to DataFrame if not already one
+        if not isinstance(df, pd.DataFrame):
+           df = pd.DataFrame(df)
+        # Open and write file
+        df.to_csv(out_path, index=False)
+        # Pass out_path back for logging
+        return out_path
+            
+    def write_cut_flow_csv(self, df_cut_flow, out_name="cut_flow.csv"):
+        """Save cut flow  to CSV
+
+        Args: 
+            df_cut_flow (pd.DataFrame): Cut flow.
+            out_name (str, opt): Output file name. Defaults to "stats.csv". 
         """
         try:
-            # Check if we have events
-            if events is None or len(events) == 0:
-                self.logger.log("No events to save", "warning")
-                return
-            # Define full output file path
-            out_path = os.path.join(self.out_path, out_name)
-            ak.to_parquet(events, out_path)
-            self.logger.log(f"Wrote events {out_path}", "success")
-        except Exception as e1:
-            print(f"Error saving awkward array: {e1}")
-            # Fallback
-            try:
-                self.logger.log("Attempting to save with arrow conversion", "info")
-                table = ak.to_arrow_table(events)
-                pq.write_table(table, out_path)
-            except Exception as e2:
-                self.logger.log(f"Fallback failed {e2}", "error")
-                return # raise
+            # Write
+            out_path = self._write_df_to_csv(df_cut_flow, out_name)
+            # Confirm
+            self.logger.log(f"Wrote cut flow to {out_path}", "success")
+        except Exception as e:
+            self.logger.log(f"Failed to write cut flow: {e}", "error")
+            raise
 
-    def save_hists_h5(self, hists, out_name="hists.h5"):
+    def write_efficiency_csv(self, df_eff, out_name="efficiency.csv"):
+        """Save efficiency info to CSV
+
+        Args: 
+            df_eff (pd.DataFrame): Efficiency info.
+            out_name (str, opt): Output file name. Defaults to "efficiency.csv". 
+        """
+        try:
+            # Write
+            out_path = self._write_df_to_csv(df_eff, out_name)
+            # Confirm
+            self.logger.log(f"Wrote cut flow to {out_path}", "success")
+        except Exception as e:
+            self.logger.log(f"Failed to write efficiency info: {e}", "error")
+            raise
+
+    def write_hists_h5(self, hists, out_name="hists.h5"):
         """Save histogram selection to ROOT
             Args: 
                 hists: Selection of histogram objects.
@@ -110,25 +132,36 @@ class Write:
                 self.logger.log(f"Wrote histograms to {out_path}", "success")
         except Exception as e: 
             self.logger.log(f"Failed to write histograms: {e}", "error")
-            
-    def save_stats_csv(self, stats, out_name="stats.csv"):
-        """Save cut stats info to CSV
+            raise
 
-        Args: 
-            stats (pd.DataFrame): Cut statistics.
-            out_name (str, opt): Output file name. Defaults to "stats.csv". 
+    def write_events_parquet(self, events, out_name="events.parquet"):
+        """Save filtered awkward array to Parquet
+            Args: 
+                data (ak.Array): Awkward array.
+                out_name (str, opt): Output file name. Defaults to "events.parquet".
+        
         """
         try:
-            # Define output file 
+            # Check if we have events
+            if events is None or len(events) == 0:
+                self.logger.log("No events to save", "warning")
+                return
+            # Define full output file path
             out_path = os.path.join(self.out_path, out_name)
-            # Open and write file
-            stats.to_csv(out_path, index=False)
-            # Confirm
-            self.logger.log(f"Wrote cut stats to {out_path}", "success")
-        except Exception as e:
-            self.logger.log(f"Failed to cut stats: {e}", "error")
+            ak.to_parquet(events, out_path)
+            self.logger.log(f"Wrote events {out_path}", "success")
+        except Exception as e1:
+            print(f"Error saving awkward array: {e1}")
+            # Fallback
+            try:
+                self.logger.log("Attempting to save with arrow conversion", "info")
+                table = ak.to_arrow_table(events)
+                pq.write_table(table, out_path)
+            except Exception as e2:
+                self.logger.log(f"Fallback failed {e2}", "error")
+                raise
 
-    def save_info_txt(self, info, out_name="info.txt"):
+    def write_info_txt(self, info, out_name="info.txt"):
         """Save background event info to txt
         Args: 
             info (str): Background event info.
@@ -150,18 +183,26 @@ class Write:
         except Exception as e:
             self.logger.log(f"Failed to write info: {e}", "error")
 
-    def save_all(self, results):
+    def write_all(self, results):
         self.logger.log(f"Saving all", "info")
+        
         self.logger.log(f"Writing all results to pickle", "info")
-        self.save_all_pkl(results)
-        self.logger.log(f"Writing events to parquet", "info")
-        self.save_events_parquet(results["events"])
+        self.write_pkl(results)
+        
+        self.logger.log(f"Writing cut flow to csv", "info")
+        self.write_cut_flow_csv(results["cut_flow"])
+        
         self.logger.log(f"Writing hists to h5", "info")
-        self.save_hists_h5(results["hists"])
-        self.logger.log(f"Writing stats to csv", "info")
-        self.save_stats_csv(results["stats"])
-        self.logger.log(f"Writing info to txt", "info")
-        self.save_info_txt(results["info"])
+        self.write_hists_h5(results["hists"])
+
+        self.logger.log(f"Writing efficiency info to csv", "info")
+        self.write_efficiency_csv(results["efficiency"])
+        
+        self.logger.log(f"Writing background events to parquet", "info")
+        self.write_events_parquet(results["events"])
+
+        self.logger.log(f"Writing background info to txt", "info")
+        self.write_info_txt(results["event_info"])
 
 class Load:
     def __init__(self, in_path="test_out", verbosity=1):
@@ -176,20 +217,14 @@ class Load:
             verbosity=verbosity
         )
 
-        self.logger.log(f"Initialised", "success")
+        self.logger.log(f"Initialised with out_path={in_path}", "success")
 
     def _get_path(self, in_name):
         """Helper to get the full file path""" 
-        # Define input file path
-        in_path = os.path.join(self.in_path, in_name)
-        # Check if file exists
-        if not os.path.exists(in_path):
-            self.logger.log(f"File not found: {in_path}", "error")
-            return None
-        else: 
-            return in_path
+        # Return input file path
+        return os.path.join(self.in_path, in_name)
 
-    def load_all_pkl(self, in_name="results.pkl"):
+    def load_pkl(self, in_name="results.pkl"):
         """Load all analysis outputs from pickle file.
         
         Note that pickle provides limited portability.
@@ -214,9 +249,9 @@ class Load:
             
         except Exception as e:
             self.logger.log(f"Failed to load results from pickle: {e}", "error")
-            return None
-        
-    def load_events_parquet(self, in_name="events.parquet"):
+            raise
+
+    def load_array_parquet(self, in_name="events.parquet"):
         """Load awkward array from Parquet
 
         Args:
@@ -225,24 +260,30 @@ class Load:
         try:
             # Get path
             in_path = self._get_path(in_name)
-            # Load events
-            events = ak.from_parquet(in_path)
+            
+            # Check if file exists
+            if not os.path.exists(in_path):
+                self.logger.log(f"File not found: {in_path}", "warning")
+                return None # expected if no events
+                
+            # Load array
+            array = ak.from_parquet(in_path)
             # Confirm successful load
-            self.logger.log(f"Successfully loaded hists from {in_path}", "success")
-            return events
+            self.logger.log(f"Successfully loaded ak.Array from {in_path}", "success")
+            return array
         except Exception as e:
             print(f"Error loading awkward array: {e}")
             # Fallback: try with arrow
             try:
                 table = pq.read_table(in_path)
-                events = ak.from_arrow(table)
+                array = ak.from_arrow(table)
                 # Confirm successful load
                 self.logger.log(f"Successfully loaded hists from {in_path}", "success")
                 return events
             except Exception as e2:
                 print(f"Fallback also failed: {e2}")
-                return # raise 
-
+                raise
+                
     def load_hists_h5(self, in_name="hists.h5"):
         """Load histogram dictionary from HDF5"""
         try: 
@@ -255,7 +296,7 @@ class Load:
             # Check if file exists
             if not os.path.exists(in_path):
                 self.logger.log(f"File not found: {in_path}", "error")
-                return None
+                raise
                 
             # Open file
             with h5py.File(in_path, "r") as f:
@@ -317,37 +358,68 @@ class Load:
 
         except Exception as e:
             self.logger.log(f"Failed to load histograms: {e}", "error")
-            return None
+            raise
 
-    def load_stats_csv(self, in_name="stats.csv"):
+    def _load_csv(self, in_name):
+        """Load CSV to DataFrame.
+        
+        Args:
+            in_name (str, opt): Input file name.
+            
+        Returns:
+            pd.DataFrame
+        """
+        # Define input file path
+        in_path = self._get_path(in_name)
+        
+        # Check if file exists
+        if not os.path.exists(in_path):
+            self.logger.log(f"File not found: {in_path}", "error")
+            raise
+            
+        # Return DataFrame and path
+        return pd.read_csv(in_path), in_path
+            
+    def load_cut_flow_csv(self, in_name="cut_flow.csv"):
         """Load cut stats info from CSV file.
         
         Args:
             in_name (str, opt): Input file name. Defaults to "stats.csv".
             
         Returns:
-            pd.DataFrame: Loaded cut statistics, or None if loading failed.
+            pd.DataFrame: Loaded cut flow.
         """
         try:
-            # Define input file path
-            in_path = self._get_path(in_name)
-            
-            # Check if file exists
-            if not os.path.exists(in_path):
-                self.logger.log(f"File not found: {in_path}", "error")
-                return None
-                
-            # Load CSV file
-            stats = pd.read_csv(in_path)
-            
+            # Load
+            df_cut_flow, in_path = self._load_csv(in_name)
             # Confirm successful load
             self.logger.log(f"Loaded cut stats from {in_path}", "success")
-            return stats
+            return in_path
             
         except Exception as e:
-            self.logger.log(f"Failed to load cut stats: {e}", "error")
-            return None
+            self.logger.log(f"Failed to load cut flow: {e}", "error")
+            raise
 
+    def load_efficiency_csv(self, in_name="efficiency.csv"):
+        """Load efficiency info from CSV file.
+        
+        Args:
+            in_name (str, opt): Input file name. Defaults to "efficiency.csv".
+            
+        Returns:
+            pd.DataFrame: Loaded efficiency info.
+        """
+        try:
+            # Load
+            df_eff, in_path = self._load_csv(in_name)
+            # Confirm successful load
+            self.logger.log(f"Loaded efficiency info from {in_path}", "success")
+            return df_eff
+            
+        except Exception as e:
+            self.logger.log(f"Failed to efficiency info: {e}", "error")
+            raise
+            
     def load_info_txt(self, in_name="info.txt"):
         """Load info from plain text file.
         
@@ -363,7 +435,7 @@ class Load:
             
             # Check if file exists
             if not os.path.exists(in_path):
-                self.logger.log(f"File not found: {in_path}", "error")
+                self.logger.log(f"File not found: {in_path}", "warning")
                 return None
                 
             # Load text file
@@ -376,7 +448,7 @@ class Load:
             
         except Exception as e:
             self.logger.log(f"Failed to load info: {e}", "error")
-            return None
+            raise # no file is expected if no events
 
     def load_all(self):
         """Load all from persistent storage
@@ -384,9 +456,11 @@ class Load:
         Returns:
             results (dict)
         """
-        results = {}
-        results["events"] = self.load_events_parquet()
-        results["hists"] = self.load_hists_h5()
-        results["stats"] = self.load_stats_csv()
-        results["info"] = self.load_info_txt()
-        return results
+        return {
+            "cut_flow": self.load_cut_flow_csv(),
+            "hists": self.load_hists_h5(), 
+            "efficiency": self.load_efficiency_csv(),
+            "events": self.load_array_parquet(),
+            "event_info": self.load_info_txt()
+        }
+        

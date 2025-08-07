@@ -1,12 +1,13 @@
+# External
+import sys
+import gc
+
 # pyutils 
 from pyutils.pyprocess import Processor, Skeleton
 from pyutils.pylogger import Logger
 
 # mu2e_cosmic_ana
 from analyse import Analyse
-
-# External
-import gc
 
 class CosmicProcessor(Skeleton):
     """Class for core data processing
@@ -168,5 +169,5 @@ class CosmicProcessor(Skeleton):
         
         except Exception as e:
             # Report any errors that occur during processing
-            self.logger.log(f"Error processing {file_name}: {e}", "success")
-            return None
+            self.logger.log(f"Error processing {file_name}: {e}", "error")
+            raise

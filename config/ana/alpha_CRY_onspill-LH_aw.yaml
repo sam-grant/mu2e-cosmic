@@ -27,9 +27,15 @@ processor:
     on_spill: true
 
 postprocess:
-    # info should be false when running with no veto or loose cuts
-    info: true
+    # See src/core/postprocess.py
+    # Args:
+    #     write_events (bool, opt): Write background event info. Defaults to False.
+    #     generated_events (int, opt): Number of generated events. Defaults to 4e6.
+    #     veto (bool, opt): Whether running with CRV veto. Defaults to True.
+    #     wilson (bool, opt): Whether to use Wilson or Poisson for efficiency uncertainty. Defaults to True.
+    #     verbosity (int, opt): Printout level. Defaults to 1.
+    write_events: true
 
 output:
     # Define a unique output path relative to script directory
-    out_path: "../output/results/ana_alpha_CRY_onspill-LH_aw"
+    out_path: "../output/results/alpha_CRY_onspill-LH_aw"

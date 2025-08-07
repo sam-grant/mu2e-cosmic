@@ -1,5 +1,11 @@
+import os
 import matplotlib.pyplot as plt
-plt.style.use("mu2e.mplstyle")
+# Get the directory where draw.py is located
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# Style file is in the same directory
+style_path = os.path.join(current_dir, "mu2e.mplstyle")
+# Use style
+plt.style.use(style_path)
 from matplotlib.ticker import ScalarFormatter
 
 from analyse import Analyse

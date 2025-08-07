@@ -43,14 +43,16 @@ class Efficiency():
         lower, upper = proportion_confint(k, N, alpha=alpha, method="wilson")
         return (upper - lower) / 2 # half the interval 
 
-    def _append_result_to_df(self, results, label, k, N, eff, eff_err):
-        """Add efficiency result to DataFrame list."""
+    def _append_result(self, results, label, k, N, eff, eff_err):
+        """Add efficiency result to result list."""
+        # def to_sig_figs(x, n=4):
+        #     return float(f"{float(x):.{n}g}")
         result = {
             "Type": label,
             "Events Passing (k)": k,
             "Total Events (N)": N,
-            "Efficiency [%]": eff * 100,
-            "Efficiency Error [%]": eff_err * 100
+            "Efficiency [%]": round(float(eff * 100), 2),
+            "Efficiency Error [%]": round(float(eff_err * 100), 2)
         }
         results.append(result)
 
@@ -69,7 +71,7 @@ class Efficiency():
     def get_eff_from_hists(
         self, 
         hists,
-        N_gen=4e6, # typical 
+        generated_events=4e6, # typical 
         veto=True, 
         wilson=True,
         z=1.0
@@ -86,35 +88,33 @@ class Efficiency():
             
         Returns:
             pd.DataFrame: Results containing efficiency calculations
-
-        TODO: I hate nested functions! Do something else.
         """
         self.logger.log(f"Getting efficiency from histogams", "info")
         
         results = []
 
-        def _get_signal_eff(selection, title): 
+        def get_signal_eff(selection, title): 
             k = self._get_N_from_hists(hists, selection, label="CE-like")            
-            eff = k / N_gen if N_gen > 0 else 0
-            eff_err = self._get_binomial_err(k, N_gen)
-            self._append_result_to_df(results, title, int(k), int(N_gen), eff, eff_err)
+            eff = k / generated_events if generated_events > 0 else 0
+            eff_err = self._get_binomial_err(k, generated_events)
+            self._append_result(results, title, int(k), int(generated_events), eff, eff_err)
     
         # Signal efficiency for CE selection over wide range
-        _get_signal_eff(selection="mom_full", title="Signal (wide)")
-        _get_signal_eff(selection="mom_ext", title="Signal (ext)")
-        _get_signal_eff(selection="mom_sig", title="Signal (sig)")
+        get_signal_eff(selection="mom_full", title="Signal (wide)")
+        get_signal_eff(selection="mom_ext", title="Signal (ext)")
+        get_signal_eff(selection="mom_sig", title="Signal (sig)")
 
-        def _get_veto_eff(selection, title): 
+        def get_veto_eff(selection, title): 
             k = self._get_N_from_hists(hists, selection, label="Unvetoed")    
             N = self._get_N_from_hists(hists, selection, label="CE-like")   
             eff = (1 - k / N) if N > 0 else 0
             eff_err = self._get_wilson_err(k, N)
-            self._append_result_to_df(results, title, int(k), int(N), eff, eff_err)
+            self._append_result(results, title, int(k), int(N), eff, eff_err)
     
         # Signal efficiency for CE selection over wide range
-        _get_veto_eff(selection="mom_full", title="Veto (wide)")
-        _get_veto_eff(selection="mom_ext", title="Veto (ext)")
-        _get_veto_eff(selection="mom_sig", title="Veto (sig)")
+        get_veto_eff(selection="mom_full", title="Veto (wide)")
+        get_veto_eff(selection="mom_ext", title="Veto (ext)")
+        get_veto_eff(selection="mom_sig", title="Veto (sig)")
 
         self.logger.log("Returning efficiency information", "success")
         
