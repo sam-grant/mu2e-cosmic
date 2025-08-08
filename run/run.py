@@ -9,7 +9,6 @@ import yaml
 import shutil
 import argparse
 from pathlib import Path
-
 # Mu2e
 from pyutils.pylogger import Logger
 
@@ -75,10 +74,11 @@ def main():
         # Copy log file to output directory
         if os.path.exists(log_file_path):
             log_filename = Path(log_file_path).name
-            shutil.copy2(log_file_path, out_path / log_filename)
-            logger.log(f"Copied log file to {out_path / log_filename}", "info")
+            os.makedirs(out_path, exist_ok=True)
+            shutil.move(log_file_path, out_path / log_filename)
+            logger.log(f"Moved log file to {out_path / log_filename}", "info")
         
-        logger.log(f"Analysis complete, wrote results to {config["output"]["out_path"]}", "success")
+        logger.log(f"Analysis complete, wrote results to {config['output']['out_path']}", "success")
         
     except Exception as e:
         logger.log(f"Analysis failed: {e}", "error")

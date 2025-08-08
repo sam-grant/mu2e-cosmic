@@ -11,11 +11,12 @@ from efficiency import Efficiency
 class PostProcess():
     """Class for postprocessing
     """
-    def __init__(self, write_events=False, generated_events=4e6, veto=True, wilson=True, verbosity=1):
+    def __init__(self, write_events=False, write_event_info=False, generated_events=4e6, veto=True, wilson=True, verbosity=1):
         """Initialise
 
             Args:
-                write_events (bool, opt): Write background event info. Defaults to False.
+                write_events (bool, opt): write filtered events. Defaults to False.
+                write_event_info (bool, opt): write filtered event info. Defaults to False.
                 generated_events (int, opt): Number of generated events. Defaults to 4e6.
                 veto (bool, opt): Whether running with CRV veto. Defaults to True.
                 wilson (bool, opt): Whether to use Wilson or Poisson for efficiency uncertainty. Defaults to True.
@@ -23,6 +24,7 @@ class PostProcess():
         """
         # Member variables
         self.write_events = write_events
+        self.write_event_info = write_event_info
         self.generated_events = generated_events
         self.veto = veto
         self.wilson = wilson
@@ -229,7 +231,7 @@ class PostProcess():
                 output.append(f"  File:             {result['id']}")
                 output.append(f"  Track time [ns]:  {track_time_str}") 
                 output.append(f"  Coinc time [ns]:  {coinc_time_str if len(coinc_time_str)>0 else None}") 
-                output.append(f"  dt [ns]:          {dt_str if len(dt_str)>0 else 'N/A'}")
+                output.append(f"  dt [ns]:          {dt_str if len(str(dt_str))>0 else 'N/A'}")
                 output.append("-" * 40)
     
                 count += 1
@@ -258,7 +260,7 @@ class PostProcess():
         hists = self.combine_hists(results)
         efficiency = self.get_combined_efficiency(hists)
         events = self.combine_arrays(results) if self.write_events else None 
-        event_info = self.get_event_info(results) if self.write_events else None 
+        event_info = self.get_event_info(results) if self.write_event_info else None 
 
         output = {
             "cut_flow": cut_flow,

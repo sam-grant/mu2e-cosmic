@@ -90,7 +90,7 @@ class Write:
             # Write
             out_path = self._write_df_to_csv(df_eff, out_name)
             # Confirm
-            self.logger.log(f"Wrote cut flow to {out_path}", "success")
+            self.logger.log(f"Wrote efficiency to {out_path}", "success")
         except Exception as e:
             self.logger.log(f"Failed to write efficiency info: {e}", "error")
             raise

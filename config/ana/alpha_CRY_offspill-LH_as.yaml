@@ -1,41 +1,40 @@
-# ============================================================================
-# COSMIC PROCESSOR ANALYSIS CONFIGURATION
-# ============================================================================
-# This YAML file configures a cosmic-ray-induced background analysis 
-# The configuration is divided into three main sections: 
-# processor settings, postprocessing options, and output paths.
-# 
-# Naming: <cutset_name>_<generator>_<spill-reco>_<MDC-tag>.yaml
-# E.g.: alpha_CRY_offspill-LH_as.yaml
+# ===============================
+# alpha_CRY_offspill-LH_as.yaml
+# ===============================
 
 process:
-    # See src/core/process.py
-    # Args:
-    #     defname (str, opt): Dataset definition name. Defaults to None.
-    #     file_list_path (str, opt): Path to file list. Defaults to None.
-    #     file_name (str, opt): Single file to process. Defaults to None.
-    #     cutset_name (str, opt): Which cutset to use. Defaults to "alpha".
-    #     branches (dict or list, opt): EventNtuple branches to extract.
-    #     on_spill (bool, opt): Apply on-spill timing cuts. Defaults to False.
-    #     cuts_to_toggle (dict, opt): Cuts to enable/disable. Defaults to None.
-    #     use_remote (bool, opt): Use remote file access. Defaults to True.
-    #     location (str, opt): File location ("disk", etc.). Defaults to "disk".
-    #     max_workers (int, opt): Number of parallel workers. Defaults to 50.
-    #     verbosity (int, opt): Logging verbosity level. Defaults to 2.
-    #     use_processes (bool, opt): Use processes rather than threads. Defaults to True.
+    # defname (str, opt): Dataset definition name. Defaults to None.
+    # file_list_path (str, opt): Path to file list. Defaults to None.
+    # file_name (str, opt): Single file to process. Defaults to None.
+    # cutset_name (str, opt): Which cutset to use. Defaults to "alpha".
+    # branches (dict or list, opt): EventNtuple branches to extract.
+    # on_spill (bool, opt): Apply on-spill timing cuts. Defaults to False.
+    # cuts_to_toggle (dict, opt): Cuts to enable/disable. Defaults to None.
+    # use_remote (bool, opt): Use remote file access. Defaults to True.
+    # location (str, opt): File location ("tape", etc.). Defaults to "disk".
+    # max_workers (int, opt): Number of parallel workers. Defaults to 50.
+    # verbosity (int, opt): Logging verbosity level. Defaults to 2.
+    # use_processes (bool, opt): Use processes rather than threads. Defaults to True.
     defname: "nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.root"
-    # cutset_name: "alpha"
+    max_workers: 50
 
 postprocess:
-    # See src/core/postprocess.py
-    # Args:
-    #     write_events (bool, opt): Write background event info. Defaults to False.
-    #     generated_events (int, opt): Number of generated events. Defaults to 4e6.
-    #     veto (bool, opt): Whether running with CRV veto. Defaults to True.
-    #     wilson (bool, opt): Whether to use Wilson or Poisson for efficiency uncertainty. Defaults to True.
-    #     verbosity (int, opt): Printout level. Defaults to 1.
+    # defname (str, opt): Dataset definition name. Defaults to None.
+    # file_list_path (str, opt): Path to file list. Defaults to None.
+    # file_name (str, opt): Single file to process. Defaults to None.
+    # cutset_name (str, opt): Which cutset to use. Defaults to "alpha".
+    # branches (dict or list, opt): EventNtuple branches to extract.
+    # on_spill (bool, opt): Apply on-spill timing cuts. Defaults to False.
+    # cuts_to_toggle (dict, opt): Cuts to enable/disable. Defaults to None.
+    # use_remote (bool, opt): Use remote file access. Defaults to True.
+    # location (str, opt): File location ("disk", etc.). Defaults to "disk".
+    # max_workers (int, opt): Number of parallel workers. Defaults to 50.
+    # use_processes (bool, opt): Use processes rather than threads. Defaults to True.
+    # verbosity (int, opt): Logging verbosity level. Defaults to 2 (max).
+    # worker_verbosity (int, opt): Verbosity for worker processes (debug only!). Defaults to 0.
     write_events: true
+    write_event_info: true
 
 output:
-    # Define a unique output path relative to the run directory
+    # Define a unique output path relative to script directory
     out_path: "../output/results/alpha_CRY_offspill-LH_as"

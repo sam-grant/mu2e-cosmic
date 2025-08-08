@@ -1,8 +1,10 @@
 # Samuel Grant 2025
 # Define cutsets for cosmic-ray-induced background analysis
 
-# Define baseline defaults (do not edit!)
-defaults: 
+##########################################################
+# Define baseline defaults (DO NOT EDIT!)
+##########################################################
+defaults:
     description: "Baseline defaults"
     thresholds:
         track_pdg: 11 
@@ -36,17 +38,32 @@ defaults:
         within_ext_win: true
         within_sig_win: true
 
+##########################################################
 # Define custom cutsets which are overridden from defaults
 # You can turn cuts off and edit thresholds here
+##########################################################
 cutsets:
-    alpha: 
-        description: 
+    ########################
+    # Analysis cut sets
+    ########################
+    alpha:
+        description:
             "baseline cutset with loop helix parameters"      
-    beta: 
-        description: 
+    beta:
+        description:
             "alpha with no R_max cut"
         active:
             within_lhr_max: false
-        
-    
-    
+
+    ########################
+    # Development cut sets
+    ########################
+    track_cuts:
+        description:
+            "loose cut set for plotting track cut parameters"
+        active:
+            has_hits: false
+            within_d0: false
+            within_lhr_max: false
+            within_pitch_angle: false
+            unvetoed: false

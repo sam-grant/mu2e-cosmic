@@ -7,3 +7,5 @@ Example, from this directory run:
 ```python
 python run.py --config test.yaml
 ```
+
+Ensure that you run this in a fresh shell if multiprocessing!

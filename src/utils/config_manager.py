@@ -55,7 +55,8 @@ class ConfigManager:
                     return 
         
         # If we get here, file wasn't found anywhere
-        self.logger.log(f"Config file '{self.config_path}' not found in any of: {paths}")
-        raise
+        msg = f"Config file '{self.config_file_name}' not found in any of: {paths}"
+        self.logger.log(msg, "error")
+        raise FileNotFoundError(msg)
 
             

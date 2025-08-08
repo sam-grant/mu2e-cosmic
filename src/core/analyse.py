@@ -151,7 +151,7 @@ class Analyse:
             data["is_reco_electron"] = is_reco_electron
         except Exception as e:
             self.logger.log(f"Error defining 'is_reco_electron': {e}", "error") 
-            raise  
+            raise e
 
         ###################################################
         # 2. Tracks intersect tracker entrance
@@ -177,7 +177,7 @@ class Analyse:
             data["has_trk_front"] = has_trk_front
         except Exception as e:
             self.logger.log(f"Error defining 'has_trk_front': {e}", "error") 
-            raise 
+            raise e
             
         ###################################################
         # 3. Track fit hypothesis quality
@@ -196,7 +196,7 @@ class Analyse:
             data["good_trkqual"] = good_trkqual
         except Exception as e:
             self.logger.log(f"Error defining 'good_trkqual': {e}", "error") 
-            raise  
+            raise e
         
         ###################################################
         # 4. Time at tracker entrance (t0)
@@ -220,7 +220,7 @@ class Analyse:
                 data["within_t0"] = within_t0
         except Exception as e:
             self.logger.log(f"Error defining 'within_t0': {e}", "error") 
-            raise  
+            raise e
 
         ###################################################
         # 5. Downstream tracks at the tracker entrance 
@@ -241,7 +241,7 @@ class Analyse:
             data["is_downstream"] = is_downstream
         except Exception as e:
             self.logger.log(f"Error defining 'is_downstream': {e}", "error") 
-            raise  
+            raise e
 
         ###################################################
         # 6. Minimum active hits
@@ -260,7 +260,7 @@ class Analyse:
             data["has_hits"] = has_hits
         except Exception as e:
             self.logger.log(f"Error defining 'has_hits': {e}", "error") 
-            raise 
+            raise e
             
         ###################################################
         # 7. Extrapolated distance of closest approach
@@ -283,7 +283,7 @@ class Analyse:
             data["within_d0"] = within_d0
         except Exception as e:
             self.logger.log(f"Error defining 'within_d0': {e}", "error") 
-            raise  
+            raise e
 
         ###################################################
         # 8. Pitch angle
@@ -313,7 +313,7 @@ class Analyse:
             data["within_pitch_angle"] = within_pitch_angle
         except Exception as e:
             self.logger.log(f"Error defining 'within_pitch_angle': {e}", "error") 
-            raise  
+            raise e
 
         ###################################################
         # 9. Loop helix maximimum radius 
@@ -336,7 +336,7 @@ class Analyse:
             data["within_lhr_max"] = within_lhr_max
         except Exception as e:
             self.logger.log(f"Error defining 'within_lhr_max': {e}", "error") 
-            raise 
+            raise e
             
         ###################################################
         # 10. Track "PID" from truth track parents 
@@ -358,7 +358,7 @@ class Analyse:
             data["is_truth_electron"] = has_trk_parent_electron
         except Exception as e:
             self.logger.log(f"Error defining 'is_truth_electron': {e}", "error") 
-            raise  
+            raise e 
 
         ###################################################
         # 11. One electron track fit / event 
@@ -382,7 +382,7 @@ class Analyse:
             data["one_reco_electron_per_event"] = one_reco_electron_per_event
         except Exception as e:
             self.logger.log(f"Error defining 'one_reco_electron': {e}", "error") 
-            raise   
+            raise e
 
         ###################################################
         # 12. CRV veto: |dt| < 150 ns 
@@ -418,7 +418,7 @@ class Analyse:
             data["unvetoed"] = ~veto
         except Exception as e:
             self.logger.log(f"Error defining 'unvetoed': {e}", "error") 
-            raise  
+            raise e
 
         ###################################################
         # 13. Extended window 
@@ -442,7 +442,7 @@ class Analyse:
             data["within_ext_win"] = within_ext_win
         except Exception as e:
             self.logger.log(f"Error defining 'within_ext_win': {e}", "error") 
-            raise 
+            raise e
 
         ###################################################
         # 14. Signal window 
@@ -467,7 +467,7 @@ class Analyse:
             data["within_sig_win"] = within_sig_win
         except Exception as e:
             self.logger.log(f"Error defining 'within_sig_win': {e}", "error") 
-            raise 
+            raise e
 
         # Done 
         self.logger.log("All cuts defined", "success")

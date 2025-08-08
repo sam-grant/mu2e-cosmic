@@ -90,14 +90,19 @@ class Efficiency():
             pd.DataFrame: Results containing efficiency calculations
         """
         self.logger.log(f"Getting efficiency from histogams", "info")
+    
+        try:
+            generated_events = float(generated_events)
+        except (ValueError, TypeError):
+            generated_events = 0
         
         results = []
-
+        
         def get_signal_eff(selection, title): 
             k = self._get_N_from_hists(hists, selection, label="CE-like")            
-            eff = k / generated_events if generated_events > 0 else 0
+            eff = k / generated_events if int(float(generated_events)) > 0 else 0
             eff_err = self._get_binomial_err(k, generated_events)
-            self._append_result(results, title, int(k), int(generated_events), eff, eff_err)
+            self._append_result(results, title, int(k), int(float(generated_events)), eff, eff_err)
     
         # Signal efficiency for CE selection over wide range
         get_signal_eff(selection="mom_full", title="Signal (wide)")

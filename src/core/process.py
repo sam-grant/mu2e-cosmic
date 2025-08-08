@@ -40,9 +40,10 @@ class CosmicProcessor(Skeleton):
         cuts_to_toggle = None,
         use_remote = True,
         location = "disk",
-        max_workers = 50,
-        verbosity = 2,
+        max_workers = None,
         use_processes = True,
+        verbosity = 1,
+        worker_verbosity = 0
         
     ):
         """Initialise your processor with specific configuration
@@ -60,8 +61,9 @@ class CosmicProcessor(Skeleton):
             use_remote (bool, opt): Use remote file access. Defaults to True.
             location (str, opt): File location ("disk", etc.). Defaults to "disk".
             max_workers (int, opt): Number of parallel workers. Defaults to 50.
-            verbosity (int, opt): Logging verbosity level. Defaults to 2.
             use_processes (bool, opt): Use processes rather than threads. Defaults to True.
+            verbosity (int, opt): Logging verbosity level. Defaults to 2 (max).
+            worker_verbosity (int, opt): Verbosity for worker processes (debug only!). Defaults to 0.
 
         Note: 
             Could also use kwargs**, but this is self documenting 
@@ -86,12 +88,13 @@ class CosmicProcessor(Skeleton):
         }
 
         # Process parameters
-        self.on_spill = on_spill            # Apply t0 cut for onspill
-        self.use_remote = use_remote        # Use remote file via mdh
-        self.location = location            # File location
-        self.max_workers = max_workers      # Limit the number of workers
-        self.verbosity = verbosity          # Set verbosity 
-        self.use_processes = use_processes  # Use processes rather than threads
+        self.on_spill = on_spill                    # Apply t0 cut for onspill
+        self.use_remote = use_remote                # Use remote file via mdh
+        self.location = location                    # File location
+        self.max_workers = max_workers              # Limit the number of workers
+        self.use_processes = use_processes          # Use processes rather than threads
+        self.verbosity = verbosity                  # Set verbosity 
+        self.worker_verbosity = worker_verbosity    # Set worker verbosity 
 
         # Analysis methods
         self.analyse = Analyse(
@@ -121,6 +124,18 @@ class CosmicProcessor(Skeleton):
         \tverbosity       = {self.verbosity}
         \tuse_processes   = {self.use_processes}"""
 
+        # init_summary = f"""
+        # \tdefname         = {self.defname}
+        # \tfile_list_path  = {self.file_list_path}
+        # \tfile_name       = {self.file_name}
+        # \ton_spill        = {self.on_spill}
+        # \tcuts_to_toggle  = {self.cuts_to_toggle}
+        # \tbranches        = {list(self.branches.keys()) if isinstance(self.branches, dict) else self.branches}
+        # \tuse_remote      = {self.use_remote}
+        # \tlocation        = {self.location}
+        # \tmax_workers     = {self.max_workers}
+        # \tverbosity       = {self.verbosity}
+        # \tuse_processes   = {self.use_processes}"""
         # Confirm init
         self.logger.log(f"Initialised with:{init_summary}", "success")
         
@@ -140,13 +155,13 @@ class CosmicProcessor(Skeleton):
             
         Returns:
             A tuple containing the histogram (counts and bin edges)
-        """
+        """        
         try:
             # Create processor for this file
             this_processor = Processor(
-                use_remote=self.use_remote,     # Use remote file via mdh
-                location=self.location,         # File location
-                verbosity=0                     # Reduce output for workers
+                use_remote=self.use_remote,    
+                location=self.location,        
+                verbosity=self.worker_verbosity
             )
             
             # Extract the data 
@@ -171,3 +186,34 @@ class CosmicProcessor(Skeleton):
             # Report any errors that occur during processing
             self.logger.log(f"Error processing {file_name}: {e}", "error")
             raise
+
+    # def process_file(self, file_name):
+    #     """Minimal test version"""
+    #     import time
+    #     import random
+        
+    #     print(f"Processing {file_name}", flush=True)
+    #     time.sleep(random.random())  # Simulate work
+    #     return {"file": file_name, "result": "done"}
+
+    # def process_file(self, file_name):
+    #     """Test 2: Create Processor and call process_data"""
+    #     import sys
+    #     print(f"Creating Processor for {file_name}", file=sys.stderr, flush=True)
+        
+    #     this_processor = Processor(
+    #         use_remote=self.use_remote,
+    #         location=self.location,
+    #         verbosity=0
+    #     )
+        
+    #     print(f"Calling process_data for {file_name}", file=sys.stderr, flush=True)
+        
+    #     this_data = this_processor.process_data(
+    #         file_name=file_name,
+    #         branches=self.branches
+    #     )
+        
+    #     print(f"process_data completed for {file_name}, data type: {type(this_data)}", file=sys.stderr, flush=True)
+        
+    #     return {"file": file_name, "data_length": len(this_data) if this_data else 0}
