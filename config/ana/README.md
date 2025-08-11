@@ -1,0 +1,53 @@
+# Analysis configuration
+
+Configure the core processing modules: `src/core/process.py` and `src/core/postprocess.py` for `run/run.py`. 
+
+```bash
+cd run/
+python run.py -c 
+
+They follow the template given in `template.yaml`. 
+
+```yaml
+# ==================================
+# ANALYSIS CONFIGURATION TEMPLATE
+# ==================================
+# This YAML file configures a cosmic-ray-induced background analysis
+# It is used to steer run/run.py via 
+# 
+# python run.py -c my_config.yaml
+#
+# Naming: <cutset_name>_<generator>_<spill-reco>_<ds_type>.yaml
+# 
+# Example: "alpha_CRY_onspill-LH_au.yaml"
+#
+
+
+# Configure src/core/process.py
+process:    
+    # defname (str, opt): Dataset definition name. Defaults to None.
+    # file_list_path (str, opt): Path to file list. Defaults to None.
+    # file_name (str, opt): Single file to process. Defaults to None.
+    # cutset_name (str, opt): Which cutset to use. Defaults to "alpha".
+    # branches (dict or list, opt): EventNtuple branches to extract.
+    # on_spill (bool, opt): Apply on-spill timing cuts. Defaults to False.
+    # cuts_to_toggle (dict, opt): Cuts to enable/disable. Defaults to None.
+    # use_remote (bool, opt): Use remote file access. Defaults to True.
+    # location (str, opt): File location ("disk", etc.). Defaults to "disk".
+    # max_workers (int, opt): Number of parallel workers. Defaults to 50.
+    # use_processes (bool, opt): Use processes rather than threads. Defaults to True.
+    # verbosity (int, opt): Logging verbosity level. Defaults to 2 (max).
+    # worker_verbosity (int, opt): Verbosity for worker processes (debug only!). Defaults to 0.
+
+# Configure src/core/postprocess.py
+postprocess:
+    # write_events (bool, opt): write filtered events. Defaults to False.
+    # write_event_info (bool, opt): write filtered event info. Defaults to False.
+    # generated_events (int, opt): Number of generated events. Defaults to 4e6.
+    # veto (bool, opt): Whether running with CRV veto. Defaults to True.
+    # wilson (bool, opt): Whether to use Wilson or Poisson for efficiency uncertainty. Defaults to True.
+    # verbosity (int, opt): Printout level. Defaults to 1.
+    
+output:
+    # out_path: "../output/results/<name>" 
+```
