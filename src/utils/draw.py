@@ -57,7 +57,7 @@ class Draw():
             # ax.set_ylim(ylim[0], ylim[1]) # * 10)  # Extend top by factor of 10 (doesn't work)
             ax.set_yscale("log")
             ax.set_title(title)
-            ax.legend(labels, frameon=True, loc="upper left")
+            ax.legend(labels, frameon=True, loc="upper right")
 
         # Wide range 
         selection = "mom_full"
