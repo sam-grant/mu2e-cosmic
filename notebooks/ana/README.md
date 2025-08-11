@@ -4,7 +4,7 @@ Load and display results from `run/run.py`, make plots. Each notebook should be 
 
 One can generate an analysis notebook using the label set in the output block of the analysis configuration file: 
 
-```python
+```bash
 python generate_notebook.py alpha_CRY_onspill-LH_au
 ```
 
