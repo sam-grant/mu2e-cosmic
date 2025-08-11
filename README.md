@@ -1,10 +1,18 @@
 # mu2e-cosmic
 
->Note: Recently did some major restructuring, improved documentation is on the way.
+Cosmic-ray-induced background analyses of Monte Carlo data for the Mu2e experiment at Fermilab.
+
+## Usage
+
+- Run the analysis: [run](run/README.md)
+- Display the results: [notebooks/ana](notebooks/ana/README.md)
+
+
+<!-- >Note: Recently did some major restructuring, improved documentation is on the way.
 
 This repository contains code intended for **analyses of sensitivity to cosmic-ray-induced backgrounds at the Mu2e experiment and the performance of the Cosmic Ray Veto (CRV) system** using both on-spill and off-spill datasets. The analysis framework allows users to explore the cut strategies for signal-like track selection and cosmic ray induced background rejection. 
 
-The tools in this repository were originally developed by **Sam Grant** and extended by **Victor Dorojan** as part of ongoing efforts to study sensitivity to cosmic-ray-induced backgrounds and optimise CRV efficiency measurements. The analysis aims to support detector studies by providing **reproducible workflows for cosmic background characterisation**.
+The tools in this repository were originally developed by **Sam Grant** and extended by **Victor Dorojan** as part of ongoing efforts to study sensitivity to cosmic-ray-induced backgrounds and optimise CRV efficiency measurements. The analysis aims to support detector studies by providing **reproducible workflows for cosmic background characterisation**. -->
 
 
 <!-- 
