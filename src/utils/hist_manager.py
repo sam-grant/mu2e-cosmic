@@ -73,7 +73,7 @@ class HistManager:
             },
             
             "nactive": { # Integer binning
-                "axis": hist.axis.Regular(100, 0, 100, name="nactive", label="Active tracker hits"),
+                "axis": hist.axis.Regular(101, -0.5, 100.5, name="nactive", label="Active tracker hits"),
                 "param": "nactive", 
                 "filter": None
             },
@@ -86,7 +86,7 @@ class HistManager:
                 "filter": None
             },
             "d0": { # 5 mm binning
-                "axis": hist.axis.Regular(55, -50, 500, name="d0", 
+                "axis": hist.axis.Regular(60, 0, 300, name="d0", 
                                         label=r"Distance of closest approach, $d_{0}$ [mm]"),
                 "param": "d0",
                 "filter": None
@@ -124,24 +124,31 @@ class HistManager:
     
     def _prepare_track_data(self, data):
         """
-        Common data preparation for track-based extractors
+        Loose cuts
         
         Returns:
             tuple: (trk, trkfit)
         """
         # Select electron tracks
         is_electron = self.selector.is_electron(data["trk"])
+        # # One electron fit
+        # one_electron_per_event = ak.sum(is_electron, axis=-1) == 1
+        # # Broadcast to track level
+        # one_electron, _ = ak.broadcast_arrays(one_electron_per_event, is_electron)
         
         # Apply trk-level selections 
+        # trk = data["trk"][(is_electron & one_electron)]
+        # trkfit = data["trkfit"][(is_electron & one_electron)]
+
         trk = data["trk"][is_electron]
         trkfit = data["trkfit"][is_electron]
-
+        
         # Select tracker front
         at_trk_front = self.selector.select_surface(trkfit, surface_name="TT_Front")
         
         # Apply trkseg-level selections
         trkfit = trkfit[at_trk_front]  
-        
+
         return trk, trkfit
     
     def _extract_data(self, data, param):
