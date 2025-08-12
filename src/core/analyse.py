@@ -19,6 +19,7 @@ from pyutils.pyprint import Print
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(script_dir, "..", "utils"))
 from cut_manager import CutManager
+from hist_manager import HistManager
 
 class Analyse:
     """Class to handle analysis method and flow
@@ -39,19 +40,19 @@ class Analyse:
         self.cutset_name = cutset_name
         self.verbosity = verbosity
 
-        # Tools
+        # Helper sets cut parameters, self.track_pdg, self.lo_nactive, etc.
+        # TODO: put load_cuts in config_manager.py or cut_manager.py, whichever makes more sense.
+        self.cut_config = {"description": "FAILED TO LOAD"}  # Default fallback
+        self._load_cuts()
+        
+        # Setup tools
         self.selector = Select(verbosity=self.verbosity)
         self.vector = Vector(verbosity=self.verbosity) 
+        self.hist_manager = HistManager(self) # Needs to come after _load_cuts
         self.logger = Logger(
             print_prefix="[Analyse]",
             verbosity=self.verbosity
         )
-
-        # TODO: put load_cuts in config_manager.py or cut_manager.py, whichever makes more sense.
-
-        # Helper sets cut parameters, self.track_pdg, self.lo_nactive, etc.
-        self.cut_config = {"description": "FAILED TO LOAD"}  # Default fallback
-        self._load_cuts()
         
         self.logger.log(
             f"Initialised with:\n"
@@ -525,201 +526,19 @@ class Analyse:
         except Exception as e:
             self.logger.log(f"Error applying cuts: {e}", "error") 
             raise
-            
-    def create_histograms(self, data, data_CE, data_CE_unvetoed): # , data_CE_ext, data_CE_sig):
-        
+
+    def create_histograms(self, datasets):
         """Create histograms from the data before and after applying cuts
+        
         Args:
-            data: Data before cuts
-            data_CE: CE-like events after cuts
-            data_CE_unvetoed: Unvetoed CE-like events
+            datasets (dict): Dictionary of arrays 
+            
         Returns:
             dict: Dictionary of histograms
-
-        NEEDS URGENT REVIEW 
-
-        I'm not too familar with hist histograms
         """
         self.logger.log("Creating histograms", "info")
-
-        selection = ["All", "CE-like", "Unvetoed"]
-
-        try: 
-            # Full momentum range histogram
-            h1_mom_full_range = hist.Hist(
-                hist.axis.Regular(30, 0, 300, name="mom", label="Momentum [MeV/c]"),
-                hist.axis.StrCategory(selection, name="selection", label="Selection")
-            )
-
-            # Extended window
-            h1_mom_ext_win = hist.Hist(
-                hist.axis.Regular(10, self.thresholds["lo_ext_win_mevc"], self.thresholds["hi_ext_win_mevc"], name="mom", label="Momentum [MeV/c]"),
-                hist.axis.StrCategory(selection, name="selection", label="Selection")
-            )
-
-            # Signal window
-            h1_mom_sig_win = hist.Hist(
-                hist.axis.Regular(13, self.thresholds["lo_sig_win_mevc"], self.thresholds["hi_sig_win_mevc"], name="mom", label="Momentum [MeV/c]"),
-                hist.axis.StrCategory(selection, name="selection", label="Selection")
-            )
-            
-            # Z-position histograms
-            h1_crv_z = hist.Hist(
-                hist.axis.Regular(100, -15e3, 10e3, name="crv_z", label="CRV z-position [mm]"),
-                hist.axis.StrCategory(selection, name="selection", label="Selection")
-            )
-
-            # Track parameters 
-            
-            # Track quality 
-            h1_trkqual = hist.Hist(
-                hist.axis.Regular(100, 0, 1, name="trkqual", label="Track quality"),
-                hist.axis.StrCategory(selection, name="selection", label="90")
-            )
-            
-            # Number of active hits
-            h1_nactive = hist.Hist(
-                hist.axis.Regular(100, 0, 100, name="nactive", label="Active tracker hits"),
-                hist.axis.StrCategory(selection, name="selection", label="Selection")
-            )
-
-            # Track fit parameters 
-            h1_t0err = hist.Hist(
-                hist.axis.Regular(100, 0, 3.0, name="t0err", label=r"Track $t_{0}$ uncertainty, $\sigma_{t_{0}}$ [ns]"),
-                hist.axis.StrCategory(selection, name="selection", label="Selection")
-            )
-            h1_d0 = hist.Hist(
-                hist.axis.Regular(350, -50, 500, name="d0", label=r"Distance of closest approach, $d_{0}$ [mm]"),
-                hist.axis.StrCategory(selection, name="selection", label="Selection")
-            )
-            h1_maxr = hist.Hist(
-                hist.axis.Regular(150, 200, 850, name="maxr", label=r"Loop helix maximum radius, $R_{\text{max}}$ [mm]"),
-                hist.axis.StrCategory(selection, name="selection", label="Selection")
-            )
-            h1_pitch_angle = hist.Hist(
-                hist.axis.Regular(150, -0.5, 2.5, name="pitch_angle", label=r"Pitch angle, $p_{z}/p_{T}$"),
-                hist.axis.StrCategory(selection, name="selection", label="Selection")
-            )
-
-            # Sanity plots
-            h1_pdg = hist.Hist(
-                hist.axis.Regular(30, -15, 15, name="pdg", label="Track PDG"), 
-                hist.axis.StrCategory(selection, name="selection", label="Selection")
-            )
-
-            h1_sid = hist.Hist(
-                hist.axis.Regular(60, -10, 50, name="sid", label="Surface ID"), 
-                hist.axis.StrCategory(selection, name="selection", label="Selection")
-            )
-
-            h1_pz = hist.Hist(
-                hist.axis.Regular(110, -10, 100, name="pz", label=r"$p_{z}$ [MeV/c]"), 
-                hist.axis.StrCategory(selection, name="selection", label="Selection")
-            )
-
-            # Process and fill selection
-            # Is there a better way?
-            # Nested functions can causes issues
-            def fill_selection(data, label): 
-                """ Nested helper function to fill hists """
-                
-                # Tracks must be electron candidates at the tracker entrance
-                is_electron = self.selector.is_electron(data["trk"])  
-                at_trk_front = self.selector.select_surface(data["trkfit"], surface_name="TT_Front")  
-
-                # Yet another copy
-                trk = data["trk"][is_electron]
-                trkfit = data["trkfit"][is_electron & at_trk_front]
-
-                # Get variables
-                mom = self.vector.get_mag(trkfit["trksegs"], "mom")
-
-                crv_z = ak.flatten(data["crv"]["crvcoincs.pos.fCoordinates.fZ"], axis=None)
-                trkqual = ak.flatten(trk["trkqual.result"], axis=None)
-                nactive = ak.flatten(trk["trk.nactive"], axis=None)
-                t0err = ak.flatten(trkfit["trksegpars_lh"]["t0err"], axis=None)
-                d0 = ak.flatten(trkfit["trksegpars_lh"]["d0"], axis=None)
-                maxr = ak.flatten(trkfit["trksegpars_lh"]["maxr"], axis=None)
-
-                
-                pitch_angle = ak.flatten(self.get_pitch_angle(trkfit), axis=None)
-                
-                pdg = ak.flatten(trk["trk.pdg"], axis=None)
-
-                sid = ak.flatten(trkfit["trksegs"]["sid"], axis=None)
-
-                pz = ak.flatten(trkfit["trksegs"]["mom"]["fCoordinates"]["fZ"], axis=None)
-                
-                # Flatten 
-                mom = ak.Array([]) if mom is None else ak.flatten(mom, axis=None)
-                    
-                # Fill for full range
-                h1_mom_full_range.fill(mom=mom, selection=np.full(len(mom), label))
-
-                # Fill extended region
-                mom_ext = mom[(mom > self.thresholds["lo_ext_win_mevc"]) & (mom < self.thresholds["hi_ext_win_mevc"])]
-                h1_mom_ext_win.fill(mom=mom_ext, selection=np.full(len(mom_ext), label))
-                
-                # Fill signal region
-                mom_sig = mom[(mom > self.thresholds["lo_sig_win_mevc"]) & (mom < self.thresholds["hi_sig_win_mevc"])]
-                h1_mom_sig_win.fill(mom=mom_sig, selection=np.full(len(mom_sig), label))
-
-                # Fill position
-                h1_crv_z.fill(crv_z=crv_z, selection=np.full(len(crv_z), label))
-
-                # Fill nactive
-                h1_trkqual.fill(trkqual=trkqual, selection=np.full(len(trkqual), label))
-                
-                # Fill nactive
-                h1_nactive.fill(nactive=nactive, selection=np.full(len(nactive), label))
-                
-                h1_t0err.fill(t0err=t0err, selection=np.full(len(t0err), label))
-                h1_d0.fill(d0=d0, selection=np.full(len(d0), label))
-                h1_maxr.fill(maxr=maxr, selection=np.full(len(maxr), label))
-                h1_pitch_angle.fill(pitch_angle=pitch_angle, selection=np.full(len(pitch_angle), label))
-                h1_pdg.fill(pdg=pdg, selection=np.full(len(pdg), label))
-                h1_sid.fill(sid=sid, selection=np.full(len(sid), label))
-                h1_pz.fill(pz=pz, selection=np.full(len(pz), label))
-                # Clean up 
-                # del mom, mom_sig, crv_z
-                # gc.collect()
-                    
-            # Fill histograms
-            fill_selection(data, selection[0]) 
-            fill_selection(data_CE, selection[1])
-            if len(data_CE_unvetoed) > 0:
-                fill_selection(data_CE_unvetoed, selection[2])
-            
-            self.logger.log("Histograms filled", "success")
-
-            # Create a copy in results 
-            # 
-            result = {
-                "mom_full": h1_mom_full_range.copy(), 
-                "mom_ext": h1_mom_ext_win.copy(),
-                "mom_sig": h1_mom_sig_win.copy(),
-                "crv_z": h1_crv_z.copy(),
-                "trkqual": h1_trkqual.copy(),
-                "nactive": h1_nactive.copy(),
-                "t0err": h1_t0err.copy(),
-                "maxr": h1_maxr.copy(),
-                "d0": h1_d0.copy(),
-                "pitch_angle": h1_pitch_angle.copy(),
-                "pdg": h1_pdg.copy(),
-                "sid": h1_sid.copy(),
-                "pz": h1_pz.copy()
-                # Add more
-            }
-
-            return result 
-
-        except Exception as e:
-            # Handle any errors that occur during processing
-            self.logger.log(f"Error filling histograms: {e}", "error")
-            raise
-
-    
-
+        return self.hist_manager.create_histograms(datasets)
+        
     def execute(self, data, file_id, cuts_to_toggle=None):
         """Perform complete analysis on an array
         
@@ -737,11 +556,6 @@ class Analyse:
         try:
             # Initialise cut manager and apply any prefiltering
             cut_manager = CutManager(verbosity=self.verbosity)
-            
-            # if self.event_subrun is not None: 
-            #     mask = ((data["evt"]["event"] == self.event_subrun[0]) & 
-            #            (data["evt"]["subrun"] == self.event_subrun[1]))
-            #     data = data[mask]
             
             # Define cuts
             self.logger.log(f"Defining cuts", "max")
@@ -789,9 +603,11 @@ class Analyse:
             # Create histograms and compile results
             self.logger.log("Creating histograms", "max")
             histograms = self.create_histograms(
-                data, 
-                data_CE,
-                data_CE_unvetoed
+                datasets = { 
+                    "All": data,
+                    "CE-like": data_CE,
+                    "Unvetoed": data_CE_unvetoed
+                }
             )
 
             # Store results

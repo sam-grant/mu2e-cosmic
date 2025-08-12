@@ -120,11 +120,8 @@ class CutManager:
     ############################################
     # Generate and manage cut flows
     ############################################
-
     
     def _add_entry(self, name, events_passing, absolute_frac, relative_frac, description):
-        # def to_sig_figs(x, n=4):
-        #     return float(f"{float(x):.{n}g}")
         return {
             "name": name,
             "events_passing": int(events_passing),
@@ -147,8 +144,8 @@ class CutManager:
             self._add_entry(
                 name = "No cuts",
                 events_passing = total_events,
-                absolute_frac =  100.0,
-                relative_frac = 100.0,
+                absolute_frac =  100.00,
+                relative_frac = 100.00,
                 description = "No selection applied",
             )
         )
@@ -188,7 +185,7 @@ class CutManager:
                 self._add_entry(
                     name = name,
                     events_passing = events_passing,
-                    absolute_frac =  absolute_frac,
+                    absolute_frac = absolute_frac,
                     relative_frac = relative_frac,
                     description = cut_info["description"],
                 )

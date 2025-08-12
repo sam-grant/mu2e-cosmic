@@ -100,7 +100,7 @@ class CosmicProcessor(Skeleton):
         self.analyse = Analyse(
             cutset_name=cutset_name,
             on_spill=self.on_spill,
-            verbosity=0 # Reduce verbosity for workers
+            verbosity=self.worker_verbosity # Reduce verbosity for workers
         )
 
         self.logger = Logger(
@@ -160,8 +160,9 @@ class CosmicProcessor(Skeleton):
             # Create processor for this file
             this_processor = Processor(
                 use_remote=self.use_remote,    
-                location=self.location,        
-                verbosity=self.worker_verbosity
+                location=self.location,  
+                verbosity=self.worker_verbosity,
+                worker_verbosity=self.worker_verbosity
             )
             
             # Extract the data 
@@ -185,7 +186,7 @@ class CosmicProcessor(Skeleton):
         except Exception as e:
             # Report any errors that occur during processing
             self.logger.log(f"Error processing {file_name}: {e}", "error")
-            raise
+            raise e
 
     # def process_file(self, file_name):
     #     """Minimal test version"""

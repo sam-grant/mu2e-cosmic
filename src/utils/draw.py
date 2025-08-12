@@ -117,7 +117,7 @@ class Draw():
         h1o_z = h1o_z[{"selection": selection}]
         h1o_z.plot1d(overlay="selection", density=True, ax=ax, yerr=False)
         # Format
-        ax.grid(True, alpha=0.3)
+        # ax.grid(True, alpha=0.3)
         ax.set_ylabel("Normalised coincidences")
         ax.legend(selection, frameon=False, loc="upper right")
         ax.ticklabel_format(style="scientific", axis="y", scilimits=(0,0), useMathText=True)
