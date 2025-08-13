@@ -110,7 +110,7 @@ class Draw():
         """
         Plot CRV z-position histograms
         """
-        selection = ["All", "CE-like"]
+        selection = ["All", "Preselect", "CE-like"]
         # 1x3 subplots
         fig, ax = plt.subplots() 
         # Wide range 
@@ -137,7 +137,7 @@ class Draw():
         # 1x3 subplots
         fig, ax = plt.subplots(1, 2, figsize=(6.4*2, 4.8))
 
-        selection = ["All", "CE-like"]
+        selection = ["All", "Preselect", "CE-like"]
         
         # Nested helper
         # Shouldn't this be a regular function?
@@ -184,7 +184,7 @@ class Draw():
         # 1x3 subplots
         fig, ax = plt.subplots(1, 3, figsize=(6.4*3, 4.8))
 
-        selection = ["All", "CE-like"]
+        selection = ["All", "Preselect", "CE-like"]
         # Nested helper
         # Shouldn't this be a regular function?
         def _format_axis(ax, labels): 
@@ -244,7 +244,7 @@ class Draw():
         # 1x3 subplots
         fig, ax = plt.subplots(2, 2, figsize=(6.4*2, 4.8*2))
 
-        selection = ["All", "CE-like"]
+        selection = ["All", "Preselect", "CE-like"]
         # Nested helper
         # Shouldn't this be a regular function?
         def _format_axis(ax, labels): 

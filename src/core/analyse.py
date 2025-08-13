@@ -406,31 +406,29 @@ class Analyse:
             raise e
 
         ###################################################
-        # Loop helix maximimum radius 
+        # Loop helix maximimum radius lower bound 
         ###################################################
         try:
             # Track segmentslevel definition 
-            within_lhr_max = ((self.thresholds["lo_maxr_mm"] < data["trkfit"]["trksegpars_lh"]["maxr"]) & 
-                              (data["trkfit"]["trksegpars_lh"]["maxr"] < self.thresholds["hi_maxr_mm"]))
+            within_lhr_max_lo = (self.thresholds["lo_maxr_mm"] < data["trkfit"]["trksegpars_lh"]["maxr"]) 
             # Track level definition 
-            within_lhr_max = ak.all(~at_trk_front | within_lhr_max, axis=-1)
+            within_lhr_max_lo = ak.all(~at_trk_front | within_lhr_max_lo, axis=-1)
             # Add cut 
             cut_manager.add_cut(
-                name="within_lhr_max",
-                description=f"Loop helix maximum radius ({self.thresholds["lo_maxr_mm"]}"\
-                            f" < R_max < {self.thresholds["hi_maxr_mm"]} mm)",
-                mask=within_lhr_max,
-                active=self.active_cuts["within_lhr_max"],
+                name="within_lhr_max_lo",
+                description=f"Loop helix maximum radius (R_max > {self.thresholds["lo_maxr_mm"]} mm)",
+                mask=within_lhr_max_lo,
+                active=self.active_cuts["within_lhr_max_lo"],
                 group="Tracker"
             )
             # Append for debugging
-            data["within_lhr_max"] = within_lhr_max
+            data["within_lhr_max_lo"] = within_lhr_max_lo
         except Exception as e:
-            self.logger.log(f"Error defining 'within_lhr_max': {e}", "error") 
+            self.logger.log(f"Error defining 'within_lhr_max_lo': {e}", "error") 
             raise e
 
         ###################################################
-        # Loop helix maximimum radius upper only 
+        # Loop helix maximimum radius upper bound (main)
         ###################################################
         try:
             # Track segmentslevel definition 
@@ -628,7 +626,9 @@ class Analyse:
             if groups_to_toggle: 
                 self.logger.log(f"Toggling cut groups", "max")
                 cut_manager.toggle_group(groups_to_toggle) 
-                
+
+            # Save cut state
+            cut_manager.save_state("original")
             # Retrieve initial veto status (for cut plots)
             veto = cut_manager.cuts["unvetoed"]["active"]
             
@@ -639,37 +639,91 @@ class Analyse:
             ##########################################
             # Apply cuts
             ##########################################  
+            
+            # # Apply preselection cuts
+            # self.logger.log("Applying preselection cuts", "max")
+            # # Turn all cut groups except preselection
+            # cut_manager.toggle_group(
+            #     {
+            #         "Tracker": False,
+            #         "CRV": False,
+            #         "Momentum": False
+                    
+            #     }
+            # )           
+            # data["preselect"] = cut_manager.combine_cuts(active_only=True)
+            # data_preselect = self.apply_cuts(data, cut_manager)
+            
+            # # Apply CE-like cuts (without veto & momentum windows)
+            # self.logger.log("Applying CE-like cuts", "max")
+            # # Turn tracker cut group back on
+            # # cut_manager.toggle_group({"Tracker": True})
+            # # # Turn off veto and momentum windows
+            # cut_manager.toggle_group(
+            #     {
+            #         "Tracker": True,
+            #         "CRV": False,
+            #         "Momentum": False
+                    
+            #     }
+            # ) 
+            # # cut_manager.toggle_cut(
+            # #     {
+            # #         "unvetoed": False,
+            # #         "within_ext_win": False,
+            # #         "within_sig_win": False
+                    
+            # #     }
+            # # )
+            # data["CE_like"] = cut_manager.combine_cuts(active_only=True)
+            # data_CE = self.apply_cuts(data, cut_manager)
 
-            
-            
+            # Apply preselection cuts
+            self.logger.log("Applying preselection cuts", "max")
+            cut_manager.toggle_group({
+                "Tracker": False,
+                "CRV": False, 
+                "Momentum": False
+            })  
+            # cut_manager.save_state("preselect")
+            data["preselect"] = cut_manager.combine_cuts(active_only=True)
+            data_preselect = self.apply_cuts(data, cut_manager)
+
             # Apply CE-like cuts (without veto & momentum windows)
             self.logger.log("Applying CE-like cuts", "max")
-            # Turn off veto and momentum windows
-            cut_manager.toggle_cut(
-                {
-                    "unvetoed": False,
-                    "within_ext_win": False,
-                    "within_sig_win": False
-                    
-                }
-            )
+            # Restore state
+            # Toggling Tracker to True will activate tracker cuts from different
+            # cutsets that we may not want
+            cut_manager.restore_state("original")
+            cut_manager.toggle_group({
+                "CRV": False,       # Keep CRV off (this turns off "unvetoed")
+                "Momentum": False   # Keep Momentum off (this turns off both momentum windows)
+            })
+            # cut_manager.save_state("CE_like")
+            # Print active cuts
+            cut_manager.list_groups()
+            # Save CE-like selection
             data["CE_like"] = cut_manager.combine_cuts(active_only=True)
             data_CE = self.apply_cuts(data, cut_manager)
-            
-            # Apply veto 
+
+            # Apply CRV cuts
             data_CE_unvetoed = {} # Default with length zero
             if veto:  
                 self.logger.log("Applying veto cuts", "max")  
                 # Turn veto on
-                cut_manager.toggle_cut({"unvetoed": True})
+                cut_manager.toggle_group({"CRV": True}) # same thing
+                # cut_manager.toggle_cut({"unvetoed": True}) # same thing
                 data["unvetoed_CE_like"] = cut_manager.combine_cuts(active_only=True)
                 data_CE_unvetoed = self.apply_cuts(data, cut_manager) 
+
+            print(f"!!!!! N CE-like: {len(data_CE)}")
             
             # Create histograms and compile results
             self.logger.log("Creating histograms", "max")
             histograms = self.create_histograms(
                 datasets = { 
                     "All": data,
+                    "Preselect": data_preselect,
                     "CE-like": data_CE,
                     "Unvetoed": data_CE_unvetoed
                 }

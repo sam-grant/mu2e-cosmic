@@ -39,7 +39,7 @@ class HistManager:
         self.histogram_configs = {
             # Momentum histograms
             "mom_full": { # 5 MeV/c binning
-                "axis": hist.axis.Regular(60, 0, 300, name="mom", label="Momentum [MeV/c]"),
+                "axis": hist.axis.Regular(200, 0, 1000, name="mom", label="Momentum [MeV/c]"),
                 "param": "mom",
                 "filter": None
             },

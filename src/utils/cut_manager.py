@@ -15,6 +15,8 @@ class CutManager:
         """
         # Init cut object
         self.cuts = {}
+        # Store original active states for restoration
+        self._original_states = {}
         # Start logger
         self.logger = Logger( 
             verbosity=verbosity,
@@ -30,7 +32,7 @@ class CutManager:
             description (str): Description of what the cut does
             mask (awkward.Array): Boolean mask array for the cut
             active (bool, optional): Whether the cut is active by default
-            group (str, optional): Group name for organising cuts
+            group (str, optional): Group name for organizing cuts
         """
 
         # Get the next available index
@@ -43,6 +45,9 @@ class CutManager:
             "group": group,
             "idx" : next_idx
         }
+
+        # Store original state for restoration
+        self._original_states[name] = active
 
         group_info = f" in group '{group}'" if group else ""
         self.logger.log(f"Added cut {name} with index {next_idx}{group_info}", "info")
@@ -136,46 +141,107 @@ class CutManager:
         
         return success
 
-    # def get_groups(self):
-    #     """Get all unique group names and their cuts
+    def save_state(self, state_name="default"):
+        """Save current active states of all cuts
         
-    #     Returns:
-    #         dict: Dictionary mapping group names to lists of cut names
-    #     """
-    #     groups = {}
-    #     for cut_name, cut_info in self.cuts.items():
-    #         group = cut_info.get("group")
-    #         if group is not None:
-    #             if group not in groups:
-    #                 groups[group] = []
-    #             groups[group].append(cut_name)
-        
-    #     # Also add ungrouped cuts
-    #     ungrouped = [cut_name for cut_name, cut_info in self.cuts.items() 
-    #                 if cut_info.get("group") is None]
-    #     if ungrouped:
-    #         groups[None] = ungrouped
+        Args:
+            state_name (str): Name for this saved state
+        """
+        if not hasattr(self, '_saved_states'):
+            self._saved_states = {}
             
-    #     return groups
+        self._saved_states[state_name] = {
+            name: cut_info["active"] for name, cut_info in self.cuts.items()
+        }
+        self.logger.log(f"Saved current cut states as '{state_name}'", "info")
 
-    # def list_groups(self):
-    #     """Print all groups and their cuts"""
-    #     groups = self.get_groups()
+    def restore_state(self, state_name="default"):
+        """Restore previously saved cut states
         
-    #     if not groups:
-    #         self.logger.log("No cuts defined", "info")
-    #         return
+        Args:
+            state_name (str): Name of the saved state to restore
+        """
+        if not hasattr(self, '_saved_states') or state_name not in self._saved_states:
+            self.logger.log(f"No saved state '{state_name}' found", "error")
+            return False
             
-    #     for group_name, cut_names in groups.items():
-    #         if group_name is None:
-    #             self.logger.log(f"Ungrouped cuts ({len(cut_names)}): {', '.join(cut_names)}", "info")
-    #         else:
-    #             active_cuts = [name for name in cut_names if self.cuts[name]["active"]]
-    #             self.logger.log(f"Group '{group_name}' ({len(active_cuts)}/{len(cut_names)} active): {', '.join(cut_names)}", "info")
+        saved_states = self._saved_states[state_name]
+        restored_cuts = []
+        
+        for cut_name, active_state in saved_states.items():
+            if cut_name in self.cuts:
+                self.cuts[cut_name]["active"] = active_state
+                restored_cuts.append(cut_name)
+            else:
+                self.logger.log(f"Cut '{cut_name}' no longer exists, skipping", "warning")
+        
+        self.logger.log(f"Restored {len(restored_cuts)} cuts from state '{state_name}'", "success")
+        return True
+
+    def restore_original_state(self):
+        """Restore all cuts to their original active states (as defined when added)"""
+        restored_cuts = []
+        
+        for cut_name, original_state in self._original_states.items():
+            if cut_name in self.cuts:
+                self.cuts[cut_name]["active"] = original_state
+                restored_cuts.append(cut_name)
+            else:
+                self.logger.log(f"Cut '{cut_name}' no longer exists, skipping", "warning")
+        
+        self.logger.log(f"Restored {len(restored_cuts)} cuts to original states", "success")
+        return True
+
+    def list_saved_states(self):
+        """List all saved states"""
+        if not hasattr(self, '_saved_states') or not self._saved_states:
+            self.logger.log("No saved states found", "info")
+            return []
+            
+        states = list(self._saved_states.keys())
+        self.logger.log(f"Available saved states: {states}", "info")
+        return states
+
+    def get_groups(self):
+        """Get all unique group names and their cuts
+        
+        Returns:
+            dict: Dictionary mapping group names to lists of cut names
+        """
+        groups = {}
+        for cut_name, cut_info in self.cuts.items():
+            group = cut_info.get("group")
+            if group is not None:
+                if group not in groups:
+                    groups[group] = []
+                groups[group].append(cut_name)
+        
+        # Also add ungrouped cuts
+        ungrouped = [cut_name for cut_name, cut_info in self.cuts.items() 
+                    if cut_info.get("group") is None]
+        if ungrouped:
+            groups[None] = ungrouped
+            
+        return groups
+
+    def list_groups(self):
+        """Print all groups and their cuts"""
+        groups = self.get_groups()
+        
+        if not groups:
+            self.logger.log("No cuts defined", "info")
+            return
+            
+        for group_name, cut_names in groups.items():
+            if group_name is None:
+                self.logger.log(f"Ungrouped cuts ({len(cut_names)}): {', '.join(cut_names)}", "info")
+            else:
+                active_cuts = [name for name in cut_names if self.cuts[name]["active"]]
+                self.logger.log(f"Group '{group_name}' ({len(active_cuts)}/{len(cut_names)} active): {', '.join(cut_names)}", "info")
     
-    # def get_active_cuts(self):
-    #     """Utility to get all active cutss"""
-    #     return {name: cut for name, cut in self.cuts.items() if cut["active"]}
+    def get_active_cuts(self):
+        """Utility to get all active cutss"""
+        return {name: cut for name, cut in self.cuts.items() if cut["active"]}
     
     def combine_cuts(self, cut_names=None, active_only=True):
         """ Return a Boolean combined mask from specified cuts. Applies an AND operation across all cuts. 
@@ -333,21 +399,6 @@ class CutManager:
         if not cut_flow_list:
             self.logger.log(f"No cut flows to combine", "error")
             return []
-        
-        # # Filter ALL stats lists based on active_only flag, not just the template??
-        # if active_only:
-        #     filtered_stats_list = []
-        #     for stats in stats_list:
-        #         filtered_stats = []
-        #         for cut in stats:
-        #             # Always include "No cuts" entry
-        #             if cut["name"] == "No cuts":
-        #                 filtered_stats.append(cut)
-        #             # Include only active cuts
-        #             elif cut.get("active", True):
-        #                 filtered_stats.append(cut)
-        #         filtered_stats_list.append(filtered_stats)
-        #     stats_list = filtered_stats_list
 
         try:
             # Use the first (now filtered) list as template

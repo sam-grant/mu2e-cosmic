@@ -10,6 +10,7 @@ process:
     use_remote: false
     verbosity: 2
     worker_verbosity: 1
+    cutset_name: "alpha"
 
 postprocess:
     write_events: true
