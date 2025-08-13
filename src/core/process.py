@@ -120,7 +120,7 @@ class CosmicProcessor(Skeleton):
         \tcutset_name     = {self.analyse.cutset_name}
         \ton_spill        = {self.on_spill}
         \tcuts_to_toggle  = {self.cuts_to_toggle}
-        \groups_to_toggle = {self.groups_to_toggle}
+        \tgroups_to_toggle = {self.groups_to_toggle}
         \tbranches        = {list(self.branches.keys()) if isinstance(self.branches, dict) else self.branches}
         \tuse_remote      = {self.use_remote}
         \tlocation        = {self.location}

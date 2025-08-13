@@ -58,9 +58,9 @@ cutsets:
             "alpha with no R_max cut"
         active:
             within_lhr_max: false
-    SU2020:
+    SU2020a:
         description:
-            "SU2020 cuts"
+            "SU2020a cuts (trkqual > 0.8)"
         active:
             within_lhr_max: false
             within_lhr_max_hi: true
@@ -68,15 +68,26 @@ cutsets:
         thresholds:
             lo_tanDip: 0.5
             hi_tanDip: 1.0
-    ########################
-    # Development cut sets
-    ########################
-    track_cuts:
+    SU2020b:
         description:
-            "loose cut set for plotting track cut parameters"
+            "SU2020b cuts (trkqual > 0.2)"
         active:
-            has_hits: false
-            within_d0: false
             within_lhr_max: false
-            within_pitch_angle: false
-            unvetoed: false
+            within_lhr_max_hi: true
+            within_t0err: true
+        thresholds:
+            lo_tanDip: 0.5
+            hi_tanDip: 1.0
+            lo_trkqual: 0.2
+    SU2020c:
+        description:
+            "SU2020c cuts (no trkqual)"
+        active:
+            within_lhr_max: false
+            within_lhr_max_hi: true
+            within_t0err: true
+            good_trkqual: false
+        thresholds:
+            lo_tanDip: 0.5
+            hi_tanDip: 1.0
+            
