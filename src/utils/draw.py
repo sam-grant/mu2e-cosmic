@@ -14,8 +14,6 @@ from pyutils.pylogger import Logger
 class Draw():
     """
     Class to draw standard "hist" histograms produced by Analyse().create_histograms()
-
-    FIXME: needs review! Pretty bad code.
     """
     def __init__(self, cutset_name="alpha", verbosity=1): 
         """
@@ -71,7 +69,7 @@ class Draw():
         for i, label in enumerate(labels):
             labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
         # Format
-        title = "Wide range: 0-300 MeV/c"
+        title = "Wide range: 0-100 MeV/c"
         _format_axis(ax[0], labels, title)
     
         # Extended window 
@@ -130,241 +128,150 @@ class Draw():
             self.logger.log(f"\tWrote {out_path}", "success")
         plt.show()
 
-    def plot_trk_params(self, hists, out_path=None):
-        """
-        Plot 1x2 track-level histograms
-        """
-        # 1x3 subplots
-        fig, ax = plt.subplots(1, 2, figsize=(6.4*2, 4.8))
+    # def plot_trk_params(self, hists, out_path=None):
+    #     """
+    #     Plot 1x2 track-level histograms
+    #     """
+    #     # 1x3 subplots
+    #     fig, ax = plt.subplots(1, 2, figsize=(6.4*2, 4.8))
 
+    #     selection = ["All", "Preselect", "CE-like"]
+        
+    #     # Nested helper
+    #     # Shouldn't this be a regular function?
+    #     def _format_axis(ax, labels): 
+    #         ax.set_yscale("log")
+    #         ax.legend(labels, frameon=True, loc="upper right")
+
+    #     # trkqual 
+    #     name = "trkqual"
+    #     h1o_trkqual = hists[name]
+    #     # h_wide = h_wide[{"selection": ["All", "CE-like", "Unvetoed CE-like"]}] # slice(-2, None)}]  # Last 2 selections
+    #     h1o_trkqual = h1o_trkqual[{"selection": selection}]
+    #     h1o_trkqual.plot1d(overlay="selection", ax=ax[0], density=False, yerr=False)
+    #     # Get hist labels
+    #     labels = list(h1o_trkqual.axes["selection"])
+    #     # for i, label in enumerate(labels):
+    #     #     labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
+    #     # Format
+    #     # title = "Wide range: 0-300 MeV/c"
+    #     _format_axis(ax[0], labels)
+    
+    #     # nactive 
+    #     name = "nactive"
+    #     h1o_nactive = hists[name]
+    #     h1o_nactive = h1o_nactive[{"selection": selection}]
+    #     h1o_nactive.plot1d(overlay="selection", ax=ax[1], yerr=False)
+    #     # Get hist labels
+    #     labels = list(h1o_nactive.axes["selection"])
+    #     # for i, label in enumerate(labels):
+    #     #     labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
+    #     # Format
+    #     _format_axis(ax[1], labels)
+        
+    #     plt.tight_layout()
+    #     if out_path:
+    #         plt.savefig(out_path, dpi=300)
+    #         self.logger.log(f"\tWrote {out_path}", "success")
+    #     plt.show()
+
+    def plot_summary(self, hists, out_path=None):
+        """
+        Plot 3x3 summary plot for ["All", "Preselect", "CE-like"]
+        mom_full, pz, t0,
+        trkqual, nactive, t0err
+        d0, Rmax, tandip 
+        """
+        # 3x3 subplots
+        fig, ax = plt.subplots(3, 3, figsize=(6.4*3, 4.8*3))
         selection = ["All", "Preselect", "CE-like"]
         
-        # Nested helper
-        # Shouldn't this be a regular function?
-        def _format_axis(ax, labels): 
+        # Helper function to format axes
+        def format_axis(ax, labels): 
             ax.set_yscale("log")
             ax.legend(labels, frameon=True, loc="upper right")
-
-        # trkqual 
+        
+        # Row 0: mom, pz, t0
+        # mom (momentum magnitude)
+        name = "mom_full"
+        h1o_mom = hists[name]
+        h1o_mom = h1o_mom[{"selection": selection}]
+        h1o_mom.plot1d(overlay="selection", ax=ax[0,0], yerr=False)
+        labels = list(h1o_mom.axes["selection"])
+        format_axis(ax[0,0], labels)
+        
+        # pz (momentum z-component)
+        name = "pz"
+        h1o_pz = hists[name]
+        h1o_pz = h1o_pz[{"selection": selection}]
+        h1o_pz.plot1d(overlay="selection", ax=ax[0,1], yerr=False)
+        labels = list(h1o_pz.axes["selection"])
+        format_axis(ax[0,1], labels)
+        
+        # t0 (time)
+        name = "t0"
+        h1o_t0 = hists[name]
+        h1o_t0 = h1o_t0[{"selection": selection}]
+        h1o_t0.plot1d(overlay="selection", ax=ax[0,2], yerr=False)
+        labels = list(h1o_t0.axes["selection"])
+        format_axis(ax[0,2], labels)
+        
+        # Row 1: trkqual, nactive, t0err
+        # trkqual (track quality)
         name = "trkqual"
         h1o_trkqual = hists[name]
-        # h_wide = h_wide[{"selection": ["All", "CE-like", "Unvetoed CE-like"]}] # slice(-2, None)}]  # Last 2 selections
         h1o_trkqual = h1o_trkqual[{"selection": selection}]
-        h1o_trkqual.plot1d(overlay="selection", ax=ax[0], density=False, yerr=False)
-        # Get hist labels
+        h1o_trkqual.plot1d(overlay="selection", ax=ax[1,0], yerr=False)
         labels = list(h1o_trkqual.axes["selection"])
-        # for i, label in enumerate(labels):
-        #     labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
-        # Format
-        # title = "Wide range: 0-300 MeV/c"
-        _format_axis(ax[0], labels)
-    
-        # nactive 
+        format_axis(ax[1,0], labels)
+        
+        # nactive (number of active hits)
         name = "nactive"
         h1o_nactive = hists[name]
         h1o_nactive = h1o_nactive[{"selection": selection}]
-        h1o_nactive.plot1d(overlay="selection", ax=ax[1], yerr=False)
-        # Get hist labels
+        h1o_nactive.plot1d(overlay="selection", ax=ax[1,1], yerr=False)
         labels = list(h1o_nactive.axes["selection"])
-        # for i, label in enumerate(labels):
-        #     labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
-        # Format
-        _format_axis(ax[1], labels)
+        format_axis(ax[1,1], labels)
         
-        plt.tight_layout()
-        if out_path:
-            plt.savefig(out_path, dpi=300)
-            self.logger.log(f"\tWrote {out_path}", "success")
-        plt.show()
-
-    def plot_trkfit_params(self, hists, out_path=None):
-        """
-        Plot 2x2 trackfit-level histograms
-        """
-        # 1x3 subplots
-        fig, ax = plt.subplots(1, 3, figsize=(6.4*3, 4.8))
-
-        selection = ["All", "Preselect", "CE-like"]
-        # Nested helper
-        # Shouldn't this be a regular function?
-        def _format_axis(ax, labels): 
-            ax.set_yscale("log")
-            ax.legend(labels, frameon=True, loc="upper right")
-
-
-
-        # d0 
-        name = "d0"
-        h1o_d0 = hists[name]
-        h1o_d0 = h1o_d0[{"selection": selection}]
-        # h_wide = h_wide[{"selection": ["All", "CE-like", "Unvetoed CE-like"]}] # slice(-2, None)}]  # Last 2 selections
-        h1o_d0.plot1d(overlay="selection", ax=ax[0], yerr=False)
-        # Get hist labels
-        labels = list(h1o_d0.axes["selection"])
-        # for i, label in enumerate(labels):
-        #     labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
-        # Format
-        _format_axis(ax[0], labels)
-
-        name = "maxr"
-        h1o_maxr = hists[name]
-        # h_wide = h_wide[{"selection": ["All", "CE-like", "Unvetoed CE-like"]}] # slice(-2, None)}]  # Last 2 selections
-        h1o_maxr = h1o_maxr[{"selection": selection}]
-        h1o_maxr.plot1d(overlay="selection", ax=ax[1], yerr=False)
-        # Get hist labels
-        labels = list(h1o_maxr.axes["selection"])
-        # for i, label in enumerate(labels):
-        #     labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
-        # Format
-        _format_axis(ax[1], labels)
-
-        name = "pitch_angle"
-        h1o_pitch_angle = hists[name]
-        h1o_pitch_angle = h1o_pitch_angle[{"selection": selection}]
-        # h_wide = h_wide[{"selection": ["All", "CE-like", "Unvetoed CE-like"]}] # slice(-2, None)}]  # Last 2 selections
-        h1o_pitch_angle.plot1d(overlay="selection", ax=ax[2], yerr=False)
-        # Get hist labels
-        labels = list(h1o_pitch_angle.axes["selection"])
-        # for i, label in enumerate(labels):
-        #     labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
-        # Format
-        _format_axis(ax[2], labels)
-
-        plt.tight_layout()
-        if out_path:
-            plt.savefig(out_path, dpi=300)
-            self.logger.log(f"\tWrote {out_path}", "success")
-        plt.show()
-
-    
-    def plot_trkfit_params_SU2020(self, hists, out_path=None):
-        """
-        Plot 2x2 trackfit-level histograms
-        """
-        # 1x3 subplots
-        fig, ax = plt.subplots(2, 2, figsize=(6.4*2, 4.8*2))
-
-        selection = ["All", "Preselect", "CE-like"]
-        # Nested helper
-        # Shouldn't this be a regular function?
-        def _format_axis(ax, labels): 
-            ax.set_yscale("log")
-            ax.legend(labels, frameon=True, loc="upper right")
-
-        # t0err 
+        # t0err (time uncertainty)
         name = "t0err"
         h1o_t0err = hists[name]
         h1o_t0err = h1o_t0err[{"selection": selection}]
-        # h_wide = h_wide[{"selection": ["All", "CE-like", "Unvetoed CE-like"]}] # slice(-2, None)}]  # Last 2 selections
-        h1o_t0err.plot1d(overlay="selection", ax=ax[0,0], yerr=False)
-        # Get hist labels
+        h1o_t0err.plot1d(overlay="selection", ax=ax[1,2], yerr=False)
         labels = list(h1o_t0err.axes["selection"])
-        # for i, label in enumerate(labels):
-        #     labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
-        # Format
-        _format_axis(ax[0,0], labels)
-
-        # d0 
+        format_axis(ax[1,2], labels)
+        
+        # Row 2: d0, Rmax, tandip
+        # d0 (distance of closest approach)
         name = "d0"
         h1o_d0 = hists[name]
         h1o_d0 = h1o_d0[{"selection": selection}]
-        # h_wide = h_wide[{"selection": ["All", "CE-like", "Unvetoed CE-like"]}] # slice(-2, None)}]  # Last 2 selections
-        h1o_d0.plot1d(overlay="selection", ax=ax[0,1], yerr=False)
-        # Get hist labels
+        h1o_d0.plot1d(overlay="selection", ax=ax[2,0], yerr=False)
         labels = list(h1o_d0.axes["selection"])
-        # for i, label in enumerate(labels):
-        #     labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
-        # Format
-        _format_axis(ax[0,1], labels)
-
+        format_axis(ax[2,0], labels)
+        
+        # maxr (maximum radius)
         name = "maxr"
         h1o_maxr = hists[name]
-        # h_wide = h_wide[{"selection": ["All", "CE-like", "Unvetoed CE-like"]}] # slice(-2, None)}]  # Last 2 selections
         h1o_maxr = h1o_maxr[{"selection": selection}]
-        h1o_maxr.plot1d(overlay="selection", ax=ax[1,0], yerr=False)
-        # Get hist labels
+        h1o_maxr.plot1d(overlay="selection", ax=ax[2,1], yerr=False)
         labels = list(h1o_maxr.axes["selection"])
-        # for i, label in enumerate(labels):
-        #     labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
-        # Format
-        _format_axis(ax[1,0], labels)
-
+        format_axis(ax[2,1], labels)
+        
+        # pitch_angle (tan dip)
         name = "pitch_angle"
         h1o_pitch_angle = hists[name]
         h1o_pitch_angle = h1o_pitch_angle[{"selection": selection}]
-        # h_wide = h_wide[{"selection": ["All", "CE-like", "Unvetoed CE-like"]}] # slice(-2, None)}]  # Last 2 selections
-        h1o_pitch_angle.plot1d(overlay="selection", ax=ax[1,1], yerr=False)
-        # Get hist labels
+        h1o_pitch_angle.plot1d(overlay="selection", ax=ax[2,2], yerr=False)
         labels = list(h1o_pitch_angle.axes["selection"])
-        for i, label in enumerate(labels):
-            labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
-        # Format
-        _format_axis(ax[1,1], labels)
-
-        plt.tight_layout()
-        if out_path:
-            plt.savefig(out_path, dpi=300)
-            self.logger.log(f"\tWrote {out_path}", "success")
-        plt.show()
-
-
-    def plot_sanity(self, hists, out_path=None):
-        """
-        Plot 1x3 sanity histograms
-        """
-        # 1x3 subplots
-        fig, ax = plt.subplots(1, 3, figsize=(6.4*3, 4.8))
-
-        selection = ["All", "CE-like"]
+        format_axis(ax[2,2], labels)
         
-        # Nested helper
-        # Shouldn't this be a regular function?
-        def _format_axis(ax, labels): 
-            ax.set_yscale("log")
-            ax.legend(labels, frameon=True, loc="upper right")
-
-        # t0err 
-        name = "pdg"
-        h1o_pdg = hists[name]
-        h1o_pdg = h1o_pdg[{"selection": selection}] # slice(-2, None)}]  # Last 2 selections
-        h1o_pdg.plot1d(overlay="selection", ax=ax[0], yerr=False)
-        # Get hist labels
-        labels = list(h1o_pdg.axes["selection"])
-        # for i, label in enumerate(labels):
-        #     labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
-        # Format
-        _format_axis(ax[0], labels)
-
-        # d0 
-        name = "sid"
-        h1o_sid = hists[name]
-        h1o_sid = h1o_sid[{"selection": selection}]
-        # h_wide = h_wide[{"selection": ["All", "CE-like", "Unvetoed CE-like"]}] # slice(-2, None)}]  # Last 2 selections
-        h1o_sid.plot1d(overlay="selection", ax=ax[1], yerr=False)
-        # Get hist labels
-        labels = list(h1o_sid.axes["selection"])
-        for i, label in enumerate(labels):
-            labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
-        # Format
-        _format_axis(ax[1], labels)
-
-        name = "pz"
-        h1o_pz = hists[name]
-        # h_wide = h_wide[{"selection": ["All", "CE-like", "Unvetoed CE-like"]}] # slice(-2, None)}]  # Last 2 selections
-        h1o_pz = h1o_pz[{"selection": selection}]
-        h1o_pz.plot1d(overlay="selection", ax=ax[2], yerr=False)
-        # Get hist labels
-        labels = list(h1o_pz.axes["selection"])
-        for i, label in enumerate(labels):
-            labels[i] = f"{label}: {"{:,}".format(self._count_events(hists, name, label))}"
-        # Format
-        _format_axis(ax[2], labels)
-
         plt.tight_layout()
         if out_path:
             plt.savefig(out_path, dpi=300)
             self.logger.log(f"\tWrote {out_path}", "success")
         plt.show()
+
     # Old ratio plot 
     # Keeping it here because it was painful to make
     # def z_plots(hists, out_path=f"../../img/{ds_type}/h1_ana_crv_z_{ds_type}_{tag}.png"):

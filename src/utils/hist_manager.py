@@ -77,10 +77,15 @@ class HistManager:
                 "param": "nactive", 
                 "filter": None
             },
-            
+            "t0": { # 10 ns binning
+                "axis": hist.axis.Regular(200, 0, 2000, name="t0err", 
+                                        label=r"Track fit time [ns]"),
+                "param": "t0",
+                "filter": None
+            },
             # Track-fit parameter histograms
             "t0err": { # 0.05 ns binning
-                "axis": hist.axis.Regular(60, 0, 3.0, name="t0err", 
+                "axis": hist.axis.Regular(100, 0, 5.0, name="t0err", 
                                         label=r"Track $t_{0}$ uncertainty, $\sigma_{t_{0}}$ [ns]"),
                 "param": "t0err",
                 "filter": None
@@ -125,6 +130,9 @@ class HistManager:
     def _prepare_track_data(self, data):
         """
         Loose cuts
+
+        We have to select electron fits at the tracker entrance,
+        otherwise you will plot +e, mu-, and mu+ fits
         
         Returns:
             tuple: (trk, trkfit)
@@ -177,6 +185,10 @@ class HistManager:
         elif param == "nactive":
             trk, _ = self._prepare_track_data(data)
             return ak.flatten(trk["trk.nactive"], axis=None)
+
+        elif param == "t0":
+            _, trkfit = self._prepare_track_data(data)
+            return ak.flatten(trkfit["trksegs"]["time"], axis=None)
             
         elif param == "t0err":
             _, trkfit = self._prepare_track_data(data)

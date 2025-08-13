@@ -639,44 +639,6 @@ class Analyse:
             ##########################################
             # Apply cuts
             ##########################################  
-            
-            # # Apply preselection cuts
-            # self.logger.log("Applying preselection cuts", "max")
-            # # Turn all cut groups except preselection
-            # cut_manager.toggle_group(
-            #     {
-            #         "Tracker": False,
-            #         "CRV": False,
-            #         "Momentum": False
-                    
-            #     }
-            # )           
-            # data["preselect"] = cut_manager.combine_cuts(active_only=True)
-            # data_preselect = self.apply_cuts(data, cut_manager)
-            
-            # # Apply CE-like cuts (without veto & momentum windows)
-            # self.logger.log("Applying CE-like cuts", "max")
-            # # Turn tracker cut group back on
-            # # cut_manager.toggle_group({"Tracker": True})
-            # # # Turn off veto and momentum windows
-            # cut_manager.toggle_group(
-            #     {
-            #         "Tracker": True,
-            #         "CRV": False,
-            #         "Momentum": False
-                    
-            #     }
-            # ) 
-            # # cut_manager.toggle_cut(
-            # #     {
-            # #         "unvetoed": False,
-            # #         "within_ext_win": False,
-            # #         "within_sig_win": False
-                    
-            # #     }
-            # # )
-            # data["CE_like"] = cut_manager.combine_cuts(active_only=True)
-            # data_CE = self.apply_cuts(data, cut_manager)
 
             # Apply preselection cuts
             self.logger.log("Applying preselection cuts", "max")
