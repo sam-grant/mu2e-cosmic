@@ -15,6 +15,8 @@ defaults:
         lo_maxr_mm: 450
         hi_maxr_mm: 680
         hi_d0_mm: 100
+        # lo_t0err: 0.5577350
+        hi_t0err: 0.9 
         lo_tanDip: 0.5577350
         hi_tanDip: 1.0 
         veto_dt_ns: 150
@@ -29,9 +31,11 @@ defaults:
         within_t0: true
         is_downstream: true
         has_hits: true
+        within_t0err: false
         within_d0: true
         within_pitch_angle: true
         within_lhr_max: true
+        within_lhr_max_hi: false
         is_truth_electron: true
         one_reco_electron: true
         unvetoed: true
@@ -54,7 +58,16 @@ cutsets:
             "alpha with no R_max cut"
         active:
             within_lhr_max: false
-
+    SU2020:
+        description:
+            "SU2020 cuts"
+        active:
+            within_lhr_max: false
+            within_lhr_max_hi: true
+            within_t0err: true
+        thresholds:
+            lo_tanDip: 0.5
+            hi_tanDip: 1.0
     ########################
     # Development cut sets
     ########################

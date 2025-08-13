@@ -269,6 +269,29 @@ class Analyse:
         except Exception as e:
             self.logger.log(f"Error defining 'has_hits': {e}", "error") 
             raise e
+
+        ###################################################
+        # 6.5. t0 uncertainty distance of closest approach
+        ###################################################
+        try:
+            # Track segments level definition
+            within_t0err = (data["trkfit"]["trksegpars_lh"]["t0err"] < self.thresholds["hi_t0err"])
+
+            # Track level definition
+            within_t0err = ak.all(~at_trk_front | within_t0err, axis=-1) 
+
+            # Add cut 
+            cut_manager.add_cut(
+                name="within_t0err",
+                description=f"Track fit t0 uncertainty (t0err < {self.thresholds["hi_t0err"]} ns)",
+                mask=within_t0err,
+                active=self.active_cuts["within_t0err"] 
+            )
+            # Append for debugging
+            data["within_t0err"] = within_t0err
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_t0err': {e}", "error") 
+            raise e
             
         ###################################################
         # 7. Extrapolated distance of closest approach
@@ -347,6 +370,27 @@ class Analyse:
             data["within_lhr_max"] = within_lhr_max
         except Exception as e:
             self.logger.log(f"Error defining 'within_lhr_max': {e}", "error") 
+            raise e
+
+        ###################################################
+        # 9.5. Loop helix maximimum radius upper only 
+        ###################################################
+        try:
+            # Track segmentslevel definition 
+            within_lhr_max_hi = (data["trkfit"]["trksegpars_lh"]["maxr"] < self.thresholds["hi_maxr_mm"])
+            # Track level definition 
+            within_lhr_max_hi = ak.all(~at_trk_front | within_lhr_max_hi, axis=-1)
+            # Add cut 
+            cut_manager.add_cut(
+                name="within_lhr_max_hi",
+                description=f"Loop helix maximum radius (R_max < {self.thresholds["hi_maxr_mm"]} mm)",
+                mask=within_lhr_max_hi,
+                active=self.active_cuts["within_lhr_max_hi"] 
+            )
+            # Append for debugging
+            data["within_lhr_max_hi"] = within_lhr_max_hi
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_lhr_max_hi': {e}", "error") 
             raise e
             
         ###################################################
