@@ -6,35 +6,44 @@ from pyutils.pyselect import Select
 
 sys.path.append("../utils")
 from cut_manager import CutManager
-from efficiency import Efficiency
+from hist_analyser import HistAnalyser
+from rates import Rates
 
 class PostProcess():
     """Class for postprocessing
     """
-    def __init__(self, write_events=False, write_event_info=False, generated_events=4e6, veto=True, wilson=True, verbosity=1):
+    def __init__(self, write_events=False, write_event_info=False, generated_events=4e6, on_spill=False, 
+                 livetime=1.06887e7, on_spill_frac=0.322, veto=True, verbosity=1):
         """Initialise
 
             Args:
                 write_events (bool, opt): write filtered events. Defaults to False.
                 write_event_info (bool, opt): write filtered event info. Defaults to False.
                 generated_events (int, opt): Number of generated events. Defaults to 4e6.
+                on_spill (bool, opt): Whether we are using on spill cuts. Defaults to False.
+                livetime (float, opt): The total livetime in seconds for this dataset. Defaults to 1.06887e7.
+                on_spill_frac (float, opt): Fraction of walltime in onspill. Defaults to 32.2%.
                 veto (bool, opt): Whether running with CRV veto. Defaults to True.
-                wilson (bool, opt): Whether to use Wilson or Poisson for efficiency uncertainty. Defaults to True.
                 verbosity (int, opt): Printout level. Defaults to 1.
         """
         # Member variables
         self.write_events = write_events
         self.write_event_info = write_event_info
         self.generated_events = generated_events
+        self.livetime = livetime
+        self.on_spill = on_spill
+        self.on_spill_frac = on_spill_frac
         self.veto = veto
-        self.wilson = wilson
         self.verbosity = verbosity
         
         # Selector 
         self.selector = Select(verbosity=0)
 
-        # Efficency handler
-        self.efficiency = Efficiency(verbosity=self.verbosity)
+        # Efficency and rates handler
+        self.hist_analyser = HistAnalyser(verbosity=self.verbosity)
+
+        # Rates handler
+        self.rates = Rates(verbosity=self.verbosity)
 
         # Start logger
         self.logger = Logger(
@@ -141,9 +150,9 @@ class PostProcess():
             self.logger.log(f"Exception while combining arrays: {e}", "error")
             return None
 
-    def get_combined_efficiency(self, hists):
+    def get_combined_analysis(self, hists):
         """
-        Calculate combined efficiency from histograms
+        Calculate combined analysis of efficiency and rates from histograms
 
         Args:
             hists: Combined histograms.
@@ -151,18 +160,20 @@ class PostProcess():
             pd.DataFrame of efficiency information
         """
         try:
-            result = self.efficiency.get_eff_from_hists(
+            result = self.hist_analyser.analyse_hists(
                 hists, 
+                livetime=self.livetime,
+                on_spill=self.on_spill,
+                on_spill_frac=self.on_spill_frac,
                 generated_events=self.generated_events,
-                veto=self.veto, 
-                wilson=self.wilson
+                veto=self.veto
             )
-            self.logger.log(f"Calculated efficiency:", "success")
+            self.logger.log(f"Analysed histograms:", "success")
             return result
         except Exception as e:
-            self.logger.log(f"Exception while calculating efficiency: {e}", "error")
+            self.logger.log(f"Exception while analysing histograms: {e}", "error")
             return None
-
+            
     def get_event_info(self, results): 
         """
         Get filtered event info
@@ -252,24 +263,30 @@ class PostProcess():
         Returns:
             tuple of combined arrays and combined histograms
         """
-        # This handles single files 
-        if not isinstance(results, list):
-            results = [results]
+        try:
+            
+            # This handles single files 
+            if not isinstance(results, list):
+                results = [results]
+    
+            cut_flow = self.combine_cut_flows(results)
+            hists = self.combine_hists(results)
+            analysis = self.get_combined_analysis(hists)
+            events = self.combine_arrays(results) if self.write_events else None 
+            event_info = self.get_event_info(results) if self.write_event_info else None 
+    
+            output = {
+                "cut_flow": cut_flow,
+                "hists": hists,
+                "analysis": analysis,
+                "events": events,
+                "event_info": event_info
+            }
+            
+            self.logger.log(f"Postprocessing complete:\n\tReturning dict of combined cut flows, histograms, filtered events, and filtered event info", "success")
+            
+            return output
 
-        cut_flow = self.combine_cut_flows(results)
-        hists = self.combine_hists(results)
-        efficiency = self.get_combined_efficiency(hists)
-        events = self.combine_arrays(results) if self.write_events else None 
-        event_info = self.get_event_info(results) if self.write_event_info else None 
-
-        output = {
-            "cut_flow": cut_flow,
-            "hists": hists,
-            "efficiency": efficiency,
-            "events": events,
-            "event_info": event_info
-        }
-        
-        self.logger.log(f"Postprocessing complete:\n\tReturning dict of combined cut flows, histograms, filtered events, and filtered event info", "success")
-        
-        return output
+        except Exception as e:
+            self.logger.log(f"Error during postprocessing {e}", "error")
+            raise e

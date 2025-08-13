@@ -692,8 +692,6 @@ class Analyse:
                 # cut_manager.toggle_cut({"unvetoed": True}) # same thing
                 data["unvetoed_CE_like"] = cut_manager.combine_cuts(active_only=True)
                 data_CE_unvetoed = self.apply_cuts(data, cut_manager) 
-
-            print(f"!!!!! N CE-like: {len(data_CE)}")
             
             # Create histograms and compile results
             self.logger.log("Creating histograms", "max")

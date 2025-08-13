@@ -79,20 +79,20 @@ class Write:
             self.logger.log(f"Failed to write cut flow: {e}", "error")
             raise
 
-    def write_efficiency_csv(self, df_eff, out_name="efficiency.csv"):
-        """Save efficiency info to CSV
+    def write_analysis_csv(self, df_eff, out_name="analysis.csv"):
+        """Save analysis info to CSV
 
         Args: 
-            df_eff (pd.DataFrame): Efficiency info.
-            out_name (str, opt): Output file name. Defaults to "efficiency.csv". 
+            df_eff (pd.DataFrame): analysis info.
+            out_name (str, opt): Output file name. Defaults to "analysis.csv". 
         """
         try:
             # Write
             out_path = self._write_df_to_csv(df_eff, out_name)
             # Confirm
-            self.logger.log(f"Wrote efficiency to {out_path}", "success")
+            self.logger.log(f"Wrote analysis to {out_path}", "success")
         except Exception as e:
-            self.logger.log(f"Failed to write efficiency info: {e}", "error")
+            self.logger.log(f"Failed to write analysis info: {e}", "error")
             raise
 
     def write_hists_h5(self, hists, out_name="hists.h5"):
@@ -195,8 +195,8 @@ class Write:
         self.logger.log(f"Writing hists to h5", "info")
         self.write_hists_h5(results["hists"])
 
-        self.logger.log(f"Writing efficiency info to csv", "info")
-        self.write_efficiency_csv(results["efficiency"])
+        self.logger.log(f"Writing analysis info to csv", "info")
+        self.write_analysis_csv(results["analysis"])
         
         self.logger.log(f"Writing background events to parquet", "info")
         self.write_events_parquet(results["events"])
@@ -400,24 +400,24 @@ class Load:
             self.logger.log(f"Failed to load cut flow: {e}", "error")
             raise
 
-    def load_efficiency_csv(self, in_name="efficiency.csv"):
-        """Load efficiency info from CSV file.
+    def load_analysis_csv(self, in_name="analysis.csv"):
+        """Load analysis info from CSV file.
         
         Args:
-            in_name (str, opt): Input file name. Defaults to "efficiency.csv".
+            in_name (str, opt): Input file name. Defaults to "analysis.csv".
             
         Returns:
-            pd.DataFrame: Loaded efficiency info.
+            pd.DataFrame: Loaded analysis info.
         """
         try:
             # Load
             df_eff, in_path = self._load_csv(in_name)
             # Confirm successful load
-            self.logger.log(f"Loaded efficiency info from {in_path}", "success")
+            self.logger.log(f"Loaded analysis info from {in_path}", "success")
             return df_eff
             
         except Exception as e:
-            self.logger.log(f"Failed to efficiency info: {e}", "error")
+            self.logger.log(f"Failed to analysis info: {e}", "error")
             raise
             
     def load_info_txt(self, in_name="info.txt"):
@@ -459,7 +459,7 @@ class Load:
         return {
             "cut_flow": self.load_cut_flow_csv(),
             "hists": self.load_hists_h5(), 
-            "efficiency": self.load_efficiency_csv(),
+            "analysis": self.load_analysis_csv(),
             "events": self.load_array_parquet(),
             "event_info": self.load_info_txt()
         }
