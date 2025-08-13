@@ -175,16 +175,32 @@ class Draw():
     #         self.logger.log(f"\tWrote {out_path}", "success")
     #     plt.show()
 
-    def plot_summary(self, hists, out_path=None):
+    def plot_summary(self, hists, out_path=None, toggle_lines=None):
         """
         Plot 3x3 summary plot for ["All", "Preselect", "CE-like"]
         mom_full, pz, t0,
         trkqual, nactive, t0err
         d0, Rmax, tandip 
+        
+        Args:
+            hists: Dictionary of histograms
+            out_path: Output path for saving figure
+            toggle_lines (dict): Dictionary to control which threshold lines to show.
+                               Defaults to all True if not provided.
+                               Keys: "mom_full", "pz", "t0", "trkqual", "nactive", 
+                                     "t0err", "d0", "maxr", "pitch_angle"
         """
         # 3x3 subplots
         fig, ax = plt.subplots(3, 3, figsize=(6.4*3, 4.8*3))
         selection = ["All", "Preselect", "CE-like"]
+        
+        # Set default toggle_lines if not provided
+        if toggle_lines is None:
+            toggle_lines = {
+                "mom_full": True, "pz": True, "t0": True,
+                "trkqual": True, "nactive": True, "t0err": True,
+                "d0": True, "maxr": True, "pitch_angle": True
+            }
         
         # Helper function to format axes
         def format_axis(ax, labels): 
@@ -199,6 +215,12 @@ class Draw():
         h1o_mom.plot1d(overlay="selection", ax=ax[0,0], yerr=False)
         labels = list(h1o_mom.axes["selection"])
         format_axis(ax[0,0], labels)
+        # Add momentum window lines
+        if False: # toggle_lines.get("mom_full", True):
+            ax[0,0].axvline(self.analyse.thresholds["lo_ext_win_mevc"], linestyle="--", color="grey")
+            ax[0,0].axvline(self.analyse.thresholds["hi_ext_win_mevc"], linestyle="--", color="grey")
+            ax[0,0].axvline(self.analyse.thresholds["lo_sig_win_mevc"], linestyle="--", color="red")
+            ax[0,0].axvline(self.analyse.thresholds["hi_sig_win_mevc"], linestyle="--", color="red")
         
         # pz (momentum z-component)
         name = "pz"
@@ -207,6 +229,9 @@ class Draw():
         h1o_pz.plot1d(overlay="selection", ax=ax[0,1], yerr=False)
         labels = list(h1o_pz.axes["selection"])
         format_axis(ax[0,1], labels)
+        # Add downstream line (pz > 0)
+        if toggle_lines.get("pz", True):
+            ax[0,1].axvline(0, linestyle="--", color="grey")
         
         # t0 (time)
         name = "t0"
@@ -215,7 +240,11 @@ class Draw():
         h1o_t0.plot1d(overlay="selection", ax=ax[0,2], yerr=False)
         labels = list(h1o_t0.axes["selection"])
         format_axis(ax[0,2], labels)
-        
+        # Add t0 window lines
+        if toggle_lines.get("t0", True) and self.analyse.active_cuts["within_t0"]:
+            ax[0,2].axvline(self.analyse.thresholds["lo_t0_ns"], linestyle="--", color="grey")
+            ax[0,2].axvline(self.analyse.thresholds["hi_t0_ns"], linestyle="--", color="grey")
+            
         # Row 1: trkqual, nactive, t0err
         # trkqual (track quality)
         name = "trkqual"
@@ -224,6 +253,9 @@ class Draw():
         h1o_trkqual.plot1d(overlay="selection", ax=ax[1,0], yerr=False)
         labels = list(h1o_trkqual.axes["selection"])
         format_axis(ax[1,0], labels)
+        # Add track quality threshold
+        if toggle_lines.get("trkqual", True) and self.analyse.active_cuts["good_trkqual"]:
+            ax[1,0].axvline(self.analyse.thresholds["lo_trkqual"], linestyle="--", color="grey")
         
         # nactive (number of active hits)
         name = "nactive"
@@ -232,6 +264,9 @@ class Draw():
         h1o_nactive.plot1d(overlay="selection", ax=ax[1,1], yerr=False)
         labels = list(h1o_nactive.axes["selection"])
         format_axis(ax[1,1], labels)
+        # Add minimum hits threshold
+        if toggle_lines.get("nactive", True) and self.analyse.active_cuts["has_hits"]:
+            ax[1,1].axvline(self.analyse.thresholds["lo_nactive"], linestyle="--", color="grey")
         
         # t0err (time uncertainty)
         name = "t0err"
@@ -240,6 +275,9 @@ class Draw():
         h1o_t0err.plot1d(overlay="selection", ax=ax[1,2], yerr=False)
         labels = list(h1o_t0err.axes["selection"])
         format_axis(ax[1,2], labels)
+        # Add t0err threshold
+        if toggle_lines.get("t0err", True) and self.analyse.active_cuts["within_t0err"]:
+            ax[1,2].axvline(self.analyse.thresholds["hi_t0err"], linestyle="--", color="grey")
         
         # Row 2: d0, Rmax, tandip
         # d0 (distance of closest approach)
@@ -249,6 +287,9 @@ class Draw():
         h1o_d0.plot1d(overlay="selection", ax=ax[2,0], yerr=False)
         labels = list(h1o_d0.axes["selection"])
         format_axis(ax[2,0], labels)
+        # Add d0 threshold
+        if toggle_lines.get("d0", True) and self.analyse.active_cuts["within_d0"]:
+            ax[2,0].axvline(self.analyse.thresholds["hi_d0_mm"], linestyle="--", color="grey")
         
         # maxr (maximum radius)
         name = "maxr"
@@ -257,7 +298,13 @@ class Draw():
         h1o_maxr.plot1d(overlay="selection", ax=ax[2,1], yerr=False)
         labels = list(h1o_maxr.axes["selection"])
         format_axis(ax[2,1], labels)
-        
+        # Add maxr thresholds
+        if toggle_lines.get("maxr", True):
+            if self.analyse.active_cuts["within_lhr_max_lo"]:
+                ax[2,1].axvline(self.analyse.thresholds["lo_maxr_mm"], linestyle="--", color="grey")
+            if self.analyse.active_cuts["within_lhr_max_hi"]:
+                ax[2,1].axvline(self.analyse.thresholds["hi_maxr_mm"], linestyle="--", color="grey")
+            
         # pitch_angle (tan dip)
         name = "pitch_angle"
         h1o_pitch_angle = hists[name]
@@ -265,6 +312,10 @@ class Draw():
         h1o_pitch_angle.plot1d(overlay="selection", ax=ax[2,2], yerr=False)
         labels = list(h1o_pitch_angle.axes["selection"])
         format_axis(ax[2,2], labels)
+        # Add tan dip thresholds
+        if toggle_lines.get("pitch_angle", True) and self.analyse.active_cuts["within_pitch_angle"]:
+            ax[2,2].axvline(self.analyse.thresholds["lo_tanDip"], linestyle="--", color="grey")
+            ax[2,2].axvline(self.analyse.thresholds["hi_tanDip"], linestyle="--", color="grey")
         
         plt.tight_layout()
         if out_path:
