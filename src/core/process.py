@@ -38,6 +38,7 @@ class CosmicProcessor(Skeleton):
         },
         on_spill=False,
         cuts_to_toggle = None,
+        groups_to_toggle = None,
         use_remote = True,
         location = "disk",
         max_workers = None,
@@ -58,6 +59,7 @@ class CosmicProcessor(Skeleton):
             branches (dict or list, opt): EventNtuple branches to extract.
             on_spill (bool, opt): Apply on-spill timing cuts. Defaults to False.
             cuts_to_toggle (dict, opt): Cuts to enable/disable. Defaults to None.
+            groups_to_toggle (dict, opt): Cut groups to enable/disable. Defaults to None.
             use_remote (bool, opt): Use remote file access. Defaults to True.
             location (str, opt): File location ("disk", etc.). Defaults to "disk".
             max_workers (int, opt): Number of parallel workers. Defaults to 50.
@@ -109,6 +111,7 @@ class CosmicProcessor(Skeleton):
             
         # Toggle cuts
         self.cuts_to_toggle = cuts_to_toggle
+        self.groups_to_toggle = groups_to_toggle
 
         init_summary = f"""
         \tdefname         = {self.defname}
@@ -117,6 +120,7 @@ class CosmicProcessor(Skeleton):
         \tcutset_name     = {self.analyse.cutset_name}
         \ton_spill        = {self.on_spill}
         \tcuts_to_toggle  = {self.cuts_to_toggle}
+        \groups_to_toggle = {self.groups_to_toggle}
         \tbranches        = {list(self.branches.keys()) if isinstance(self.branches, dict) else self.branches}
         \tuse_remote      = {self.use_remote}
         \tlocation        = {self.location}
@@ -175,7 +179,8 @@ class CosmicProcessor(Skeleton):
             results = self.analyse.execute(
                 this_data, 
                 file_name,
-                self.cuts_to_toggle
+                self.cuts_to_toggle,
+                self.groups_to_toggle
             )
 
             # Clean up memory

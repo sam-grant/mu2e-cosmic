@@ -159,7 +159,8 @@ class Analyse:
                 name="has_trk_front", 
                 description="Tracks intersect tracker entrance", 
                 mask=has_trk_front,
-                active=self.active_cuts["has_trk_front"]
+                active=self.active_cuts["has_trk_front"],
+                group="Preselection"
             )
             # Append for debugging
             data["at_trk_front"] = at_trk_front
@@ -179,7 +180,8 @@ class Analyse:
                 name="is_reco_electron", 
                 description="Electron track fits", 
                 mask=is_reco_electron,
-                active=self.active_cuts["is_reco_electron"]
+                active=self.active_cuts["is_reco_electron"],
+                group="Preselection"
             )
             # Append mask for debugging
             data["is_reco_electron"] = is_reco_electron
@@ -200,7 +202,8 @@ class Analyse:
                 name="is_downstream",
                 description="Downstream tracks (p_z > 0 at tracker entrance)",
                 mask=is_downstream,
-                active=self.active_cuts["is_downstream"]  
+                active=self.active_cuts["is_downstream"],
+                group="Preselection"
             )
             # Append for debugging
             data["is_downstream"] = is_downstream
@@ -223,7 +226,8 @@ class Analyse:
                 name="one_reco_electron",
                 description="One reco electron / event",
                 mask=one_reco_electron,
-                active=self.active_cuts["one_reco_electron"]
+                active=self.active_cuts["one_reco_electron"],
+                group="Preselection"
             )
             # Append for debugging 
             data["one_reco_electron"] = one_reco_electron
@@ -246,7 +250,8 @@ class Analyse:
                 name="is_truth_electron", 
                 description="Track parents are electrons (truth PID)", 
                 mask=has_trk_parent_electron,
-                active=self.active_cuts["is_truth_electron"] 
+                active=self.active_cuts["is_truth_electron"] ,
+                group="Preselection"
             )
             # Append for debugging
             data["is_truth_electron"] = has_trk_parent_electron
@@ -265,7 +270,8 @@ class Analyse:
                 name="good_trkqual",
                 description=f"Track fit quality > {self.thresholds["lo_trkqual"]}",
                 mask=good_trkqual,
-                active=self.active_cuts["good_trkqual"]
+                active=self.active_cuts["good_trkqual"],
+                group="Tracker"
             )
             # Append for debugging
             data["good_trkqual"] = good_trkqual
@@ -289,7 +295,8 @@ class Analyse:
                     description=f"t0 at tracker entrance ({self.thresholds["lo_t0_ns"]}"\
                                 f" < t_0 < {self.thresholds["hi_t0_ns"]} ns)",
                     mask=within_t0,
-                    active=self.active_cuts["within_t0"] 
+                    active=self.active_cuts["within_t0"],
+                    group="Tracker"
                 )
                 # Append for debugging
                 data["within_t0"] = within_t0
@@ -308,7 +315,8 @@ class Analyse:
                 name="has_hits",
                 description=f">{self.thresholds["lo_nactive"]-1} active tracker hits",
                 mask=has_hits,
-                active=self.active_cuts["has_hits"] 
+                active=self.active_cuts["has_hits"],
+                group="Tracker"
             )
             # Append for debugging
             data["has_hits"] = has_hits
@@ -331,7 +339,8 @@ class Analyse:
                 name="within_t0err",
                 description=f"Track fit t0 uncertainty (t0err < {self.thresholds["hi_t0err"]} ns)",
                 mask=within_t0err,
-                active=self.active_cuts["within_t0err"] 
+                active=self.active_cuts["within_t0err"],
+                group="Tracker"
             )
             # Append for debugging
             data["within_t0err"] = within_t0err
@@ -354,7 +363,8 @@ class Analyse:
                 name="within_d0",
                 description=f"Distance of closest approach (d_0 < {self.thresholds["hi_d0_mm"]} mm)",
                 mask=within_d0,
-                active=self.active_cuts["within_d0"] 
+                active=self.active_cuts["within_d0"],
+                group="Tracker"
             )
             # Append for debugging
             data["within_d0"] = within_d0
@@ -386,7 +396,8 @@ class Analyse:
                 description=f"Extrapolated pitch angle ({self.thresholds["lo_tanDip"]}"\
                             f" < tan(theta_Dip) < {self.thresholds["hi_tanDip"]})",
                 mask=within_pitch_angle,
-                active=self.active_cuts["within_pitch_angle"] 
+                active=self.active_cuts["within_pitch_angle"],
+                group="Tracker"
             )
             # Append 
             data["within_pitch_angle"] = within_pitch_angle
@@ -409,7 +420,8 @@ class Analyse:
                 description=f"Loop helix maximum radius ({self.thresholds["lo_maxr_mm"]}"\
                             f" < R_max < {self.thresholds["hi_maxr_mm"]} mm)",
                 mask=within_lhr_max,
-                active=self.active_cuts["within_lhr_max"] 
+                active=self.active_cuts["within_lhr_max"],
+                group="Tracker"
             )
             # Append for debugging
             data["within_lhr_max"] = within_lhr_max
@@ -430,7 +442,8 @@ class Analyse:
                 name="within_lhr_max_hi",
                 description=f"Loop helix maximum radius (R_max < {self.thresholds["hi_maxr_mm"]} mm)",
                 mask=within_lhr_max_hi,
-                active=self.active_cuts["within_lhr_max_hi"] 
+                active=self.active_cuts["within_lhr_max_hi"],
+                group="Tracker"
             )
             # Append for debugging
             data["within_lhr_max_hi"] = within_lhr_max_hi
@@ -466,7 +479,8 @@ class Analyse:
                 name="unvetoed",
                 description=f"No veto: |dt| >= {self.thresholds["veto_dt_ns"]} ns",
                 mask=~veto,
-                active=self.active_cuts["unvetoed"]
+                active=self.active_cuts["unvetoed"],
+                group="CRV"
             )
             # Append for debugging
             data["unvetoed"] = ~veto
@@ -490,7 +504,8 @@ class Analyse:
                 description=f"Extended window ({self.thresholds["lo_ext_win_mevc"]}"\
                             f" < p < {self.thresholds["hi_ext_win_mevc"]} MeV/c)",
                 mask=within_ext_win,
-                active=self.active_cuts["within_ext_win"]
+                active=self.active_cuts["within_ext_win"],
+                group="Momentum"
             )
             # Append 
             data["within_ext_win"] = within_ext_win
@@ -515,7 +530,8 @@ class Analyse:
                 description=f"Signal window ({self.thresholds["lo_sig_win_mevc"]}"\
                             f" < p < {self.thresholds["hi_sig_win_mevc"]} MeV/c)",
                 mask=within_sig_win,
-                active=self.active_cuts["within_sig_win"]
+                active=self.active_cuts["within_sig_win"],
+                group="Momentum"
             )
             # Append 
             data["within_sig_win"] = within_sig_win
@@ -582,13 +598,14 @@ class Analyse:
         self.logger.log("Creating histograms", "info")
         return self.hist_manager.create_histograms(datasets)
         
-    def execute(self, data, file_id, cuts_to_toggle=None):
+    def execute(self, data, file_id, cuts_to_toggle=None, groups_to_toggle=None):
         """Perform complete analysis on an array
         
         Args:
             data: The data to analyse
             file_id: Identifier for the file
             cuts_to_toggle: Dict of cut name with active state  
+            groups_to_toggle: Dict of cut group names with active state
             
         Returns:
             dict: Complete analysis results
@@ -608,7 +625,10 @@ class Analyse:
             if cuts_to_toggle: 
                 self.logger.log(f"Toggling cuts", "max")
                 cut_manager.toggle_cut(cuts_to_toggle) 
-
+            if groups_to_toggle: 
+                self.logger.log(f"Toggling cut groups", "max")
+                cut_manager.toggle_group(groups_to_toggle) 
+                
             # Retrieve initial veto status (for cut plots)
             veto = cut_manager.cuts["unvetoed"]["active"]
             

@@ -21,7 +21,7 @@ class CutManager:
             print_prefix="[CutManager]"
         )
     
-    def add_cut(self, name, description, mask, active=True):
+    def add_cut(self, name, description, mask, active=True, group=None):
         """
         Add a cut to the collection.
         
@@ -30,6 +30,7 @@ class CutManager:
             description (str): Description of what the cut does
             mask (awkward.Array): Boolean mask array for the cut
             active (bool, optional): Whether the cut is active by default
+            group (str, optional): Group name for organising cuts
         """
 
         # Get the next available index
@@ -39,10 +40,12 @@ class CutManager:
             "description": description,
             "mask": mask,
             "active": active,
+            "group": group,
             "idx" : next_idx
         }
 
-        self.logger.log(f"Added cut {name} with index {next_idx}", "info")
+        group_info = f" in group '{group}'" if group else ""
+        self.logger.log(f"Added cut {name} with index {next_idx}{group_info}", "info")
         # return self # This would allow method chaining, could be useful maybe?
 
     def toggle_cut(self, cut_dict):
@@ -85,6 +88,90 @@ class CutManager:
             self.logger.log(f"Successfully deactivated cut(s): {deactivated_cuts}", "info")
         
         return success
+
+    def toggle_group(self, group_dict):
+        """Utility to set entire group(s) of cuts as inactive or active
+        
+        Args: 
+            group_dict (dict): Dictionary mapping group names to their desired active state
+                              e.g., {"quality_cuts": False, "momentum_cuts": True}
+        """
+        # Validate input type
+        if not isinstance(group_dict, dict):
+            self.logger.log(f"Invalid input type: expected dict, got {type(group_dict)}", "error")
+            return False
+        
+        success = True
+        bad_groups = []
+        activated_groups = []
+        deactivated_groups = []
+        
+        for group_name, active_state in group_dict.items():
+            # Find all cuts in this group
+            cuts_in_group = [name for name, cut_info in self.cuts.items() 
+                           if cut_info.get("group") == group_name]
+            
+            if cuts_in_group:
+                # Toggle all cuts in the group
+                for cut_name in cuts_in_group:
+                    self.cuts[cut_name]["active"] = active_state
+                
+                if active_state:
+                    activated_groups.append(f"{group_name} ({len(cuts_in_group)} cuts)")
+                else:
+                    deactivated_groups.append(f"{group_name} ({len(cuts_in_group)} cuts)")
+            else:
+                bad_groups.append(group_name)
+                success = False
+        
+        # Log results
+        if len(bad_groups) > 0:
+            self.logger.log(f"Group(s) not found: {bad_groups}", "error")
+        
+        if len(activated_groups) > 0:
+            self.logger.log(f"Successfully activated group(s): {activated_groups}", "info")
+        
+        if len(deactivated_groups) > 0:
+            self.logger.log(f"Successfully deactivated group(s): {deactivated_groups}", "info")
+        
+        return success
+
+    # def get_groups(self):
+    #     """Get all unique group names and their cuts
+        
+    #     Returns:
+    #         dict: Dictionary mapping group names to lists of cut names
+    #     """
+    #     groups = {}
+    #     for cut_name, cut_info in self.cuts.items():
+    #         group = cut_info.get("group")
+    #         if group is not None:
+    #             if group not in groups:
+    #                 groups[group] = []
+    #             groups[group].append(cut_name)
+        
+    #     # Also add ungrouped cuts
+    #     ungrouped = [cut_name for cut_name, cut_info in self.cuts.items() 
+    #                 if cut_info.get("group") is None]
+    #     if ungrouped:
+    #         groups[None] = ungrouped
+            
+    #     return groups
+
+    # def list_groups(self):
+    #     """Print all groups and their cuts"""
+    #     groups = self.get_groups()
+        
+    #     if not groups:
+    #         self.logger.log("No cuts defined", "info")
+    #         return
+            
+    #     for group_name, cut_names in groups.items():
+    #         if group_name is None:
+    #             self.logger.log(f"Ungrouped cuts ({len(cut_names)}): {', '.join(cut_names)}", "info")
+    #         else:
+    #             active_cuts = [name for name in cut_names if self.cuts[name]["active"]]
+    #             self.logger.log(f"Group '{group_name}' ({len(active_cuts)}/{len(cut_names)} active): {', '.join(cut_names)}", "info")
     
     # def get_active_cuts(self):
     #     """Utility to get all active cutss"""
@@ -121,14 +208,17 @@ class CutManager:
     # Generate and manage cut flows
     ############################################
     
-    def _add_entry(self, name, events_passing, absolute_frac, relative_frac, description):
-        return {
+    def _add_entry(self, name, events_passing, absolute_frac, relative_frac, description, group=None):
+        entry = {
             "name": name,
             "events_passing": int(events_passing),
             "absolute_frac": round(float(absolute_frac), 2),
             "relative_frac": round(float(relative_frac), 2),
             "description": description
         }
+        if group is not None:
+            entry["group"] = group
+        return entry
             
     def create_cut_flow(self, data):
         """ Utility to calculate cut flow from array and cuts object
@@ -188,27 +278,45 @@ class CutManager:
                     absolute_frac = absolute_frac,
                     relative_frac = relative_frac,
                     description = cut_info["description"],
+                    group = cut_info.get("group")
                 )
             )
 
         return cut_flow
 
-    def format_cut_flow(self, cut_flow):
+    def format_cut_flow(self, cut_flow, include_group=True):
         """Format cut flow as a DataFrame with more readable column names
 
             Args:
                 cut_flow (dict): The cut flow to format
+                include_group (bool, optional): Whether to include group column
             Returns:
                 df_cut_flow (pd.DataFrame)
         """
         df_cut_flow = pd.DataFrame(cut_flow)
-        df_cut_flow = df_cut_flow.rename(columns={
+        
+        column_mapping = {
             "name": "Cut",
             "events_passing": "Events Passing",
             "absolute_frac": "Absolute [%]", 
             "relative_frac": "Relative [%]",
             "description": "Description"
-        })
+        }
+        
+        if include_group and "group" in df_cut_flow.columns:
+            column_mapping["group"] = "Group"
+        
+        df_cut_flow = df_cut_flow.rename(columns=column_mapping)
+        
+        # Reorder columns to put Group after Cut if it exists
+        if include_group and "Group" in df_cut_flow.columns:
+            cols = df_cut_flow.columns.tolist()
+            if "Group" in cols:
+                cols.remove("Group")
+                cut_idx = cols.index("Cut") if "Cut" in cols else 0
+                cols.insert(cut_idx + 1, "Group")
+                df_cut_flow = df_cut_flow[cols]
+        
         return df_cut_flow
         
     def combine_cut_flows(self, cut_flow_list, format_as_df=True):
@@ -288,9 +396,8 @@ class CutManager:
                 return self.format_cut_flow(combined_cut_flow)
             else:
                 self.logger.log(f"Combined cut flows", "success")
-                combined_cut_flow
+                return combined_cut_flow
         
         except Exception as e:
             self.logger.log(f"Exception when combining cut flows: {e}", "error")
             raise
-            
