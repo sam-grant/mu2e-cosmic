@@ -1,5 +1,5 @@
 # =============
-# test.yaml
+# alpha_test.yaml
 #
 # Test pipeline with one file
 # =============
@@ -17,4 +17,4 @@ postprocess:
     generated_events: 4895
 
 output:
-    out_path: "../output/results/test"
+    out_path: "../output/results/alpha_test"

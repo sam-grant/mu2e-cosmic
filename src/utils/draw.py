@@ -313,9 +313,15 @@ class Draw():
         labels = list(h1o_pitch_angle.axes["selection"])
         format_axis(ax[2,2], labels)
         # Add tan dip thresholds
-        if toggle_lines.get("pitch_angle", True) and self.analyse.active_cuts["within_pitch_angle"]:
-            ax[2,2].axvline(self.analyse.thresholds["lo_tanDip"], linestyle="--", color="grey")
-            ax[2,2].axvline(self.analyse.thresholds["hi_tanDip"], linestyle="--", color="grey")
+        if toggle_lines.get("pitch_angle", True):
+            if self.analyse.active_cuts["within_pitch_angle_lo"]:
+                ax[2,2].axvline(self.analyse.thresholds["lo_pitch_angle"], linestyle="--", color="grey")
+            if self.analyse.active_cuts["within_pitch_angle_hi"]:
+                ax[2,2].axvline(self.analyse.thresholds["hi_pitch_angle"], linestyle="--", color="grey")
+                
+        # if toggle_lines.get("pitch_angle", True) and self.analyse.active_cuts["within_pitch_angle"]:
+        #     ax[2,2].axvline(self.analyse.thresholds["lo_tanDip"], linestyle="--", color="grey")
+        #     ax[2,2].axvline(self.analyse.thresholds["hi_tanDip"], linestyle="--", color="grey")
         
         plt.tight_layout()
         if out_path:

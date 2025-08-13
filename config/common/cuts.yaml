@@ -15,10 +15,9 @@ defaults:
         lo_maxr_mm: 450
         hi_maxr_mm: 680
         hi_d0_mm: 100
-        # lo_t0err: 0.5577350
         hi_t0err: 0.9 
-        lo_tanDip: 0.5577350
-        hi_tanDip: 1.0 
+        lo_pitch_angle: 0.5577350
+        hi_pitch_angle: 1.0 
         veto_dt_ns: 150
         lo_ext_win_mevc: 100
         hi_ext_win_mevc: 110
@@ -33,7 +32,8 @@ defaults:
         has_hits: true
         within_t0err: false
         within_d0: true
-        within_pitch_angle: true
+        within_pitch_angle_lo: true
+        within_pitch_angle_hi: true
         within_lhr_max_lo: true
         within_lhr_max_hi: true
         is_truth_electron: true
@@ -66,8 +66,8 @@ cutsets:
             within_lhr_max_lo: false
             within_t0err: true
         thresholds:
-            lo_tanDip: 0.5
-            hi_tanDip: 1.0
+            lo_pitch_angle: 0.5
+            hi_pitch_angle: 1.0
     SU2020b:
         description:
             "SU2020b cuts (trkqual > 0.2)"
@@ -75,8 +75,8 @@ cutsets:
             within_lhr_max_lo: false
             within_t0err: true
         thresholds:
-            lo_tanDip: 0.5
-            hi_tanDip: 1.0
+            lo_pitch_angle: 0.5
+            hi_pitch_angle: 1.0
             lo_trkqual: 0.2
     SU2020c:
         description:
@@ -86,6 +86,6 @@ cutsets:
             within_t0err: true
             good_trkqual: false
         thresholds:
-            lo_tanDip: 0.5
-            hi_tanDip: 1.0
+            lo_pitch_angle: 0.5
+            hi_pitch_angle: 1.0
             

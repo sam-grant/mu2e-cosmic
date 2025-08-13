@@ -373,38 +373,53 @@ class Analyse:
             raise e
 
         ###################################################
-        # Pitch angle
+        # Pitch angle lower bound
         ###################################################
         try:
-            # # Define pitch angle
-            # pvec = self.vector.get_vector(data["trkfit"]["trksegs"], "mom")
-            # pt = np.sqrt(pvec["x"]**2 + pvec["y"]**2) 
-            # pz = data["trkfit"]["trksegs"]["mom"]["fCoordinates"]["fZ"]
-            # pitch_angle = pz/pt 
-            # data["pitch_angle"] = pitch_angle
+            # Define pitch angle
             pitch_angle = self.get_pitch_angle(data["trkfit"])
-            # Old track segments definition (tanDip has a bug in EventNtuple)
-            # within_pitch_angle = ((self.thresholds["lo_tanDip"] < data["trkfit"]["trksegpars_lh"]["tanDip"]) & 
-            #                       (data["trkfit"]["trksegpars_lh"]["tanDip"] < self.thresholds["hi_tanDip"]))
-            # Correct definition
-            within_pitch_angle = ((self.thresholds["lo_tanDip"] < pitch_angle) & (pitch_angle < self.thresholds["hi_tanDip"]))
+            # Trk segments level
+            within_pitch_angle_lo = (self.thresholds["lo_pitch_angle"] < pitch_angle) 
             # Track level definition
-            within_pitch_angle = ak.all(~at_trk_front | within_pitch_angle, axis=-1)
+            within_pitch_angle_lo = ak.all(~at_trk_front | within_pitch_angle_lo, axis=-1)
             # Add cut 
             cut_manager.add_cut(
-                name="within_pitch_angle",
-                description=f"Extrapolated pitch angle ({self.thresholds["lo_tanDip"]}"\
-                            f" < tan(theta_Dip) < {self.thresholds["hi_tanDip"]})",
-                mask=within_pitch_angle,
-                active=self.active_cuts["within_pitch_angle"],
+                name="within_pitch_angle_lo",
+                description=f"Extrapolated pitch angle (pz/pt > {self.thresholds["lo_pitch_angle"]}",
+                mask=within_pitch_angle_lo,
+                active=self.active_cuts["within_pitch_angle_lo"],
                 group="Tracker"
             )
             # Append 
-            data["within_pitch_angle"] = within_pitch_angle
+            data["within_pitch_angle_lo"] = within_pitch_angle_lo
         except Exception as e:
-            self.logger.log(f"Error defining 'within_pitch_angle': {e}", "error") 
+            self.logger.log(f"Error defining 'within_pitch_angle_lo': {e}", "error") 
             raise e
 
+        ###################################################
+        # Pitch angle upper bound
+        ###################################################
+        try:
+            # Define pitch angle
+            pitch_angle = self.get_pitch_angle(data["trkfit"])
+            # Trk segments level
+            within_pitch_angle_hi = (self.thresholds["hi_pitch_angle"] > pitch_angle) 
+            # Track level definition
+            within_pitch_angle_hi = ak.all(~at_trk_front | within_pitch_angle_hi, axis=-1)
+            # Add cut 
+            cut_manager.add_cut(
+                name="within_pitch_angle_hi",
+                description=f"Extrapolated pitch angle (pz/pt > {self.thresholds["hi_pitch_angle"]}",
+                mask=within_pitch_angle_hi,
+                active=self.active_cuts["within_pitch_angle_hi"],
+                group="Tracker"
+            )
+            # Append 
+            data["within_pitch_angle_hi"] = within_pitch_angle_hi
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_pitch_angle_hi': {e}", "error") 
+            raise e
+            
         ###################################################
         # Loop helix maximimum radius lower bound 
         ###################################################
