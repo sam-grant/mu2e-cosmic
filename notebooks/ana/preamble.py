@@ -8,7 +8,7 @@ from pyutils.pylogger import Logger
 from pyutils.pyprint import Print
 
 # mu2e-cosmic classes
-sys.path.extend(["../../src/core", "../../src/utils"])
+sys.path.extend(["../../../src/core", "../../../src/utils"])
 from io_manager import Load
 from draw import Draw
 from efficiency import Efficiency 

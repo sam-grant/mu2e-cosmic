@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to generate analysis notebooks based on ana_template.ipynb
+Script to generate analysis notebooks based on template/template.ipynb
 Usage: python generate_notebook.py <ana_label>
 """
 
@@ -38,9 +38,16 @@ def generate_notebook(ana_label, template_path, output_path=None):
         output_path (str, optional): Output path. If None, uses ana_label.ipynb
     """
     
+    # Extract the prefix before the first underscore
+    prefix = ana_label.split('_')[0]
+    
     # Set default output path if not provided
     if output_path is None:
-        output_path = f"{ana_label}.ipynb"
+        # Create directory path based on prefix
+        output_dir = Path(prefix)
+        output_dir.mkdir(exist_ok=True)
+        output_path = output_dir / f"{ana_label}.ipynb"
+        logger.log(f"Created/using directory: {output_dir}", "info")
     
     # Read the template notebook
     try:
@@ -50,7 +57,7 @@ def generate_notebook(ana_label, template_path, output_path=None):
         logger.log(f"Error: Template file \"{template_path}\" not found.", "error")
         return False
     except json.JSONDecodeError as e:
-        logger.log(f"Error: Template file \"{template_path}\" not found.", "error")
+        logger.log(f"Error: Template file \"{template_path}\" contains invalid JSON: {e}", "error")
         return False
     
     # Process each cell to replace placeholders
@@ -95,14 +102,15 @@ def main():
         help_message = (
             f"Usage: python generate_notebook.py <ana_label> [template_path] [output_path]\n"
             f"  ana_label: The analysis label to use for replacements\n"
-            f"  template_path: Path to template notebook (default: ana_template.ipynb)\n"
-            f"  output_path: Output path (default: <ana_label>.ipynb)"
+            f"             (prefix before first underscore will be used as directory name)\n"
+            f"  template_path: Path to template notebook (default: template/template.ipynb)\n"
+            f"  output_path: Output path (default: <prefix>/<ana_label>.ipynb)"
         )
         logger.log(help_message, "info")
         sys.exit(1)
     
     ana_label = sys.argv[1]
-    template_path = sys.argv[2] if len(sys.argv) > 2 else "ana_template.ipynb"
+    template_path = sys.argv[2] if len(sys.argv) > 2 else "template/template.ipynb"
     output_path = sys.argv[3] if len(sys.argv) > 3 else None
     
     # Validate ana_label
