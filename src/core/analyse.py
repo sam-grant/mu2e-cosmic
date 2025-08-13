@@ -143,26 +143,7 @@ class Analyse:
         
         """
         ###################################################
-        # 1. Select electron track fit hypothesis  
-        ###################################################
-        try:
-            # Track level definition
-            is_reco_electron = self.selector.is_electron(data["trk"])
-            # Add cut 
-            cut_manager.add_cut(
-                name="is_reco_electron", 
-                description="Electron track fits", 
-                mask=is_reco_electron,
-                active=self.active_cuts["is_reco_electron"]
-            )
-            # Append mask for debugging
-            data["is_reco_electron"] = is_reco_electron
-        except Exception as e:
-            self.logger.log(f"Error defining 'is_reco_electron': {e}", "error") 
-            raise e
-
-        ###################################################
-        # 2. Tracks intersect tracker entrance
+        # Tracks intersect tracker entrance
         ###################################################
         try:
             # Track segments level definition
@@ -186,52 +167,28 @@ class Analyse:
         except Exception as e:
             self.logger.log(f"Error defining 'has_trk_front': {e}", "error") 
             raise e
-            
+
         ###################################################
-        # 3. Track fit hypothesis quality
-        ###################################################
-        try: 
-            # Track level mask
-            good_trkqual = self.selector.select_trkqual(data["trk"], quality=self.thresholds["lo_trkqual"])
-            # Add cut 
-            cut_manager.add_cut(
-                name="good_trkqual",
-                description=f"Track fit quality > {self.thresholds["lo_trkqual"]}",
-                mask=good_trkqual,
-                active=self.active_cuts["good_trkqual"]
-            )
-            # Append for debugging
-            data["good_trkqual"] = good_trkqual
-        except Exception as e:
-            self.logger.log(f"Error defining 'good_trkqual': {e}", "error") 
-            raise e
-        
-        ###################################################
-        # 4. Time at tracker entrance (t0)
+        # Select electron track fit hypothesis  
         ###################################################
         try:
-            if self.on_spill:
-                # Track segments level definition
-                within_t0 = ((self.thresholds["lo_t0_ns"] < data["trkfit"]["trksegs"]["time"]) & 
-                             (data["trkfit"]["trksegs"]["time"] < self.thresholds["hi_t0_ns"]))
-                # Track level definition
-                within_t0 = ak.all(~at_trk_front | within_t0, axis=-1)
-                # Add cut 
-                cut_manager.add_cut( 
-                    name="within_t0",
-                    description=f"t0 at tracker entrance ({self.thresholds["lo_t0_ns"]}"\
-                                f" < t_0 < {self.thresholds["hi_t0_ns"]} ns)",
-                    mask=within_t0,
-                    active=self.active_cuts["within_t0"] 
-                )
-                # Append for debugging
-                data["within_t0"] = within_t0
+            # Track level definition
+            is_reco_electron = self.selector.is_electron(data["trk"])
+            # Add cut 
+            cut_manager.add_cut(
+                name="is_reco_electron", 
+                description="Electron track fits", 
+                mask=is_reco_electron,
+                active=self.active_cuts["is_reco_electron"]
+            )
+            # Append mask for debugging
+            data["is_reco_electron"] = is_reco_electron
         except Exception as e:
-            self.logger.log(f"Error defining 'within_t0': {e}", "error") 
+            self.logger.log(f"Error defining 'is_reco_electron': {e}", "error") 
             raise e
 
         ###################################################
-        # 5. Downstream tracks at the tracker entrance 
+        # Downstream tracks at the tracker entrance 
         ###################################################
         try:
             # Track segments level mask
@@ -252,171 +209,7 @@ class Analyse:
             raise e
 
         ###################################################
-        # 6. Minimum active hits
-        ###################################################
-        try:
-            # Track level definition 
-            has_hits = self.selector.has_n_hits(data["trk"], n_hits=self.thresholds["lo_nactive"])
-            # Add cut
-            cut_manager.add_cut(
-                name="has_hits",
-                description=f">{self.thresholds["lo_nactive"]-1} active tracker hits",
-                mask=has_hits,
-                active=self.active_cuts["has_hits"] 
-            )
-            # Append for debugging
-            data["has_hits"] = has_hits
-        except Exception as e:
-            self.logger.log(f"Error defining 'has_hits': {e}", "error") 
-            raise e
-
-        ###################################################
-        # 6.5. t0 uncertainty distance of closest approach
-        ###################################################
-        try:
-            # Track segments level definition
-            within_t0err = (data["trkfit"]["trksegpars_lh"]["t0err"] < self.thresholds["hi_t0err"])
-
-            # Track level definition
-            within_t0err = ak.all(~at_trk_front | within_t0err, axis=-1) 
-
-            # Add cut 
-            cut_manager.add_cut(
-                name="within_t0err",
-                description=f"Track fit t0 uncertainty (t0err < {self.thresholds["hi_t0err"]} ns)",
-                mask=within_t0err,
-                active=self.active_cuts["within_t0err"] 
-            )
-            # Append for debugging
-            data["within_t0err"] = within_t0err
-        except Exception as e:
-            self.logger.log(f"Error defining 'within_t0err': {e}", "error") 
-            raise e
-            
-        ###################################################
-        # 7. Extrapolated distance of closest approach
-        ###################################################
-        try:
-            # Track segments level definition
-            within_d0 = (data["trkfit"]["trksegpars_lh"]["d0"] < self.thresholds["hi_d0_mm"])
-
-            # Track level definition
-            within_d0 = ak.all(~at_trk_front | within_d0, axis=-1) 
-
-            # Add cut 
-            cut_manager.add_cut(
-                name="within_d0",
-                description=f"Distance of closest approach (d_0 < {self.thresholds["hi_d0_mm"]} mm)",
-                mask=within_d0,
-                active=self.active_cuts["within_d0"] 
-            )
-            # Append for debugging
-            data["within_d0"] = within_d0
-        except Exception as e:
-            self.logger.log(f"Error defining 'within_d0': {e}", "error") 
-            raise e
-
-        ###################################################
-        # 8. Pitch angle
-        ###################################################
-        try:
-            # # Define pitch angle
-            # pvec = self.vector.get_vector(data["trkfit"]["trksegs"], "mom")
-            # pt = np.sqrt(pvec["x"]**2 + pvec["y"]**2) 
-            # pz = data["trkfit"]["trksegs"]["mom"]["fCoordinates"]["fZ"]
-            # pitch_angle = pz/pt 
-            # data["pitch_angle"] = pitch_angle
-
-            pitch_angle = self.get_pitch_angle(data["trkfit"])
-            # Old track segments definition (tanDip has a bug in EventNtuple)
-            # within_pitch_angle = ((self.thresholds["lo_tanDip"] < data["trkfit"]["trksegpars_lh"]["tanDip"]) & 
-            #                       (data["trkfit"]["trksegpars_lh"]["tanDip"] < self.thresholds["hi_tanDip"]))
-            # Correct definition
-            within_pitch_angle = ((self.thresholds["lo_tanDip"] < pitch_angle) & (pitch_angle < self.thresholds["hi_tanDip"]))
-            # Track level definition
-            within_pitch_angle = ak.all(~at_trk_front | within_pitch_angle, axis=-1)
-            # Add cut 
-            cut_manager.add_cut(
-                name="within_pitch_angle",
-                description=f"Extrapolated pitch angle ({self.thresholds["lo_tanDip"]}"\
-                            f" < tan(theta_Dip) < {self.thresholds["hi_tanDip"]})",
-                mask=within_pitch_angle,
-                active=self.active_cuts["within_pitch_angle"] 
-            )
-            # Append 
-            data["within_pitch_angle"] = within_pitch_angle
-        except Exception as e:
-            self.logger.log(f"Error defining 'within_pitch_angle': {e}", "error") 
-            raise e
-
-        ###################################################
-        # 9. Loop helix maximimum radius 
-        ###################################################
-        try:
-            # Track segmentslevel definition 
-            within_lhr_max = ((self.thresholds["lo_maxr_mm"] < data["trkfit"]["trksegpars_lh"]["maxr"]) & 
-                              (data["trkfit"]["trksegpars_lh"]["maxr"] < self.thresholds["hi_maxr_mm"]))
-            # Track level definition 
-            within_lhr_max = ak.all(~at_trk_front | within_lhr_max, axis=-1)
-            # Add cut 
-            cut_manager.add_cut(
-                name="within_lhr_max",
-                description=f"Loop helix maximum radius ({self.thresholds["lo_maxr_mm"]}"\
-                            f" < R_max < {self.thresholds["hi_maxr_mm"]} mm)",
-                mask=within_lhr_max,
-                active=self.active_cuts["within_lhr_max"] 
-            )
-            # Append for debugging
-            data["within_lhr_max"] = within_lhr_max
-        except Exception as e:
-            self.logger.log(f"Error defining 'within_lhr_max': {e}", "error") 
-            raise e
-
-        ###################################################
-        # 9.5. Loop helix maximimum radius upper only 
-        ###################################################
-        try:
-            # Track segmentslevel definition 
-            within_lhr_max_hi = (data["trkfit"]["trksegpars_lh"]["maxr"] < self.thresholds["hi_maxr_mm"])
-            # Track level definition 
-            within_lhr_max_hi = ak.all(~at_trk_front | within_lhr_max_hi, axis=-1)
-            # Add cut 
-            cut_manager.add_cut(
-                name="within_lhr_max_hi",
-                description=f"Loop helix maximum radius (R_max < {self.thresholds["hi_maxr_mm"]} mm)",
-                mask=within_lhr_max_hi,
-                active=self.active_cuts["within_lhr_max_hi"] 
-            )
-            # Append for debugging
-            data["within_lhr_max_hi"] = within_lhr_max_hi
-        except Exception as e:
-            self.logger.log(f"Error defining 'within_lhr_max_hi': {e}", "error") 
-            raise e
-            
-        ###################################################
-        # 10. Track "PID" from truth track parents 
-        ###################################################
-        try:
-            # Truth track parent is electron 
-            is_electron = data["trkmc"]["trkmcsim"]["pdg"] == self.thresholds["track_pdg"]
-            is_trk_parent = data["trkmc"]["trkmcsim"]["nhits"] == ak.max(data["trkmc"]["trkmcsim"]["nhits"], axis=-1)
-            is_trk_parent_electron = is_electron & is_trk_parent 
-            has_trk_parent_electron = ak.any(is_trk_parent_electron, axis=-1) 
-            # Add cut 
-            cut_manager.add_cut(
-                name="is_truth_electron", 
-                description="Track parents are electrons (truth PID)", 
-                mask=has_trk_parent_electron,
-                active=self.active_cuts["is_truth_electron"] 
-            )
-            # Append for debugging
-            data["is_truth_electron"] = has_trk_parent_electron
-        except Exception as e:
-            self.logger.log(f"Error defining 'is_truth_electron': {e}", "error") 
-            raise e 
-
-        ###################################################
-        # 11. One electron track fit / event 
+        # One electron track fit / event 
         # This deals with split reflected tracks
         # TODO: make this dependent on a deltaT
         ###################################################
@@ -440,7 +233,213 @@ class Analyse:
             raise e
 
         ###################################################
-        # 12. CRV veto: |dt| < 150 ns 
+        # Track "PID" from truth track parents 
+        ###################################################
+        try:
+            # Truth track parent is electron 
+            is_electron = data["trkmc"]["trkmcsim"]["pdg"] == self.thresholds["track_pdg"]
+            is_trk_parent = data["trkmc"]["trkmcsim"]["nhits"] == ak.max(data["trkmc"]["trkmcsim"]["nhits"], axis=-1)
+            is_trk_parent_electron = is_electron & is_trk_parent 
+            has_trk_parent_electron = ak.any(is_trk_parent_electron, axis=-1) 
+            # Add cut 
+            cut_manager.add_cut(
+                name="is_truth_electron", 
+                description="Track parents are electrons (truth PID)", 
+                mask=has_trk_parent_electron,
+                active=self.active_cuts["is_truth_electron"] 
+            )
+            # Append for debugging
+            data["is_truth_electron"] = has_trk_parent_electron
+        except Exception as e:
+            self.logger.log(f"Error defining 'is_truth_electron': {e}", "error") 
+            raise e 
+
+        ###################################################
+        # Track fit hypothesis quality
+        ###################################################
+        try: 
+            # Track level mask
+            good_trkqual = self.selector.select_trkqual(data["trk"], quality=self.thresholds["lo_trkqual"])
+            # Add cut 
+            cut_manager.add_cut(
+                name="good_trkqual",
+                description=f"Track fit quality > {self.thresholds["lo_trkqual"]}",
+                mask=good_trkqual,
+                active=self.active_cuts["good_trkqual"]
+            )
+            # Append for debugging
+            data["good_trkqual"] = good_trkqual
+        except Exception as e:
+            self.logger.log(f"Error defining 'good_trkqual': {e}", "error") 
+            raise e
+        
+        ###################################################
+        # Time at tracker entrance (t0)
+        ###################################################
+        try:
+            if self.on_spill:
+                # Track segments level definition
+                within_t0 = ((self.thresholds["lo_t0_ns"] < data["trkfit"]["trksegs"]["time"]) & 
+                             (data["trkfit"]["trksegs"]["time"] < self.thresholds["hi_t0_ns"]))
+                # Track level definition
+                within_t0 = ak.all(~at_trk_front | within_t0, axis=-1)
+                # Add cut 
+                cut_manager.add_cut( 
+                    name="within_t0",
+                    description=f"t0 at tracker entrance ({self.thresholds["lo_t0_ns"]}"\
+                                f" < t_0 < {self.thresholds["hi_t0_ns"]} ns)",
+                    mask=within_t0,
+                    active=self.active_cuts["within_t0"] 
+                )
+                # Append for debugging
+                data["within_t0"] = within_t0
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_t0': {e}", "error") 
+            raise e
+
+        ###################################################
+        # Minimum active hits
+        ###################################################
+        try:
+            # Track level definition 
+            has_hits = self.selector.has_n_hits(data["trk"], n_hits=self.thresholds["lo_nactive"])
+            # Add cut
+            cut_manager.add_cut(
+                name="has_hits",
+                description=f">{self.thresholds["lo_nactive"]-1} active tracker hits",
+                mask=has_hits,
+                active=self.active_cuts["has_hits"] 
+            )
+            # Append for debugging
+            data["has_hits"] = has_hits
+        except Exception as e:
+            self.logger.log(f"Error defining 'has_hits': {e}", "error") 
+            raise e
+
+        ###################################################
+        # t0 uncertainty distance of closest approach
+        ###################################################
+        try:
+            # Track segments level definition
+            within_t0err = (data["trkfit"]["trksegpars_lh"]["t0err"] < self.thresholds["hi_t0err"])
+
+            # Track level definition
+            within_t0err = ak.all(~at_trk_front | within_t0err, axis=-1) 
+
+            # Add cut 
+            cut_manager.add_cut(
+                name="within_t0err",
+                description=f"Track fit t0 uncertainty (t0err < {self.thresholds["hi_t0err"]} ns)",
+                mask=within_t0err,
+                active=self.active_cuts["within_t0err"] 
+            )
+            # Append for debugging
+            data["within_t0err"] = within_t0err
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_t0err': {e}", "error") 
+            raise e
+            
+        ###################################################
+        # Extrapolated distance of closest approach
+        ###################################################
+        try:
+            # Track segments level definition
+            within_d0 = (data["trkfit"]["trksegpars_lh"]["d0"] < self.thresholds["hi_d0_mm"])
+
+            # Track level definition
+            within_d0 = ak.all(~at_trk_front | within_d0, axis=-1) 
+
+            # Add cut 
+            cut_manager.add_cut(
+                name="within_d0",
+                description=f"Distance of closest approach (d_0 < {self.thresholds["hi_d0_mm"]} mm)",
+                mask=within_d0,
+                active=self.active_cuts["within_d0"] 
+            )
+            # Append for debugging
+            data["within_d0"] = within_d0
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_d0': {e}", "error") 
+            raise e
+
+        ###################################################
+        # Pitch angle
+        ###################################################
+        try:
+            # # Define pitch angle
+            # pvec = self.vector.get_vector(data["trkfit"]["trksegs"], "mom")
+            # pt = np.sqrt(pvec["x"]**2 + pvec["y"]**2) 
+            # pz = data["trkfit"]["trksegs"]["mom"]["fCoordinates"]["fZ"]
+            # pitch_angle = pz/pt 
+            # data["pitch_angle"] = pitch_angle
+            pitch_angle = self.get_pitch_angle(data["trkfit"])
+            # Old track segments definition (tanDip has a bug in EventNtuple)
+            # within_pitch_angle = ((self.thresholds["lo_tanDip"] < data["trkfit"]["trksegpars_lh"]["tanDip"]) & 
+            #                       (data["trkfit"]["trksegpars_lh"]["tanDip"] < self.thresholds["hi_tanDip"]))
+            # Correct definition
+            within_pitch_angle = ((self.thresholds["lo_tanDip"] < pitch_angle) & (pitch_angle < self.thresholds["hi_tanDip"]))
+            # Track level definition
+            within_pitch_angle = ak.all(~at_trk_front | within_pitch_angle, axis=-1)
+            # Add cut 
+            cut_manager.add_cut(
+                name="within_pitch_angle",
+                description=f"Extrapolated pitch angle ({self.thresholds["lo_tanDip"]}"\
+                            f" < tan(theta_Dip) < {self.thresholds["hi_tanDip"]})",
+                mask=within_pitch_angle,
+                active=self.active_cuts["within_pitch_angle"] 
+            )
+            # Append 
+            data["within_pitch_angle"] = within_pitch_angle
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_pitch_angle': {e}", "error") 
+            raise e
+
+        ###################################################
+        # Loop helix maximimum radius 
+        ###################################################
+        try:
+            # Track segmentslevel definition 
+            within_lhr_max = ((self.thresholds["lo_maxr_mm"] < data["trkfit"]["trksegpars_lh"]["maxr"]) & 
+                              (data["trkfit"]["trksegpars_lh"]["maxr"] < self.thresholds["hi_maxr_mm"]))
+            # Track level definition 
+            within_lhr_max = ak.all(~at_trk_front | within_lhr_max, axis=-1)
+            # Add cut 
+            cut_manager.add_cut(
+                name="within_lhr_max",
+                description=f"Loop helix maximum radius ({self.thresholds["lo_maxr_mm"]}"\
+                            f" < R_max < {self.thresholds["hi_maxr_mm"]} mm)",
+                mask=within_lhr_max,
+                active=self.active_cuts["within_lhr_max"] 
+            )
+            # Append for debugging
+            data["within_lhr_max"] = within_lhr_max
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_lhr_max': {e}", "error") 
+            raise e
+
+        ###################################################
+        # Loop helix maximimum radius upper only 
+        ###################################################
+        try:
+            # Track segmentslevel definition 
+            within_lhr_max_hi = (data["trkfit"]["trksegpars_lh"]["maxr"] < self.thresholds["hi_maxr_mm"])
+            # Track level definition 
+            within_lhr_max_hi = ak.all(~at_trk_front | within_lhr_max_hi, axis=-1)
+            # Add cut 
+            cut_manager.add_cut(
+                name="within_lhr_max_hi",
+                description=f"Loop helix maximum radius (R_max < {self.thresholds["hi_maxr_mm"]} mm)",
+                mask=within_lhr_max_hi,
+                active=self.active_cuts["within_lhr_max_hi"] 
+            )
+            # Append for debugging
+            data["within_lhr_max_hi"] = within_lhr_max_hi
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_lhr_max_hi': {e}", "error") 
+            raise e
+
+        ###################################################
+        # CRV veto: |dt| < 150 ns 
         # Check if EACH track is within 150 ns of ANY coincidence 
         ###################################################
         try:
@@ -476,7 +475,7 @@ class Analyse:
             raise e
 
         ###################################################
-        # 13. Extended window 
+        # Extended window 
         ###################################################
         try:
             # Get momentum magnitude 
@@ -500,7 +499,7 @@ class Analyse:
             raise e
 
         ###################################################
-        # 14. Signal window 
+        # Signal window 
         ###################################################
         try:
             # Get momentum magnitude 
