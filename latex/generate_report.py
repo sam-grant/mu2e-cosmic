@@ -429,9 +429,39 @@ def main():
     parser.add_argument('--compile', action='store_true', help='Compile LaTeX to PDF using pdflatex')
     
     args = parser.parse_args()
+
+    
+    # ana_labels=[
+    #     "SU2020a_CRY_offspill-LH_as"
+    #     # ,"SU2020a_CRY_onspill-LH_aq"
+    #     ,"SU2020a_CRY_onspill-LH_au"
+    #     ,"SU2020a_CRY_onspill-LH_aw"
+    #     # ,"SU2020a_signal_onspill-LH_an"
+    #     # ,"SU2020a_signal_onspill-LH_aq"
+    #     ,"SU2020a_signal_onspill-LH_au"
+    #     ,"SU2020a_signal_onspill-LH_aw"
+    #     ,"SU2020b_CRY_offspill-LH_as"
+    #     # ,"SU2020b_CRY_onspill-LH_aq"
+    #     ,"SU2020b_CRY_onspill-LH_au"
+    #     ,"SU2020b_CRY_onspill-LH_aw"
+    #     # ,"SU2020b_signal_onspill-LH_an"
+    #     # ,"SU2020b_signal_onspill-LH_aq"
+    #     ,"SU2020b_signal_onspill-LH_au"
+    #     ,"SU2020b_signal_onspill-LH_aw"
+    #     ,"SU2020c_CRY_offspill-LH_as"
+    #     # ,"SU2020c_CRY_onspill-LH_aq"
+    #     ,"SU2020c_CRY_onspill-LH_au"
+    #     ,"SU2020c_CRY_onspill-LH_aw"
+    #     # ,"SU2020c_signal_onspill-LH_an"
+    #     # ,"SU2020c_signal_onspill-LH_aq"
+    #     ,"SU2020c_signal_onspill-LH_au"
+    #     ,"SU2020c_signal_onspill-LH_aw"
+    # ]
     
     # Generate the report
     latex_file = generate_latex_report(args.ana_labels, args.output)
+    # latex_file = generate_latex_report(ana_labels, args.output)
+    # latex_file = generate_latex_report(ana_labels, "SU2020")
     
     # Optionally compile to PDF
     if args.compile:

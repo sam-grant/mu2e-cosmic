@@ -81,11 +81,11 @@ class HistAnalyser():
             "Events Passing (k)": k,
             "Total Events (N)": N,
             "Efficiency [%]": round(float(eff * 100), 3),
-            "Efficiency Error Low [%]": round(float(eff_err_lo * 100), 3),
-            "Efficiency Error High [%]": round(float(eff_err_hi * 100), 3),
+            "Efficiency Error Low [%]": round(float((eff_err_lo-eff) * 100), 3),
+            "Efficiency Error High [%]": round(float((eff_err_hi-eff) * 100), 3),
             r"Rate [$\text{day}^{-1}$]": round(float(rate), 3) if rate is not None else None,
-            r"Rate Error Low [$\text{day}^{-1}$]": round(float(rate_err_lo), 3) if rate_err_lo is not None else None,
-            r"Rate Error High [$\text{day}^{-1}$]": round(float(rate_err_hi), 3) if rate_err_hi is not None else None
+            r"Rate Error Low [$\text{day}^{-1}$]": round(float(rate_err_lo-rate), 3) if rate_err_lo is not None else None,
+            r"Rate Error High [$\text{day}^{-1}$]": round(float(rate_err_hi-rate), 3) if rate_err_hi is not None else None
         }
         results.append(result)
 
@@ -121,8 +121,12 @@ class HistAnalyser():
         eff_err_lo, eff_err_hi = self._get_wilson_bounds(k, generated_events)
         # Get rates
         rate, rate_err_lo, rate_err_hi = self._get_rates(k, walltime_days)
-        self._append_result(results, title, int(k), int(float(generated_events)), 
-                           eff, eff_err_lo, eff_err_hi, rate, rate_err_lo, rate_err_hi)
+        # Store result
+        self._append_result(
+            results, title, int(k), int(float(generated_events)), 
+            eff, eff_err_lo, eff_err_hi,
+            rate, rate_err_lo, rate_err_hi
+        )
     
     def _get_veto_eff_and_rate(self, hists, selection, title, walltime_days, results):
         """Calculate veto efficiency and rate for given selection"""
@@ -136,8 +140,8 @@ class HistAnalyser():
         # Store result
         self._append_result(
             results, title, int(k), int(N),
-            eff, eff_err_lo-eff, eff_err_hi-eff, 
-            rate, rate_err_lo-rate, rate_err_hi-rate
+            eff, eff_err_lo, eff_err_hi, 
+            rate, rate_err_lo, rate_err_hi
         )
     
     def analyse_hists(
