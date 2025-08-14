@@ -38,7 +38,8 @@ def run_analysis(ana_label):
     
     # === Cell 16 ===
     # Setup draw for this cutset
-    draw = Draw(cutset_name=ana_label.split('_')[0])
+    on_spill = "offspill" not in ana_label
+    draw = Draw(cutset_name=ana_label.split('_')[0], on_spill=on_spill)
     # Define image directory
     img_dir = f"../../../output/images/{ana_label}"
     os.makedirs(img_dir, exist_ok=True)
