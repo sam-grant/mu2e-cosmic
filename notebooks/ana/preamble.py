@@ -11,7 +11,6 @@ from pyutils.pyprint import Print
 sys.path.extend(["../../../src/core", "../../../src/utils"])
 from io_manager import Load
 from draw import Draw
-from efficiency import Efficiency 
 
 # Make everything available when using "from preamble import *"
-__all__ = ["Logger", "Print", "Load", "Draw", "Efficiency"] 
+__all__ = ["Logger", "Print", "Load", "Draw"] 

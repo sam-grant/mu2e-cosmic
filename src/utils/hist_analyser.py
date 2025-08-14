@@ -134,8 +134,11 @@ class HistAnalyser():
         # Get rates
         rate, rate_err_lo, rate_err_hi = self._get_rates(k, walltime_days)
         # Store result
-        self._append_result(results, title, int(k), int(N), eff, eff_err_lo, eff_err_hi, 
-                           rate, rate_err_lo, rate_err_hi)
+        self._append_result(
+            results, title, int(k), int(N),
+            eff, eff_err_lo-eff, eff_err_hi-eff, 
+            rate, rate_err_lo-rate, rate_err_hi-rate
+        )
     
     def analyse_hists(
         self, 

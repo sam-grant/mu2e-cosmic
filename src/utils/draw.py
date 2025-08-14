@@ -15,12 +15,13 @@ class Draw():
     """
     Class to draw standard "hist" histograms produced by Analyse().create_histograms()
     """
-    def __init__(self, cutset_name="alpha", verbosity=1): 
+    def __init__(self, cutset_name="alpha", on_spill=False, verbosity=1): 
         """
         Initialise 
         
         Args:
             cutset_name (str, opt): The cutset name. Defaults to 'alpha'.
+            on_spill (bool, opt): Whether we are using onspill time cuts. Defaults to False.
             verbosity (int, optional): Level of output detail (0: critical errors only, 1: info, 2: debug, 3: deep debug)
         """
         # Verbosity 
@@ -30,6 +31,8 @@ class Draw():
             print_prefix="[Plot]",
             verbosity=self.verbosity
         )
+        # onspill 
+        self.on_spill = on_spill
         # Get analysis params
         self.analyse = Analyse(cutset_name=cutset_name, verbosity=0)
         # Confirm
@@ -241,7 +244,7 @@ class Draw():
         labels = list(h1o_t0.axes["selection"])
         format_axis(ax[0,2], labels)
         # Add t0 window lines
-        if toggle_lines.get("t0", True) and self.analyse.active_cuts["within_t0"]:
+        if toggle_lines.get("t0", True) and self.analyse.active_cuts["within_t0"] and self.on_spill:
             ax[0,2].axvline(self.analyse.thresholds["lo_t0_ns"], linestyle="--", color="grey")
             ax[0,2].axvline(self.analyse.thresholds["hi_t0_ns"], linestyle="--", color="grey")
             

@@ -7,7 +7,6 @@ process:
     on_spill: true
     location: "tape"
     cutset_name: "alpha"
-    max_workers: 50
     cuts_to_toggle:
         unvetoed: false
 

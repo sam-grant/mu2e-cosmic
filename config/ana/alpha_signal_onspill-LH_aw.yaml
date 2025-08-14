@@ -7,7 +7,6 @@ process:
     on_spill: true
     location: "disk"
     cutset_name: "alpha"
-    max_workers: 50
     cuts_to_toggle:
         unvetoed: false
 

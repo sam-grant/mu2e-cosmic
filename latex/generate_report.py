@@ -99,7 +99,7 @@ def csv_to_latex_table(csv_path, caption="", label="", output_dir="", use_adjust
     
     try:
         df = pd.read_csv(csv_path)
-        df = df.round(3)
+        # df = df.round(3) # round to 3 decimal places
         
         # Copy CSV file to tables directory
         if output_dir:
@@ -158,9 +158,9 @@ def csv_to_latex_table(csv_path, caption="", label="", output_dir="", use_adjust
                         elif abs(val) >= 1000:
                             row_data.append(f'{val:.0f}')
                         elif abs(val) >= 1:
-                            row_data.append(f'{val:.6f}')
+                            row_data.append(f'{val:.2f}')
                         else:
-                            row_data.append(f'{val:.6f}')
+                            row_data.append(f'{val:.3f}')
                     else:
                         row_data.append(str(val))
                 else:
