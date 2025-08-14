@@ -1,0 +1,28 @@
+# Ignore everything by default
+*
+
+# Except these file types
+!*.sh
+!*.py
+!*.C
+!*.ipynb
+!*.md
+!*.yaml
+
+# Don't ignore directories (so we can traverse them)
+!*/
+
+# Don't ignore Git configuration files (but not the .git directory)
+!.git*
+.git/
+
+# Specifically ignore these directories and files
+**/attic/
+**/.ipynb_checkpoints/
+**/__pycache__/
+*~
+
+# Re-ignore the unwanted items even if they match allowed extensions
+**/attic/**
+**/.ipynb_checkpoints/**
+**/__pycache__/**
