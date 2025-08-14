@@ -78,7 +78,7 @@ class HistManager:
                 "filter": None
             },
             "t0": { # 10 ns binning
-                "axis": hist.axis.Regular(200, 0, 2000, name="t0err", 
+                "axis": hist.axis.Regular(140, 400, 1800, name="t0err", 
                                         label=r"Track fit time [ns]"),
                 "param": "t0",
                 "filter": None
@@ -91,19 +91,19 @@ class HistManager:
                 "filter": None
             },
             "d0": { # 5 mm binning
-                "axis": hist.axis.Regular(60, 0, 300, name="d0", 
+                "axis": hist.axis.Regular(40, 0, 200, name="d0", 
                                         label=r"Distance of closest approach, $d_{0}$ [mm]"),
                 "param": "d0",
                 "filter": None
             },
             "maxr": { # 5 mm binning
-                "axis": hist.axis.Regular(130, 200, 850, name="maxr", 
+                "axis": hist.axis.Regular(170, 150, 1000, name="maxr", 
                                         label=r"Loop helix maximum radius, $R_{\text{max}}$ [mm]"),
                 "param": "maxr",
                 "filter": None
             },
-            "pitch_angle": { # 5% binning
-                "axis": hist.axis.Regular(60, -0.5, 2.5, name="pitch_angle", 
+            "pitch_angle": { # 1% binning
+                "axis": hist.axis.Regular(100, -1, 3.0, name="pitch_angle", 
                                         label=r"Pitch angle, $p_{z}/p_{T}$"),
                 "param": "pitch_angle",
                 "filter": None
@@ -121,7 +121,7 @@ class HistManager:
                 "filter": None
             },
             "pz": { # 1 MeV/c binning
-                "axis": hist.axis.Regular(110, -10, 100, name="pz", label=r"$p_{z}$ [MeV/c]"),
+                "axis": hist.axis.Regular(125, -25, 100, name="pz", label=r"$p_{z}$ [MeV/c]"),
                 "param": "pz",
                 "filter": None
             }
