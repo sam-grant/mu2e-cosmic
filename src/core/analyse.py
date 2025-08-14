@@ -160,7 +160,7 @@ class Analyse:
                 description="Tracks intersect tracker entrance", 
                 mask=has_trk_front,
                 active=self.active_cuts["has_trk_front"],
-                group="Preselection"
+                group="Preselect"
             )
             # Append for debugging
             data["at_trk_front"] = at_trk_front
@@ -181,7 +181,7 @@ class Analyse:
                 description="Electron track fits", 
                 mask=is_reco_electron,
                 active=self.active_cuts["is_reco_electron"],
-                group="Preselection"
+                group="Preselect"
             )
             # Append mask for debugging
             data["is_reco_electron"] = is_reco_electron
@@ -203,7 +203,7 @@ class Analyse:
                 description="Downstream tracks (p_z > 0 at tracker entrance)",
                 mask=is_downstream,
                 active=self.active_cuts["is_downstream"],
-                group="Preselection"
+                group="Preselect"
             )
             # Append for debugging
             data["is_downstream"] = is_downstream
@@ -227,7 +227,7 @@ class Analyse:
                 description="One reco electron / event",
                 mask=one_reco_electron,
                 active=self.active_cuts["one_reco_electron"],
-                group="Preselection"
+                group="Preselect"
             )
             # Append for debugging 
             data["one_reco_electron"] = one_reco_electron
@@ -251,7 +251,7 @@ class Analyse:
                 description="Track parents are electrons (truth PID)", 
                 mask=has_trk_parent_electron,
                 active=self.active_cuts["is_truth_electron"] ,
-                group="Preselection"
+                group="Preselect"
             )
             # Append for debugging
             data["is_truth_electron"] = has_trk_parent_electron
@@ -655,8 +655,8 @@ class Analyse:
             # Apply cuts
             ##########################################  
 
-            # Apply preselection cuts
-            self.logger.log("Applying preselection cuts", "max")
+            # Apply Preselect cuts
+            self.logger.log("Applying Preselect cuts", "max")
             cut_manager.toggle_group({
                 "Tracker": False,
                 "CRV": False, 

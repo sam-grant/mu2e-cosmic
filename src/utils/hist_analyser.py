@@ -64,7 +64,7 @@ class HistAnalyser():
     def _get_wilson_bounds(self, k, N, z=1.0):
         """Calculate uncertainty with Wilson method"""
         if N == 0:
-            return 0, 0
+            return 0, 1.0
         alpha = 2 * (1 - norm.cdf(z)) # 68% confidence with z=1.0
         lower, upper = proportion_confint(k, N, alpha=alpha, method="wilson")
         return lower, upper # Return interval
@@ -73,20 +73,47 @@ class HistAnalyser():
     # DataFrame methods
     ####################################################
     
+    # def _append_result(self, results, label, k, N, eff, eff_err_lo,
+    #                    eff_err_hi, rate, rate_err_lo, rate_err_hi):
+    #     """Add efficiency and rate result to result list, with symmetric ± errors."""
+        
+    #     # Calculate symmetric uncertainties
+    #     eff_err_sym = 0.5 * (eff_err_hi - eff_err_lo)
+    #     rate_err_sym = 0.5 * (rate_err_hi - rate_err_lo)
+        
+    #     result = {
+    #         "Type": label,
+    #         "Events Passing (k)": k,
+    #         "Total Events (N)": N,
+    #         "Efficiency [%]": float(eff * 100),
+    #         "Efficiency CI Low [%]": float(eff_err_lo * 100),
+    #         "Efficiency CI High [%]": float(eff_err_hi * 100),
+    #         r"Efficiency $\pm$ [%]": float(eff_err_sym * 100),
+    #         r"Rate [$\text{day}^{-1}$]": float(rate),
+    #         r"Rate CI Low [$\text{day}^{-1}$]": float(rate_err_lo),
+    #         r"Rate CI High [$\text{day}^{-1}$]": float(rate_err_hi),
+    #         r"Rate $\pm$ [$\text{day}^{-1}$]": float(rate_err_sym)
+    #     }
+        
+    #     results.append(result)
+
+    # More compact version
     def _append_result(self, results, label, k, N, eff, eff_err_lo,
                        eff_err_hi, rate, rate_err_lo, rate_err_hi):
-        """Add efficiency result to result list."""
+        """Add efficiency and rate result to result list, with symmetric ± errors."""
+        
         result = {
             "Type": label,
-            "Events Passing (k)": k,
-            "Total Events (N)": N,
-            "Efficiency [%]": round(float(eff * 100), 3),
-            "Efficiency Error Low [%]": round(float((eff_err_lo-eff) * 100), 3),
-            "Efficiency Error High [%]": round(float((eff_err_hi-eff) * 100), 3),
-            r"Rate [$\text{day}^{-1}$]": round(float(rate), 3) if rate is not None else None,
-            r"Rate Error Low [$\text{day}^{-1}$]": round(float(rate_err_lo-rate), 3) if rate_err_lo is not None else None,
-            r"Rate Error High [$\text{day}^{-1}$]": round(float(rate_err_hi-rate), 3) if rate_err_hi is not None else None
+            "k": k,
+            "N": N,
+            "Eff [%]": float(eff * 100),
+            r"Eff Err$-$ [%]": float((eff_err_lo - eff) * 100),  # negative
+            r"Eff Err$+$ [%]": float((eff_err_hi - eff) * 100),  # positive
+            r"Rate [$\text{day}^{-1}$]": float(rate),
+            r"Rate Err$-$ [$\text{day}^{-1}$]": float(rate_err_lo - rate),  # negative
+            r"Rate Err$+$ [$\text{day}^{-1}$]": float(rate_err_hi - rate),  # positive
         }
+        
         results.append(result)
 
     ####################################################
@@ -134,7 +161,10 @@ class HistAnalyser():
         N = self._get_N_from_hists(hists, selection, label="CE-like")   
         # Get efficiency
         eff = (1 - k / N) if N > 0 else 0
-        eff_err_lo, eff_err_hi = self._get_wilson_bounds(k, N)
+        k_bound_lo, k_bound_hi = self._get_wilson_bounds(k, N)
+        # Transform 
+        eff_err_lo = 1 - k_bound_hi  
+        eff_err_hi = 1 - k_bound_lo  
         # Get rates
         rate, rate_err_lo, rate_err_hi = self._get_rates(k, walltime_days)
         # Store result
@@ -187,20 +217,20 @@ class HistAnalyser():
         results = []
         
         # Signal efficiency for CE selection over wide range
-        self._get_signal_eff_and_rate(hists, "mom_full", "Signal (wide)", generated_events, walltime_days, results)
-        self._get_signal_eff_and_rate(hists, "mom_ext", "Signal (ext)", generated_events, walltime_days, results)
-        self._get_signal_eff_and_rate(hists, "mom_sig", "Signal (sig)", generated_events, walltime_days, results)
+        self._get_signal_eff_and_rate(hists, "mom_full", "CE-like (wide)", generated_events, walltime_days, results)
+        self._get_signal_eff_and_rate(hists, "mom_ext", "CE-like (ext)", generated_events, walltime_days, results)
+        self._get_signal_eff_and_rate(hists, "mom_sig", "CE-like (sig)", generated_events, walltime_days, results)
         
         # Veto efficiency and rates
-        self._get_veto_eff_and_rate(hists, "mom_full", "Veto (wide)", walltime_days, results)
-        self._get_veto_eff_and_rate(hists, "mom_ext", "Veto (ext)", walltime_days, results)
-        self._get_veto_eff_and_rate(hists, "mom_sig", "Veto (sig)", walltime_days, results)
+        self._get_veto_eff_and_rate(hists, "mom_full", "No veto (wide)", walltime_days, results)
+        self._get_veto_eff_and_rate(hists, "mom_ext", "No veto (ext)", walltime_days, results)
+        self._get_veto_eff_and_rate(hists, "mom_sig", "No veto (sig)", walltime_days, results)
         
         self.logger.log("Returning efficiency information", "success")
         
         return pd.DataFrame(results)
         
-    # With nested functions
+    # With nested functions (can cause multiprocessing issues)
     # def analyse_hists(
     #     self, 
     #     hists,

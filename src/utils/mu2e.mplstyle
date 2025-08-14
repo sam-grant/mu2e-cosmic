@@ -41,5 +41,6 @@ ytick.minor.visible: True
 legend.fontsize: small
 legend.handlelength: 1.5
 legend.borderpad: 0.5
-legend.frameon: False
+legend.frameon: True
+legend.loc: upper right
     
