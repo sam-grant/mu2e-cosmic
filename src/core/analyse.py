@@ -40,19 +40,23 @@ class Analyse:
         self.cutset_name = cutset_name
         self.verbosity = verbosity
 
+        # Tools
+        self.logger = Logger( # Needs to come before _load_cuts
+            print_prefix="[Analyse]",
+            verbosity=self.verbosity
+        )
+        self.selector = Select(verbosity=self.verbosity)
+        self.vector = Vector(verbosity=self.verbosity) 
+
         # Helper sets cut parameters, self.track_pdg, self.lo_nactive, etc.
         # TODO: put load_cuts in config_manager.py or cut_manager.py, whichever makes more sense.
         self.cut_config = {"description": "FAILED TO LOAD"}  # Default fallback
         self._load_cuts()
         
-        # Setup tools
-        self.selector = Select(verbosity=self.verbosity)
-        self.vector = Vector(verbosity=self.verbosity) 
+        # More tools
+
         self.hist_manager = HistManager(self) # Needs to come after _load_cuts
-        self.logger = Logger(
-            print_prefix="[Analyse]",
-            verbosity=self.verbosity
-        )
+
         
         self.logger.log(
             f"Initialised with:\n"

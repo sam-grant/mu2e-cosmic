@@ -72,46 +72,32 @@ class HistAnalyser():
     ####################################################
     # DataFrame methods
     ####################################################
-    
-    # def _append_result(self, results, label, k, N, eff, eff_err_lo,
-    #                    eff_err_hi, rate, rate_err_lo, rate_err_hi):
-    #     """Add efficiency and rate result to result list, with symmetric ± errors."""
-        
-    #     # Calculate symmetric uncertainties
-    #     eff_err_sym = 0.5 * (eff_err_hi - eff_err_lo)
-    #     rate_err_sym = 0.5 * (rate_err_hi - rate_err_lo)
-        
-    #     result = {
-    #         "Type": label,
-    #         "Events Passing (k)": k,
-    #         "Total Events (N)": N,
-    #         "Efficiency [%]": float(eff * 100),
-    #         "Efficiency CI Low [%]": float(eff_err_lo * 100),
-    #         "Efficiency CI High [%]": float(eff_err_hi * 100),
-    #         r"Efficiency $\pm$ [%]": float(eff_err_sym * 100),
-    #         r"Rate [$\text{day}^{-1}$]": float(rate),
-    #         r"Rate CI Low [$\text{day}^{-1}$]": float(rate_err_lo),
-    #         r"Rate CI High [$\text{day}^{-1}$]": float(rate_err_hi),
-    #         r"Rate $\pm$ [$\text{day}^{-1}$]": float(rate_err_sym)
-    #     }
-        
-    #     results.append(result)
 
-    # More compact version
-    def _append_result(self, results, label, k, N, eff, eff_err_lo,
-                       eff_err_hi, rate, rate_err_lo, rate_err_hi):
-        """Add efficiency and rate result to result list, with symmetric ± errors."""
+    def _append_result(self, results, label, k, N, eff, eff_err_lo, eff_err_hi, rates_dict):
+        """Add efficiency and rate result with batch mode information"""
+        
+        # Get rates for both modes
+        rate_1batch = rates_dict["1batch"]["rate"]
+        rate_err_lo_1batch = rates_dict["1batch"]["rate_err_lo"] - rate_1batch
+        rate_err_hi_1batch = rates_dict["1batch"]["rate_err_hi"] - rate_1batch
+        
+        rate_2batch = rates_dict["2batch"]["rate"] 
+        rate_err_lo_2batch = rates_dict["2batch"]["rate_err_lo"] - rate_2batch
+        rate_err_hi_2batch = rates_dict["2batch"]["rate_err_hi"] - rate_2batch
         
         result = {
             "Type": label,
             "k": k,
             "N": N,
             "Eff [%]": float(eff * 100),
-            r"Eff Err$-$ [%]": float((eff_err_lo - eff) * 100),  # negative
-            r"Eff Err$+$ [%]": float((eff_err_hi - eff) * 100),  # positive
-            r"Rate [$\text{day}^{-1}$]": float(rate),
-            r"Rate Err$-$ [$\text{day}^{-1}$]": float(rate_err_lo - rate),  # negative
-            r"Rate Err$+$ [$\text{day}^{-1}$]": float(rate_err_hi - rate),  # positive
+            r"Eff Err$-$ [%]": float((eff_err_lo - eff) * 100),
+            r"Eff Err$+$ [%]": float((eff_err_hi - eff) * 100),
+            r"Rate 1batch [$\text{day}^{-1}$]": float(rate_1batch),
+            r"Rate 1batch Err$-$ [$\text{day}^{-1}$]": float(rate_err_lo_1batch),
+            r"Rate 1batch Err$+$ [$\text{day}^{-1}$]": float(rate_err_hi_1batch),
+            r"Rate 2batch [$\text{day}^{-1}$]": float(rate_2batch),
+            r"Rate 2batch Err$-$ [$\text{day}^{-1}$]": float(rate_err_lo_2batch),
+            r"Rate 2batch Err$+$ [$\text{day}^{-1}$]": float(rate_err_hi_2batch),
         }
         
         results.append(result)
@@ -132,46 +118,59 @@ class HistAnalyser():
     # Efficiency from histograms methods 
     ####################################################
 
-    def _get_rates(self, k, walltime_days):
+    def get_rates(self, k, walltime_days_dict):
         """Calculate rates and rate errors for given counts and walltime"""
-        rate = k / walltime_days
-        k_lo, k_hi = self.get_poisson_bounds(k)
-        rate_err_lo = k_lo / walltime_days  
-        rate_err_hi = k_hi / walltime_days
-        return rate, rate_err_lo, rate_err_hi
+        rates = {}
+        for batch_mode, walltime_days in walltime_days_dict.items():
+            rate = k / walltime_days
+            k_lo, k_hi = self.get_poisson_bounds(k)
+            rate_err_lo = k_lo / walltime_days  
+            rate_err_hi = k_hi / walltime_days
+            
+            rates[batch_mode] = {
+                "rate": rate,
+                "rate_err_lo": rate_err_lo,
+                "rate_err_hi": rate_err_hi
+            }
+            
+        return rates
     
-    def _get_signal_eff_and_rate(self, hists, selection, title, generated_events, walltime_days, results):
+    def _get_signal_eff_and_rate(self, hists, selection, title, generated_events, walltime_days_dict, results):
         """Calculate signal efficiency for given selection"""
         k = self._get_N_from_hists(hists, selection, label="CE-like")   
+        
         # Get efficiency
         eff = k / generated_events if int(float(generated_events)) > 0 else 0
         eff_err_lo, eff_err_hi = self._get_wilson_bounds(k, generated_events)
-        # Get rates
-        rate, rate_err_lo, rate_err_hi = self._get_rates(k, walltime_days)
-        # Store result
+        
+        # Get rates for all batch modes
+        rates_dict = self.get_rates(k, walltime_days_dict)
+        
+        # Store result using the new format
         self._append_result(
             results, title, int(k), int(float(generated_events)), 
-            eff, eff_err_lo, eff_err_hi,
-            rate, rate_err_lo, rate_err_hi
+            eff, eff_err_lo, eff_err_hi, rates_dict
         )
     
-    def _get_veto_eff_and_rate(self, hists, selection, title, walltime_days, results):
+    def _get_veto_eff_and_rate(self, hists, selection, title, walltime_days_dict, results):
         """Calculate veto efficiency and rate for given selection"""
         k = self._get_N_from_hists(hists, selection, label="Unvetoed")    
         N = self._get_N_from_hists(hists, selection, label="CE-like")   
+        
         # Get efficiency
         eff = (1 - k / N) if N > 0 else 0
         k_bound_lo, k_bound_hi = self._get_wilson_bounds(k, N)
         # Transform 
         eff_err_lo = 1 - k_bound_hi  
         eff_err_hi = 1 - k_bound_lo  
-        # Get rates
-        rate, rate_err_lo, rate_err_hi = self._get_rates(k, walltime_days)
-        # Store result
+        
+        # Get rates for all batch modes
+        rates_dict = self.get_rates(k, walltime_days_dict)
+        
+        # Store result using the new format
         self._append_result(
             results, title, int(k), int(N),
-            eff, eff_err_lo, eff_err_hi, 
-            rate, rate_err_lo, rate_err_hi
+            eff, eff_err_lo, eff_err_hi, rates_dict
         )
     
     def analyse_hists(
@@ -179,7 +178,7 @@ class HistAnalyser():
         hists,
         livetime,
         on_spill,
-        on_spill_frac, 
+        on_spill_frac,
         generated_events, 
         veto
     ):
@@ -191,7 +190,7 @@ class HistAnalyser():
             generated_events (int, opt): Number of generated events in dataset. Defaults to 4e6.
             livetime (float): The total livetime in seconds for this dataset.
             on_spill (bool): Whether we are using on spill cuts. 
-            on_spill_frac (float): The fraction of livetime in onspill. Defaults to 32.2%. 
+            on_spill_frac (dict): The fraction of livetime in onspill single and two batch modes. 
             veto (bool): Whether to include veto analysis. Defaults to True. 
             
         Returns:
@@ -204,15 +203,16 @@ class HistAnalyser():
         except (ValueError, TypeError):
             generated_events = 0
         
-        # Get walltime
-        if on_spill:
-            walltime = livetime / on_spill_frac
-        else:
-            walltime = livetime / (1-on_spill_frac)
-        
-        # Convert to days
-        walltime_days = walltime / (24*3600)
-        
+        # Get walltime in days
+        walltime_days = {}
+        sec2day = 1 / (24*3600)
+        for batch_mode, frac in on_spill_frac.items():
+            if on_spill: 
+                walltime = livetime / frac
+            else:
+                walltime = livetime / (1-frac)    
+            walltime_days[batch_mode] = walltime * sec2day
+
         # Init results
         results = []
         
@@ -222,9 +222,10 @@ class HistAnalyser():
         self._get_signal_eff_and_rate(hists, "mom_sig", "CE-like (sig)", generated_events, walltime_days, results)
         
         # Veto efficiency and rates
-        self._get_veto_eff_and_rate(hists, "mom_full", "No veto (wide)", walltime_days, results)
-        self._get_veto_eff_and_rate(hists, "mom_ext", "No veto (ext)", walltime_days, results)
-        self._get_veto_eff_and_rate(hists, "mom_sig", "No veto (sig)", walltime_days, results)
+        if veto:
+            self._get_veto_eff_and_rate(hists, "mom_full", "No veto (wide)", walltime_days, results)
+            self._get_veto_eff_and_rate(hists, "mom_ext", "No veto (ext)", walltime_days, results)
+            self._get_veto_eff_and_rate(hists, "mom_sig", "No veto (sig)", walltime_days, results)
         
         self.logger.log("Returning efficiency information", "success")
         

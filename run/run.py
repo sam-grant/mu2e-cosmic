@@ -53,6 +53,10 @@ def main():
         
         # Run main processing and analysis
         results_per_file = cosmic_processor.execute()
+
+        # Propagate on_spill parameter from process to postprocess
+        # It is needed by both. Use True default.
+        config["postprocess"]["on_spill"] = config["process"].get("on_spill", True)
         
         # Initialise postprocessor
         postprocessor = PostProcess(**config.get("postprocess", {}))

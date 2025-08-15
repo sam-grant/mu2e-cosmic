@@ -36,7 +36,7 @@ class CosmicProcessor(Skeleton):
             "trkfit" : ["trksegs", "trksegpars_lh"],
             "trkmc" : ["trkmcsim"]
         },
-        on_spill=False,
+        on_spill=True,
         cuts_to_toggle = None,
         groups_to_toggle = None,
         use_remote = True,
@@ -57,7 +57,7 @@ class CosmicProcessor(Skeleton):
             file_name (str, opt): Single file to process. Defaults to None.
             cutset_name (str, opt): Which cutset to use. Defaults to "alpha".
             branches (dict or list, opt): EventNtuple branches to extract.
-            on_spill (bool, opt): Apply on-spill timing cuts. Defaults to False.
+            on_spill (bool, opt): Apply on-spill timing cuts. Defaults to True.
             cuts_to_toggle (dict, opt): Cuts to enable/disable. Defaults to None.
             groups_to_toggle (dict, opt): Cut groups to enable/disable. Defaults to None.
             use_remote (bool, opt): Use remote file access. Defaults to True.

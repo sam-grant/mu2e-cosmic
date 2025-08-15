@@ -7,22 +7,23 @@ from pyutils.pyselect import Select
 sys.path.append("../utils")
 from cut_manager import CutManager
 from hist_analyser import HistAnalyser
-from rates import Rates
 
 class PostProcess():
     """Class for postprocessing
     """
-    def __init__(self, write_events=False, write_event_info=False, generated_events=4e6, on_spill=False, 
-                 livetime=1.06887e7, on_spill_frac=0.322, veto=True, verbosity=1):
+    def __init__(self, on_spill, write_events=False, write_event_info=False, 
+                 generated_events=4.11e10, livetime=1e7, 
+                 on_spill_frac={"1batch": 0.322, "2batch": 0.246},
+                 veto=True, verbosity=1):
         """Initialise
 
             Args:
+                on_spill (bool): Whether we are using on spill cuts. Propagated from Process by run.py
                 write_events (bool, opt): write filtered events. Defaults to False.
                 write_event_info (bool, opt): write filtered event info. Defaults to False.
-                generated_events (int, opt): Number of generated events. Defaults to 4e6.
-                on_spill (bool, opt): Whether we are using on spill cuts. Defaults to False.
-                livetime (float, opt): The total livetime in seconds for this dataset. Defaults to 1.06887e7.
-                on_spill_frac (float, opt): Fraction of walltime in onspill. Defaults to 32.2%.
+                generated_events (int, opt): Number of generated events. Defaults to 4.11e10.
+                livetime (float, opt): The total livetime in seconds for this dataset. Defaults to 1e7.
+                on_spill_frac (dict, opt): Fraction of walltime in single and two batch onspill. Defaults to 32.2% and 24.6%.
                 veto (bool, opt): Whether running with CRV veto. Defaults to True.
                 verbosity (int, opt): Printout level. Defaults to 1.
         """
@@ -41,9 +42,6 @@ class PostProcess():
 
         # Efficency and rates handler
         self.hist_analyser = HistAnalyser(verbosity=self.verbosity)
-
-        # Rates handler
-        self.rates = Rates(verbosity=self.verbosity)
 
         # Start logger
         self.logger = Logger(
