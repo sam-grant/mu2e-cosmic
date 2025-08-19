@@ -395,6 +395,7 @@ class Analyse:
                 group="Tracker"
             )
             # Append 
+            data["pitch_angle"] = pitch_angle
             data["within_pitch_angle_lo"] = within_pitch_angle_lo
         except Exception as e:
             self.logger.log(f"Error defining 'within_pitch_angle_lo': {e}", "error") 
