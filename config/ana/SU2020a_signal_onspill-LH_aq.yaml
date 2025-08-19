@@ -4,17 +4,16 @@
 
 process:
     defname: "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aq_best_v1_3_v06_03_00.root"
-    on_spill: true
     location: "tape"
     cutset_name: "SU2020a"
-    max_workers: 50
     cuts_to_toggle:
         unvetoed: false
 
 postprocess:
     write_events: false
     write_event_info: false
+    generated_events: 4000000
+    livetime: null
 
 output:
-    # Define a unique output path relative to script directory
     out_path: "../output/results/SU2020a_signal_onspill-LH_aq"

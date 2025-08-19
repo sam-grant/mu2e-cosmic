@@ -3,40 +3,15 @@
 # ===============================
 
 process:
-    # defname (str, opt): Dataset definition name. Defaults to None.
-    # file_list_path (str, opt): Path to file list. Defaults to None.
-    # file_name (str, opt): Single file to process. Defaults to None.
-    # cutset_name (str, opt): Which cutset to use. Defaults to "SU2020b".
-    # branches (dict or list, opt): EventNtuple branches to extract.
-    # on_spill (bool, opt): Apply on-spill timing cuts. Defaults to False.
-    # cuts_to_toggle (dict, opt): Cuts to enable/disable. Defaults to None.
-    # use_remote (bool, opt): Use remote file access. Defaults to True.
-    # location (str, opt): File location ("tape", etc.). Defaults to "disk".
-    # max_workers (int, opt): Number of parallel workers. Defaults to 50.
-    # verbosity (int, opt): Logging verbosity level. Defaults to 2.
-    # use_processes (bool, opt): Use processes rather than threads. Defaults to True.
     defname: "nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.root"
-    max_workers: 50
     cutset_name: "SU2020b"
+    on_spill: false
     
-
 postprocess:
-    # defname (str, opt): Dataset definition name. Defaults to None.
-    # file_list_path (str, opt): Path to file list. Defaults to None.
-    # file_name (str, opt): Single file to process. Defaults to None.
-    # cutset_name (str, opt): Which cutset to use. Defaults to "SU2020b".
-    # branches (dict or list, opt): EventNtuple branches to extract.
-    # on_spill (bool, opt): Apply on-spill timing cuts. Defaults to False.
-    # cuts_to_toggle (dict, opt): Cuts to enable/disable. Defaults to None.
-    # use_remote (bool, opt): Use remote file access. Defaults to True.
-    # location (str, opt): File location ("disk", etc.). Defaults to "disk".
-    # max_workers (int, opt): Number of parallel workers. Defaults to 50.
-    # use_processes (bool, opt): Use processes rather than threads. Defaults to True.
-    # verbosity (int, opt): Logging verbosity level. Defaults to 2 (max).
-    # worker_verbosity (int, opt): Verbosity for worker processes (debug only!). Defaults to 0.
     write_events: true
     write_event_info: true
+    generated_events: 41100000000
+    livetime: 10630000.0
 
 output:
-    # Define a unique output path relative to script directory
     out_path: "../output/results/SU2020b_CRY_offspill-LH_as"
