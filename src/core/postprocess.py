@@ -78,6 +78,9 @@ class PostProcess():
             format_as_df = format_as_df
         )
 
+        # Round 
+        combined_cut_flow = combined_cut_flow.round(3)
+
         return combined_cut_flow
 
     def combine_hists(self, results):
@@ -148,12 +151,13 @@ class PostProcess():
             self.logger.log(f"Exception while combining arrays: {e}", "error")
             return None
 
-    def get_combined_analysis(self, hists):
+    def get_combined_analysis(self, hists, transpose=True):
         """
         Calculate combined analysis of efficiency and rates from histograms
 
         Args:
             hists: Combined histograms.
+            transpose (bool, opt): Transpose the DataFrame. Defaults to True.
         Returns:
             pd.DataFrame of efficiency information
         """
@@ -166,6 +170,11 @@ class PostProcess():
                 generated_events=self.generated_events,
                 veto=self.veto
             )
+            # Round to 3 decimal places
+            result = result.round(3)
+            # transpose
+            if transpose:
+                result = result.T.reset_index(drop=True) 
             self.logger.log(f"Analysed histograms:", "success")
             return result
         except Exception as e:
