@@ -174,7 +174,9 @@ class PostProcess():
             result = result.round(3)
             # transpose
             if transpose:
+                columns = result.columns.tolist()
                 result = result.T.reset_index(drop=True) 
+                result.index = columns # Restore as row names
             self.logger.log(f"Analysed histograms:", "success")
             return result
         except Exception as e:
