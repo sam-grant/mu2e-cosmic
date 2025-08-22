@@ -92,12 +92,12 @@ class HistAnalyser():
             "Eff [%]": float(eff * 100),
             r"Eff Err$-$ [%]": float((eff_err_lo - eff) * 100),
             r"Eff Err$+$ [%]": float((eff_err_hi - eff) * 100),
-            r"Rate 1batch [$\text{day}^{-1}$]": float(rate_1batch),
-            r"Rate 1batch Err$-$ [$\text{day}^{-1}$]": float(rate_err_lo_1batch),
-            r"Rate 1batch Err$+$ [$\text{day}^{-1}$]": float(rate_err_hi_1batch),
-            r"Rate 2batch [$\text{day}^{-1}$]": float(rate_2batch),
-            r"Rate 2batch Err$-$ [$\text{day}^{-1}$]": float(rate_err_lo_2batch),
-            r"Rate 2batch Err$+$ [$\text{day}^{-1}$]": float(rate_err_hi_2batch),
+            r"Rate 1B [$\text{day}^{-1}$]": float(rate_1batch),
+            r"Rate 1B Err$-$ [$\text{day}^{-1}$]": float(rate_err_lo_1batch),
+            r"Rate 1B Err$+$ [$\text{day}^{-1}$]": float(rate_err_hi_1batch),
+            r"Rate 2B [$\text{day}^{-1}$]": float(rate_2batch),
+            r"Rate 2B Err$-$ [$\text{day}^{-1}$]": float(rate_err_lo_2batch),
+            r"Rate 2B Err$+$ [$\text{day}^{-1}$]": float(rate_err_hi_2batch),
         }
         
         results.append(result)
@@ -202,16 +202,25 @@ class HistAnalyser():
             generated_events = float(generated_events)
         except (ValueError, TypeError):
             generated_events = 0
+
+
+        # Check if livetime is valid 
+        livetime_valid = livetime is not None and livetime > 0
         
-        # Get walltime in days
-        walltime_days = {}
-        sec2day = 1 / (24*3600)
-        for batch_mode, frac in on_spill_frac.items():
-            if on_spill: 
-                walltime = livetime / frac
-            else:
-                walltime = livetime / (1-frac)    
-            walltime_days[batch_mode] = walltime * sec2day
+        if livetime_valid:
+            # Get walltime in days
+            walltime_days = {}
+            sec2day = 1 / (24*3600)
+            for batch_mode, frac in on_spill_frac.items():
+                if on_spill: 
+                    walltime = livetime / frac
+                else:
+                    walltime = livetime / (1-frac)    
+                walltime_days[batch_mode] = walltime * sec2day
+        else:
+            # Set dummy walltime for cases where we don't need rates
+            walltime_days = {"1batch": 1.0, "2batch": 1.0}  # Will result in rate = k
+            self.logger.log(f"Livetime is 0 or None with veto={veto}", "warning")
 
         # Init results
         results = []
