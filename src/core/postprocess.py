@@ -169,14 +169,15 @@ class PostProcess():
                 on_spill_frac=self.on_spill_frac,
                 generated_events=self.generated_events,
                 veto=self.veto
-            )
-            # Round to 3 decimal places
-            result = result.round(3)
-            # transpose
+            )            
             if transpose:
-                columns = result.columns.tolist()
-                result = result.T.reset_index(drop=True) 
-                result.index = columns # Restore as row names
+                 # Transpose and reset index
+                result = result.T.reset_index()
+                # Replace headers with the first row
+                result.columns = result.iloc[0]
+                # Drop first redundant and reset indices again
+                result = result.drop(0).reset_index(drop=True)
+                
             self.logger.log(f"Analysed histograms:", "success")
             return result
         except Exception as e:
