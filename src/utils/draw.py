@@ -129,6 +129,7 @@ class Draw():
             yerr=False,
             density=density,
             color=colors,
+            flow="none",
             linewidth=linewidths[0] if len(set(linewidths)) == 1 else linewidths,
             alpha=alphas[0] if len(set(alphas)) == 1 else alphas
         )
