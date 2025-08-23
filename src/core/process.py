@@ -41,7 +41,7 @@ class CosmicProcessor(Skeleton):
         groups_to_toggle = None,
         use_remote = True,
         location = "disk",
-        max_workers = 50,
+        max_workers = 100,
         use_processes = True,
         verbosity = 1,
         worker_verbosity = 0
