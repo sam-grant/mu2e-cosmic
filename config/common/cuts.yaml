@@ -88,4 +88,14 @@ cutsets:
         thresholds:
             lo_pitch_angle: 0.5
             hi_pitch_angle: 1.0
+    SU2020d:
+        description:
+            "SU2020d cuts (no trkqual, no t0err)"
+        active:
+            within_lhr_max_lo: false
+            within_t0err: false
+            good_trkqual: false
             
+        thresholds:
+            lo_pitch_angle: 0.5
+            hi_pitch_angle: 1.0       

@@ -1,0 +1,17 @@
+# ===============================
+# SU2020d_CRY_offspill-LH_aw.yaml
+# ===============================
+
+process:
+    defname: "nts.mu2e.CosmicCRYSignalAllOnSpillTriggered.MDC2020aw_best_v1_3_v06_05_00.root"
+    cutset_name: "SU2020d"
+    max_workers: 100
+
+postprocess:
+    write_events: true
+    write_event_info: true
+    generated_events: 41100000000
+    livetime: 10680000
+
+output:
+    out_path: "../output/results/SU2020d_CRY_onspill-LH_aw"
