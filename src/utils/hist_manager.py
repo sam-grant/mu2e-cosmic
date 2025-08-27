@@ -103,7 +103,7 @@ class HistManager:
                 "filter": None
             },
             "pitch_angle": { # 1% binning
-                "axis": hist.axis.Regular(100, -1, 3.0, name="pitch_angle", 
+                "axis": hist.axis.Regular(400, -1, 3.0, name="pitch_angle", 
                                         label=r"Pitch angle, $p_{z}/p_{T}$"),
                 "param": "pitch_angle",
                 "filter": None
