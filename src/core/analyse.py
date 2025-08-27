@@ -389,7 +389,7 @@ class Analyse:
             # Add cut 
             cut_manager.add_cut(
                 name="within_pitch_angle_lo",
-                description=f"Extrapolated pitch angle (pz/pt > {self.thresholds["lo_pitch_angle"]}",
+                description=f"Extrapolated pitch angle (pz/pt > {self.thresholds["lo_pitch_angle"]})",
                 mask=within_pitch_angle_lo,
                 active=self.active_cuts["within_pitch_angle_lo"],
                 group="Tracker"
@@ -414,7 +414,7 @@ class Analyse:
             # Add cut 
             cut_manager.add_cut(
                 name="within_pitch_angle_hi",
-                description=f"Extrapolated pitch angle (pz/pt > {self.thresholds["hi_pitch_angle"]}",
+                description=f"Extrapolated pitch angle (pz/pt < {self.thresholds["hi_pitch_angle"]})",
                 mask=within_pitch_angle_hi,
                 active=self.active_cuts["within_pitch_angle_hi"],
                 group="Tracker"
