@@ -1,10 +1,10 @@
 # ===============================
-# SU2020d_CRY_onspill-LH_au.yaml
+# SU2020e_CRY_onspill-LH_au.yaml
 # ===============================
 
 process:
     defname: "nts.mu2e.CosmicCRYSignalAllOnSpillTriggered.MDC2020au_best_v1_3_v06_03_00.root"
-    cutset_name: "SU2020d"
+    cutset_name: "SU2020e"
     max_workers: 50
 
 postprocess:
@@ -14,4 +14,4 @@ postprocess:
     livetime: 10680000
     
 output:
-    out_path: "../output/results/SU2020d_CRY_onspill-LH_au"
+    out_path: "../output/results/SU2020e_CRY_onspill-LH_au"
