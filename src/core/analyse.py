@@ -245,9 +245,9 @@ class Analyse:
         ###################################################
         try:
             # Truth track parent is electron 
-            is_electron = data["trkmc"]["trkmcsim"]["pdg"] == self.thresholds["track_pdg"]
+            is_truth_electron = data["trkmc"]["trkmcsim"]["pdg"] == self.thresholds["track_pdg"]
             is_trk_parent = data["trkmc"]["trkmcsim"]["nhits"] == ak.max(data["trkmc"]["trkmcsim"]["nhits"], axis=-1)
-            is_trk_parent_electron = is_electron & is_trk_parent 
+            is_trk_parent_electron = is_truth_electron & is_trk_parent 
             has_trk_parent_electron = ak.any(is_trk_parent_electron, axis=-1) 
             # Add cut 
             cut_manager.add_cut(
