@@ -52,13 +52,15 @@ cutsets:
     ########################
     alpha:
         description:
-            "baseline cutset with loop helix parameters"      
+            "baseline cutset with loop helix parameters"    
+            
     beta:
         description:
             "alpha with no R_max cut"
         active:
             within_lhr_max_hi: false
             within_lhr_max_lo: false
+            
     SU2020a:
         description:
             "SU2020a cuts (trkqual > 0.8)"
@@ -68,6 +70,7 @@ cutsets:
         thresholds:
             lo_pitch_angle: 0.5
             hi_pitch_angle: 1.0
+            
     SU2020b:
         description:
             "SU2020b cuts (trkqual > 0.2)"
@@ -78,6 +81,7 @@ cutsets:
             lo_pitch_angle: 0.5
             hi_pitch_angle: 1.0
             lo_trkqual: 0.2
+            
     SU2020c:
         description:
             "SU2020c cuts (no trkqual)"
@@ -88,6 +92,7 @@ cutsets:
         thresholds:
             lo_pitch_angle: 0.5
             hi_pitch_angle: 1.0
+            
     SU2020d:
         description:
             "SU2020d cuts (no trkqual, no t0err)"
@@ -98,4 +103,15 @@ cutsets:
             
         thresholds:
             lo_pitch_angle: 0.5
-            hi_pitch_angle: 1.0       
+            hi_pitch_angle: 1.0
+            
+    SU2020e:
+        description:
+            "SU2020e cuts (trkqual > 0.2, no t0err)"
+        active:
+            within_lhr_max_lo: false
+            within_t0err: false
+        thresholds:
+            lo_pitch_angle: 0.5
+            hi_pitch_angle: 1.0 
+            lo_trkqual: 0.2
