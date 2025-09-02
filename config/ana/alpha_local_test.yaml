@@ -5,9 +5,9 @@
 # =============
 
 process:
-    file_name: "nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00050440.root"
-    # file_name: "/exp/mu2e/data/users/sgrant/mu2e-cosmic/files/nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00050440.root"
-    use_remote: true
+    # file_name: "nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00050440.root"
+    file_name: "/exp/mu2e/data/users/sgrant/mu2e-cosmic/files/nts.mu2e.CosmicCRYSignalAllOffSpillTriggered-LH.MDC2020as_best_v1_3_v06_03_00.001202_00050440.root"
+    use_remote: false
     verbosity: 2
     worker_verbosity: 2
     cutset_name: "alpha"
