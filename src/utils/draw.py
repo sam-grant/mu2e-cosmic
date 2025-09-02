@@ -338,7 +338,7 @@ class Draw():
         # Variable info for axis labels
         var_info = {
             "mom_full": ("Momentum [MeV/c]", "", "upper right", 1.0, 1), # xlabel, title, loc, y_ext_factor, ncols
-            "pz": (r"$p_{z}$ [MeV/c]", "", "upper right", 20, 2), 
+            "mom_z": (r"$p_{z}$ [MeV/c]", "", "upper right", 20, 2), 
             "t0": ("Track fit time [ns]", "", "upper center", 20, 2), 
             "trkqual": ("Track quality", "", "upper right", 5, 2), 
             "nactive": ("Active tracker hits", "", "upper right", 20, 2), 
@@ -350,7 +350,7 @@ class Draw():
         
         # Plot all 9 histograms
         plot_positions = [
-            ("mom_full", (0, 0)), ("pz", (0, 1)), ("t0", (0, 2)),
+            ("mom_full", (0, 0)), ("mom_z", (0, 1)), ("t0", (0, 2)),
             ("trkqual", (1, 0)), ("nactive", (1, 1)), ("t0err", (1, 2)),
             ("d0", (2, 0)), ("maxr", (2, 1)), ("pitch_angle", (2, 2))
         ]
@@ -389,6 +389,53 @@ class Draw():
             self.logger.log(f"\tWrote {out_path}", "success")
         plt.show()
 
+    def plot_mom_summary(self, hists, out_path=None):
+        
+        fig, ax = plt.subplots(2, 2, figsize=(6.4*2, 2*4.8))        # Variable info for axis labels
+        var_info = {
+            
+            "mom_z": (r"$p_{z}$ [MeV/c]", "", "upper right", 1.0, 1), # xlabel, title, loc, y_ext_factor, ncols
+            "mom_T": (r"$p_{T}$ [MeV/c]", "", "upper right", 1.0, 1), 
+            "mom_err": (r"$\sigma_{p}$ [MeV/c]", "", "upper right", 1.0, 1), 
+            "mom_res": (r"$\delta p = p_{\text{reco}} - p_{\text{truth}}$ [MeV/c]", "", "upper right", 1.0, 1)
+        }
+                 
+        # Plot all 4 histograms
+        plot_positions = [
+            ("mom_z", (0, 0)), ("mom_T", (0, 1)), 
+            ("mom_err", (1, 0)), ("mom_res", (1, 1))
+        ]        
+        for var_name, (row, col) in plot_positions:
+            # Plot histograms
+            labels = self._plot_histogram(hists[var_name], ax[row, col], list(hists[var_name].axes["selection"])) # , selection)
+            
+            # Get axis labels and title
+            xlabel, title, loc, y_ext_factor, ncols = var_info[var_name]
+            ylabel = "Tracks" if col==0 else ""
+            
+            # Only show legend on first subplot
+            show_legend = True # (row == 0 and col == 0)
+            
+            # Apply formatting
+            self._format_axis(
+                ax[row, col], 
+                labels, 
+                xlabel=xlabel, 
+                ylabel=ylabel, 
+                title=title, 
+                leg=show_legend,
+                loc=loc,
+                y_ext_factor=y_ext_factor,
+                ncols=ncols
+                
+            )
+        
+        plt.tight_layout()
+        if out_path:
+            plt.savefig(out_path)
+            self.logger.log(f"\tWrote {out_path}", "success")
+        plt.show()
+        
     def _add_threshold_lines(self, ax, var_name, toggle_lines, line_kwargs):
         """Add threshold lines to plots"""
         if not toggle_lines.get(var_name, True):
