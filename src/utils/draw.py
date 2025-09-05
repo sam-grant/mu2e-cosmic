@@ -204,7 +204,7 @@ class Draw():
                 histtype=histtype,
                 linewidth=linewidth,
                 alpha=alpha,
-                linestyle=linestyle  # Added: you were missing this parameter
+                linestyle=linestyle  
             )
 
             
@@ -242,7 +242,7 @@ class Draw():
         self._format_axis(ax[0], labels, 
                          xlabel="Momentum [MeV/c]",
                          ylabel="Tracks",
-                         title="Wide range: 0-100 MeV/c")
+                         title="Wide range: 0-1000 MeV/c")
     
         # Extended window 
         name = "mom_ext"
@@ -293,6 +293,37 @@ class Draw():
         """Plot CRV z-position histograms"""
         selection = ["All", "Preselect", "CE-like"]
         fig, ax = plt.subplots(figsize=(8, 6)) 
+        
+        name = "crv_z"
+        h1o_z = hists[name]
+        h1o_z = h1o_z[{"selection": selection}]
+        
+        # Plot step histograms
+        self._plot_histogram(h1o_z, ax, selection, density=True)
+        
+        # Format axis
+        self._format_axis(ax, selection, 
+                         xlabel="z-position [mm]", 
+                         ylabel="Normalised coincidences",
+                         log=False,
+                         frameon=False)
+        
+        # Scientific notation
+        formatter = ScalarFormatter(useMathText=True)
+        formatter.set_scientific(True)
+        formatter.set_powerlimits((0, 0))
+        ax.yaxis.set_major_formatter(formatter)
+    
+        plt.tight_layout()
+        if out_path:
+            plt.savefig(out_path)
+            self.logger.log(f"\tWrote {out_path}", "success")
+        plt.show()
+
+    def plot_crv_z_long(self, hists, out_path=None):
+        """Plot CRV z-position histograms"""
+        selection = ["All", "Preselect", "CE-like"]
+        fig, ax = plt.subplots(figsize=(8*2, 6/1.5)) 
         
         name = "crv_z"
         h1o_z = hists[name]
@@ -394,10 +425,10 @@ class Draw():
         fig, ax = plt.subplots(2, 2, figsize=(6.4*2, 2*4.8))        # Variable info for axis labels
         var_info = {
             
-            "mom_z": (r"$p_{z}$ [MeV/c]", "", "upper right", 1.0, 1), # xlabel, title, loc, y_ext_factor, ncols
-            "mom_T": (r"$p_{T}$ [MeV/c]", "", "upper right", 1.0, 1), 
+            "mom_z": (r"$p_{z}$ [MeV/c]", "", "upper right", 20, 2), # xlabel, title, loc, y_ext_factor, ncols
+            "mom_T": (r"$p_{T}$ [MeV/c]", "", "upper right", 20, 2), 
             "mom_err": (r"$\sigma_{p}$ [MeV/c]", "", "upper right", 1.0, 1), 
-            "mom_res": (r"$\delta p = p_{\text{reco}} - p_{\text{truth}}$ [MeV/c]", "", "upper right", 1.0, 1)
+            "mom_res": (r"$\delta p = p_{\text{reco}} - p_{\text{truth}}$ [MeV/c]", "", "upper left", 15, 2)
         }
                  
         # Plot all 4 histograms
