@@ -3,7 +3,7 @@
 #
 
 process:
-    file_list_path: "../input/file_lists/nts.mu2e.CeEndpointOnSpillTriggered.MDC2020au_best_v1_3_v06_03_00.100.txt"
+    file_list_path: "../input/filelists/nts.mu2e.CeEndpointOnSpillTriggered.MDC2020au_best_v1_3_v06_03_00.100.txt"
     on_spill: true
     cutset_name: "SU2020a" 
     groups_to_toggle:
