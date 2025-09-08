@@ -3,7 +3,7 @@
 # ===============================
 
 process:
-    defname: "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aw_best_v1_3_v06_05_00.root"
+    defname: "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.root"
     cutset_name: "SU2020d"
     cuts_to_toggle:
         unvetoed: false
