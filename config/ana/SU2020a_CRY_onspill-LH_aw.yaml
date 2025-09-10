@@ -5,6 +5,7 @@
 process:
     defname: "nts.mu2e.CosmicCRYSignalAllOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.root"
     cutset_name: "SU2020a"
+    max_workers: 75
 
 postprocess:
     write_events: true
