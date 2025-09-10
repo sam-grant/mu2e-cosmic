@@ -8,7 +8,7 @@ defaults:
     description: "Baseline defaults"
     thresholds:
         track_pdg: 11 
-        lo_nactive: 21 
+        lo_nactive: 20 
         lo_trkqual: 0.8
         lo_t0_ns: 640
         hi_t0_ns: 1650
@@ -16,7 +16,7 @@ defaults:
         hi_maxr_mm: 680
         hi_d0_mm: 100
         hi_t0err: 0.9 
-        lo_pitch_angle: 0.5577350
+        lo_pitch_angle: 0.5
         hi_pitch_angle: 1.0 
         veto_dt_ns: 150
         lo_ext_win_mevc: 100
@@ -50,85 +50,65 @@ cutsets:
     ########################
     # Analysis cut sets
     ########################
-    alpha:
-        description:
-            "baseline cutset with loop helix parameters"      
-    beta:
-        description:
-            "alpha with no R_max cut"
-        active:
-            within_lhr_max_hi: false
-            within_lhr_max_lo: false
-    gamma:
-        description:
-            "Loose cuts (alpha with no R_max and trkqual > 0.2)"
-        active:
-            within_lhr_max_hi: false
-            within_lhr_max_lo: false
-            lo_trkqual: 0.2
+#     alpha:
+#         description:
+#             "baseline cutset with loop helix parameters"      
+#             
+#     beta:
+#         description:
+#             "alpha with no R_max cut"
+#         active:
+#             within_lhr_max_hi: false
+#             within_lhr_max_lo: false
+#             
+#     gamma:
+#         description:
+#             "Loose cuts (alpha with no R_max and trkqual > 0.2)"
+#         active:
+#             within_lhr_max_hi: false
+#             within_lhr_max_lo: false
+#             lo_trkqual: 0.2
+            
     SU2020a:
         description:
-            "SU2020a cuts (trkqual > 0)"
+            "SU2020a (trkqual > 0 (none) and t0err < 0.9 ns)"
         active:
             within_lhr_max_lo: false
-            within_t0err: true
-            lo_trkqual: 0.8
-            # good_trkqual: true
-            # has_hits: true
-            # within_d0: false
-            # within_pitch_angle_lo: false
-            # within_pitch_angle_hi: false
-            # within_lhr_max_hi: false
-            # unvetoed: false
-            # within_ext_win: false
-            # within_sig_win: false
-        thresholds:
-            lo_pitch_angle: 0.5
-            hi_pitch_angle: 1.0
-            lo_nactive: 20
+            good_trkqual: false
         
-            
     SU2020b:
         description:
             "SU2020b cuts (trkqual > 0.2)"
         active:
             within_lhr_max_lo: false
-            within_t0err: true
         thresholds:
-            lo_pitch_angle: 0.5
-            hi_pitch_angle: 1.0
             lo_trkqual: 0.2
-            
+
     SU2020c:
         description:
-            "SU2020c cuts (no trkqual)"
+            "SU2020c cuts (trkqual > 0.8)"
         active:
             within_lhr_max_lo: false
-            within_t0err: true
-            good_trkqual: false
-        thresholds:
-            lo_pitch_angle: 0.5
-            hi_pitch_angle: 1.0
-            
+
     SU2020d:
         description:
-            "SU2020d cuts (no trkqual, no t0err)"
+            "SU2020d cuts (t0err > 0 ns)"
         active:
             within_lhr_max_lo: false
             within_t0err: false
-            good_trkqual: false
-            
-        thresholds:
-            lo_pitch_angle: 0.5
-            hi_pitch_angle: 1.0
             
     SU2020e:
         description:
-            "SU2020e cuts (trkqual > 0.2, no t0err)"
+            "SU2020e cuts (trkqual > 0.2 and t0err > 0 ns)"
         active:
             within_lhr_max_lo: false
             within_t0err: false
         thresholds:
-            lo_pitch_angle: 0.5
-            hi_pitch_angle: 1.0 
             lo_trkqual: 0.2
+
+    SU2020f:
+        description:
+            "SU2020f cuts (trkqual > 0.8 and t0err > 0 ns)"
+        active:
+            within_lhr_max_lo: false
+            within_t0err: false
