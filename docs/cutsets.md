@@ -24,9 +24,19 @@ All have common signal-like background cuts:
 
 ## Signal-like cuts 
 
-Track-based signal-like cuts.
+Track-based signal-like cuts, using different combinations of trkqual and t0err. 
+
+```
+| trkqual \ t0err | < 0.9 ns |  > 0 (none) |
+|-----------------|----------|-------------|
+| > 0 (none)      | SU2020a  | SU2020d     |
+| > 0.2           | SU2020b  | SU2020e     |
+| > 0.8           | SU2020c  | SU2020f     |
+```
 
 ### SU2020a
+
+`trkqual > 0 (none)` and `t0err < 0.9 ns`
 
 * `good_trkqual`: Track quality result (trkqual > 0)
 * `within_t0`: t0 at tracker entrance (640 < t_0 < 1650 ns)
@@ -65,7 +75,7 @@ SU2020a, with `trkqual > 0.8`.
 
 ### SU2020d
 
-SU2020a, with `t0err > 0 (none), trkqual > 0 (none)`.
+SU2020a, with `t0err > 0 (none)`.
 
 * `good_trkqual`: Track quality result (trkqual > 0)
 * `within_t0`: t0 at tracker entrance (640 < t_0 < 1650 ns)
@@ -78,9 +88,22 @@ SU2020a, with `t0err > 0 (none), trkqual > 0 (none)`.
   
 ### SU2020e
 
-SU2020a, with `t0err > 0 (none), trkqual > 0.2`.
+SU2020a, with `trkqual > 0.2` and `t0err < 0 (none)`.
 
 * `good_trkqual`: Track quality result (trkqual > 0.2)
+* `within_t0`: t0 at tracker entrance (640 < t_0 < 1650 ns)
+* `within_t0err`: Track fit t0 uncertainty (t0err > 0 ns)
+* `has_hits`: >20 active tracker hits
+* `within_d0`: Distance of closest approach (d_0 < 100 mm)
+* `within_pitch_angle_lo`: Extrapolated pitch angle (pz/pt > 0.5)
+* `within_pitch_angle_hi`: Extrapolated pitch angle (pz/pt < 1.0)
+* `within_lhr_max_hi`: Loop helix maximum radius (R_max < 680 mm)
+
+### SU2020f
+
+SU2020a, with trkqual > 0.8 and t0err > 0 (none).
+
+* `good_trkqual`: Track quality result (trkqual > 0.8)
 * `within_t0`: t0 at tracker entrance (640 < t_0 < 1650 ns)
 * `within_t0err`: Track fit t0 uncertainty (t0err > 0 ns)
 * `has_hits`: >20 active tracker hits
