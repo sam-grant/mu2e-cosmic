@@ -1,0 +1,17 @@
+# ===============================
+# SU2020a_mix2bb_offspill-LH_aw.yaml
+# ===============================
+
+process:
+    defname: "nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_05_00.root"
+    cutset_name: "SU2020a"
+    max_workers: 50
+
+postprocess:
+    write_events: true
+    write_event_info: true
+    generated_events: 41100000000
+    livetime: 10680000
+
+output:
+    out_path: "../output/results/SU2020a_mix2bb_onspill-LH_aw"
