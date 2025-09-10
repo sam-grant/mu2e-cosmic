@@ -484,7 +484,7 @@ class Draw():
             ax.axvline(self.analyse.thresholds["lo_trkqual"], **line_kwargs)
             
         elif var_name == "nactive" and self.analyse.active_cuts["has_hits"]:
-            ax.axvline(self.analyse.thresholds["lo_nactive"] - 0.5, **line_kwargs)
+            ax.axvline(self.analyse.thresholds["lo_nactive"], **line_kwargs) #  - 0.5
             
         elif var_name == "t0err" and self.analyse.active_cuts["within_t0err"]:
             ax.axvline(self.analyse.thresholds["hi_t0err"], **line_kwargs)
