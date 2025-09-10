@@ -7,8 +7,6 @@ import hist
 import gc
 import sys 
 import os
-import yaml 
-import copy
 
 from pyutils.pyselect import Select
 from pyutils.pyvector import Vector
@@ -18,6 +16,7 @@ from pyutils.pyprint import Print
 # Add relative path to utils
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(script_dir, "..", "utils"))
+from io_manager import Load
 from cut_manager import CutManager
 from hist_manager import HistManager
 
@@ -49,15 +48,14 @@ class Analyse:
         self.vector = Vector(verbosity=self.verbosity) 
 
         # Helper sets cut parameters, self.track_pdg, self.lo_nactive, etc.
-        # TODO: put load_cuts in config_manager.py or cut_manager.py, whichever makes more sense.
+        loader = Load() # in_path="../config/common/") # relative to /run 
         self.cut_config = {"description": "FAILED TO LOAD"}  # Default fallback
-        self._load_cuts()
+        loader.load_cuts_yaml(self)
         
         # More tools
-
         self.hist_manager = HistManager(self) # Needs to come after _load_cuts
 
-        
+        # Init printout
         self.logger.log(
             f"Initialised with:\n"
             f"  on_spill        = {self.on_spill}\n"
@@ -66,61 +64,6 @@ class Analyse:
             f"  verbosity       = {self.verbosity}",
             "info"
         )
-
-    def _load_cuts(self):
-        """Load cut configuration from YAML. Supports baseline and derived cutsets."""
-
-        # Resolve path to cut config file
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        cut_config_path = os.path.join(script_dir, self.cut_config_path or "../../config/common/cuts.yaml")
-        
-        if not os.path.exists(cut_config_path):
-            self.logger.log(f"Cut config file not found: {cut_config_path}", "error")
-            sys.exit(1) # Stop process
-        else:
-            self.cut_config_path = cut_config_path
-
-        # Load YAML
-        with open(self.cut_config_path, "r") as f:
-            config = yaml.safe_load(f)
-
-        # Check if baseline exists
-        if "defaults" not in config:
-            self.logger.log("No 'baseline' configuration found in YAML", "error")
-            sys.exit(1) # Stop process
-
-        # Start with baseline config
-        if self.cutset_name == "defaults":
-            final_config = config["defaults"]
-        else:
-            # Check if cutset exists
-            if "cutsets" not in config or self.cutset_name not in config["cutsets"]:
-                self.logger.log(f"Cutset '{self.cutset_name}' not found in config", "error")
-                sys.exit(1) # Stop process
-            
-            # Deep copy baseline to avoid modifying original
-            final_config = copy.deepcopy(config["defaults"])
-            override_config = config["cutsets"][self.cutset_name]
-
-            # Merge overrides
-            for section in ["thresholds", "active"]:
-                if section in override_config:
-                    final_config[section].update(override_config[section])
-            
-            # Update description if provided
-            if "description" in override_config:
-                final_config["description"] = override_config["description"]
-
-        # Assign internal variables
-        self.thresholds = final_config["thresholds"]
-        self.active_cuts = final_config["active"]
-        self.cut_config = final_config
-
-        # return True
-
-    # except Exception as e:
-    #     self.logger.log(f"Error loading cuts: {e}", "error")
-    #     return False
 
     def get_pitch_angle(self, trkfit):
         """Helper to calculate pitch angle"""
@@ -152,7 +95,7 @@ class Analyse:
         try:
             # Track segments level definition
             at_trk_front = self.selector.select_surface(data["trkfit"], surface_name="TT_Front") 
-            # at_trk_mid = self.self.selector.select_surface(data["trkfit"], surface_name="TT_Mid")
+            at_trk_mid = self.selector.select_surface(data["trkfit"], surface_name="TT_Mid")
             # at_trk_back = self.self.selector.select_surface(data["trkfit"], surface_name="TT_Back")
             # in_trk = (at_trk_front | at_trk_mid | at_trk_back)
             
@@ -194,28 +137,6 @@ class Analyse:
             raise e
 
         ###################################################
-        # Downstream tracks at the tracker entrance 
-        ###################################################
-        try:
-            # Track segments level mask
-            is_downstream = self.selector.is_downstream(data["trkfit"]) 
-            # Track level mask
-            is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1) 
-            # Add cut 
-            cut_manager.add_cut(
-                name="is_downstream",
-                description="Downstream tracks (p_z > 0 at tracker entrance)",
-                mask=is_downstream,
-                active=self.active_cuts["is_downstream"],
-                group="Preselect"
-            )
-            # Append for debugging
-            data["is_downstream"] = is_downstream
-        except Exception as e:
-            self.logger.log(f"Error defining 'is_downstream': {e}", "error") 
-            raise e
-
-        ###################################################
         # One electron track fit / event 
         # This deals with split reflected tracks
         # TODO: make this dependent on a deltaT
@@ -238,6 +159,29 @@ class Analyse:
             data["one_reco_electron_per_event"] = one_reco_electron_per_event
         except Exception as e:
             self.logger.log(f"Error defining 'one_reco_electron': {e}", "error") 
+            raise e
+
+        ###################################################
+        # Downstream tracks at the tracker entrance 
+        ###################################################
+        try:
+            # Track segments level mask
+            is_downstream = self.selector.is_downstream(data["trkfit"]) 
+            # Track level mask
+            is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1) 
+            # is_downstream = ak.any(at_trk_front & is_downstream, axis=-1) 
+            # Add cut 
+            cut_manager.add_cut(
+                name="is_downstream",
+                description="Downstream tracks (p_z > 0 at tracker entrance)",
+                mask=is_downstream,
+                active=self.active_cuts["is_downstream"],
+                group="Preselect"
+            )
+            # Append for debugging
+            data["is_downstream"] = is_downstream
+        except Exception as e:
+            self.logger.log(f"Error defining 'is_downstream': {e}", "error") 
             raise e
 
         ###################################################
@@ -282,7 +226,7 @@ class Analyse:
         except Exception as e:
             self.logger.log(f"Error defining 'good_trkqual': {e}", "error") 
             raise e
-        
+            
         ###################################################
         # Time at tracker entrance (t0)
         ###################################################
@@ -309,26 +253,6 @@ class Analyse:
             raise e
 
         ###################################################
-        # Minimum active hits
-        ###################################################
-        try:
-            # Track level definition 
-            has_hits = self.selector.has_n_hits(data["trk"], n_hits=self.thresholds["lo_nactive"])
-            # Add cut
-            cut_manager.add_cut(
-                name="has_hits",
-                description=f">{self.thresholds["lo_nactive"]-1} active tracker hits",
-                mask=has_hits,
-                active=self.active_cuts["has_hits"],
-                group="Tracker"
-            )
-            # Append for debugging
-            data["has_hits"] = has_hits
-        except Exception as e:
-            self.logger.log(f"Error defining 'has_hits': {e}", "error") 
-            raise e
-
-        ###################################################
         # t0 uncertainty distance of closest approach
         ###################################################
         try:
@@ -336,7 +260,7 @@ class Analyse:
             within_t0err = (data["trkfit"]["trksegpars_lh"]["t0err"] < self.thresholds["hi_t0err"])
 
             # Track level definition
-            within_t0err = ak.all(~at_trk_front | within_t0err, axis=-1) 
+            within_t0err = ak.all(~at_trk_mid | within_t0err, axis=-1) 
 
             # Add cut 
             cut_manager.add_cut(
@@ -352,6 +276,28 @@ class Analyse:
             self.logger.log(f"Error defining 'within_t0err': {e}", "error") 
             raise e
             
+        ###################################################
+        # Minimum active hits
+        ###################################################
+        try:
+            # Track level definition 
+            # has_hits = self.selector.has_n_hits(data["trk"], n_hits=self.thresholds["lo_nactive"])
+            has_hits = data["trk"]["trk.nactive"] > self.thresholds["lo_nactive"]
+            # Add cut
+            cut_manager.add_cut(
+                name="has_hits",
+                # description=f">{self.thresholds["lo_nactive"]-1} active tracker hits",
+                description=f">{self.thresholds["lo_nactive"]} active tracker hits",
+                mask=has_hits,
+                active=self.active_cuts["has_hits"],
+                group="Tracker"
+            )
+            # Append for debugging
+            data["has_hits"] = has_hits
+        except Exception as e:
+            self.logger.log(f"Error defining 'has_hits': {e}", "error") 
+            raise e
+
         ###################################################
         # Extrapolated distance of closest approach
         ###################################################

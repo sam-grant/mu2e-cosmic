@@ -6,6 +6,9 @@ import awkward as ak
 import pyarrow.parquet as pq
 import hist
 import pandas as pd
+import yaml
+import sys
+import copy
 
 from pyutils.pylogger import Logger
 
@@ -223,6 +226,61 @@ class Load:
         """Helper to get the full file path""" 
         # Return input file path
         return os.path.join(self.in_path, in_name)
+
+    def load_cuts_yaml(self, ana, cut_config_path="../../config/common/cuts.yaml"):
+        """Load cut configuration from YAML. Supports baseline and derived cutsets.
+
+        Special function only used by analyse.py
+        
+        """
+
+        # Resolve path to cut config file
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        cut_config_path = os.path.join(script_dir, cut_config_path)
+        # cut_config_path = self._get_path(in_name) #  or "cuts.yaml") # "../../config/common/cuts.yaml")
+        
+        if not os.path.exists(cut_config_path):
+            self.logger.log(f"Cut config file not found: {cut_config_path}", "error")
+            sys.exit(1) # Stop process
+        else:
+            ana.cut_config_path = cut_config_path
+
+        # Load YAML
+        with open(ana.cut_config_path, "r") as f:
+            config = yaml.safe_load(f)
+
+        # Check if baseline exists
+        if "defaults" not in config:
+            self.logger.log("No 'baseline' configuration found in YAML", "error")
+            sys.exit(1) # Stop process
+
+        # Start with baseline config
+        if ana.cutset_name == "defaults":
+            final_config = config["defaults"]
+        else:
+            # Check if cutset exists
+            if "cutsets" not in config or ana.cutset_name not in config["cutsets"]:
+                self.logger.log(f"Cutset '{ana.cutset_name}' not found in config", "error")
+                sys.exit(1) # Stop process
+            
+            # Deep copy baseline to avoid modifying original
+            final_config = copy.deepcopy(config["defaults"])
+            override_config = config["cutsets"][ana.cutset_name]
+
+            # Merge overrides
+            for section in ["thresholds", "active"]:
+                if section in override_config:
+                    final_config[section].update(override_config[section])
+            
+            # Update description if provided
+            if "description" in override_config:
+                final_config["description"] = override_config["description"]
+
+        # Assign internal variables to ana
+        ana.thresholds = final_config["thresholds"]
+        ana.active_cuts = final_config["active"]
+        ana.cut_config = final_config
+
 
     def load_pkl(self, in_name="results.pkl"):
         """Load all analysis outputs from pickle file.
