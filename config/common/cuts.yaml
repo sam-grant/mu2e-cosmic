@@ -68,13 +68,25 @@ cutsets:
             lo_trkqual: 0.2
     SU2020a:
         description:
-            "SU2020a cuts (trkqual > 0.8)"
+            "SU2020a cuts (trkqual > 0)"
         active:
             within_lhr_max_lo: false
             within_t0err: true
+            lo_trkqual: 0.8
+            # good_trkqual: true
+            # has_hits: true
+            # within_d0: false
+            # within_pitch_angle_lo: false
+            # within_pitch_angle_hi: false
+            # within_lhr_max_hi: false
+            # unvetoed: false
+            # within_ext_win: false
+            # within_sig_win: false
         thresholds:
             lo_pitch_angle: 0.5
             hi_pitch_angle: 1.0
+            lo_nactive: 20
+        
             
     SU2020b:
         description:
