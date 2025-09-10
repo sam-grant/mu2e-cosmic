@@ -34,6 +34,8 @@ Track-based signal-like cuts, using different combinations of trkqual and t0err.
 | > 0.8           | SU2020c  | SU2020f     |
 ```
 
+For my own sanity I will stick primarily with SU2020b, which is the most comparable to baseline SU2020.
+
 ### SU2020a
 
 `trkqual > 0 (none)` and `t0err < 0.9 ns`
