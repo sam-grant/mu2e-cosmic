@@ -9,7 +9,7 @@ class HistAnalyser():
     """
     Tools for histograms-based statisical analysis
     
-    Efficiency and rate calculations 
+    Efficiency and rate calculations with livetime scaling
     """
     def __init__(self, verbosity=1):
         """Initialise
@@ -125,6 +125,30 @@ class HistAnalyser():
         rate_err_lo_2batch = rates_dict["2batch"]["rate_err_lo"] - rate_2batch
         rate_err_hi_2batch = rates_dict["2batch"]["rate_err_hi"] - rate_2batch
         
+        # Hardcode Run-1 livetime as 3.46e6 seconds (from Natalie)
+        # TODO: verify this and put it in YAML (or an arg in PostProcess)
+        run1_livetime_seconds = 3.46e6
+        run1_livetime_ratio = getattr(self, '_current_scaled_livetime', 0) / run1_livetime_seconds if hasattr(self, '_current_scaled_livetime') else 0
+
+        # Calculate rates per Run-1 
+        if run1_livetime_ratio > 0:
+            rate_1b_per_run1 = k / run1_livetime_ratio
+            rate_2b_per_run1 = k / run1_livetime_ratio
+            
+            # Calculate uncertainties for Run-1 rates using Poisson bounds
+            k_lo, k_hi = self.get_poisson_bounds(k)
+            rate_1b_err_lo_per_run1 = k_lo / run1_livetime_ratio - rate_1b_per_run1
+            rate_1b_err_hi_per_run1 = k_hi / run1_livetime_ratio - rate_1b_per_run1
+            rate_2b_err_lo_per_run1 = rate_1b_err_lo_per_run1
+            rate_2b_err_hi_per_run1 = rate_1b_err_hi_per_run1
+        else:
+            rate_1b_per_run1 = 0
+            rate_2b_per_run1 = 0
+            rate_1b_err_lo_per_run1 = 0
+            rate_1b_err_hi_per_run1 = 0
+            rate_2b_err_lo_per_run1 = 0
+            rate_2b_err_hi_per_run1 = 0
+    
         result = {
             "Type": label,
             "k": k,
@@ -138,6 +162,13 @@ class HistAnalyser():
             r"Rate 2B [$\text{day}^{-1}$]": float(rate_2batch),
             r"Rate 2B Err$-$ [$\text{day}^{-1}$]": float(rate_err_lo_2batch),
             r"Rate 2B Err$+$ [$\text{day}^{-1}$]": float(rate_err_hi_2batch),
+            r"Run-1 Livetimes": float(run1_livetime_ratio),
+            r"Rate 1B [$\text{Run-1}^{-1}$]": float(rate_1b_per_run1),
+            r"Rate 1B Err$-$ [$\text{Run-1}^{-1}$]": float(rate_1b_err_lo_per_run1),
+            r"Rate 1B Err$+$ [$\text{Run-1}^{-1}$]": float(rate_1b_err_hi_per_run1),
+            r"Rate 2B [$\text{Run-1}^{-1}$]": float(rate_2b_per_run1),
+            r"Rate 2B Err$-$ [$\text{Run-1}^{-1}$]": float(rate_2b_err_lo_per_run1),
+            r"Rate 2B Err$+$ [$\text{Run-1}^{-1}$]": float(rate_2b_err_hi_per_run1),
         }
         
         results.append(result)
@@ -186,7 +217,7 @@ class HistAnalyser():
         # Get rates for all batch modes
         rates_dict = self.get_rates(k, walltime_days_dict)
         
-        # Store result using the new format
+        # Store result
         self._append_result(
             results, title, int(k), int(float(generated_events)), 
             eff, eff_err_lo, eff_err_hi, rates_dict
@@ -207,7 +238,7 @@ class HistAnalyser():
         # Get rates for all batch modes
         rates_dict = self.get_rates(k, walltime_days_dict)
         
-        # Store result using the new format
+        # Store result
         self._append_result(
             results, title, int(k), int(N),
             eff, eff_err_lo, eff_err_hi, rates_dict
@@ -224,21 +255,21 @@ class HistAnalyser():
         reference_window="mom_sig"
     ):
         """
-        Report efficiency results for signal and veto analysis.
+        Report efficiency results for signal and veto analysis with livetime scaling.
         
         Args:
             hists: Selection of histograms 
             generated_events (int, opt): Number of generated events in dataset. Defaults to 4e6.
-            livetime (float): The total livetime in seconds for this dataset.
+            livetime (float): The total livetime in seconds for the REFERENCE window (signal region).
             on_spill (bool): Whether we are using on spill cuts. 
             on_spill_frac (dict): The fraction of livetime in onspill single and two batch modes. 
-            veto (bool): Whether to include veto analysis. Defaults to True. 
+            veto (bool): Whether to include veto analysis. Defaults to True.
             reference_window (str): Reference momentum window for livetime scaling (default "mom_sig")
             
         Returns:
             pd.DataFrame: Results containing efficiency calculations
         """
-        self.logger.log(f"Getting efficiency from histograms", "info")
+        self.logger.log(f"Getting efficiency from histograms with livetime scaling", "info")
     
         try:
             generated_events = float(generated_events)
@@ -268,6 +299,9 @@ class HistAnalyser():
                 # Scale livetime for this momentum window
                 scaled_livetime = self._scale_livetime_for_window(livetime, hists, mom_window, reference_window)
                 
+                # Store scaled livetime for Run-1 calculation in _append_result
+                self._current_scaled_livetime = scaled_livetime
+                
                 # Get walltime in days
                 walltime_days = {}
                 sec2day = 1 / (24*3600)
@@ -280,15 +314,16 @@ class HistAnalyser():
             else:
                 # Set dummy walltime for cases where we don't need rates
                 walltime_days = {"1batch": 1.0, "2batch": 1.0}  # Will result in rate = k
+                self._current_scaled_livetime = 0
             
             # Signal efficiency for this momentum window
             self._get_signal_eff_and_rate(hists, mom_window, title, generated_events, walltime_days, results)
             
             # Veto efficiency and rates for this momentum window
             if veto:
-                veto_title = f"No veto ({title.split('(')[1]}"  # Extract the momentum range part
+                veto_title = f"No veto ({title.split('(')[1]}"  # Extract the momentum range part: full, ext, sig
                 self._get_veto_eff_and_rate(hists, mom_window, veto_title, walltime_days, results)
         
-        self.logger.log("Returning efficiency information", "success")
+        self.logger.log("Returning efficiency information with scaled livetimes", "success")
         
         return pd.DataFrame(results)
