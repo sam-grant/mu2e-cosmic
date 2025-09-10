@@ -28,21 +28,6 @@ class HistAnalyser():
     # Stats methods
     ####################################################
     
-    # def _get_binomial_err(self, k, N):
-    #     """Calculate Binomial uncertainty"""
-    #     q = k / N 
-    #     return np.sqrt(q * (1 - q) / N)
-        
-    # def _get_poisson_err(self, k, N=None):
-    #     """Calculate Poisson uncertainty
-    #         Returns:
-    #             absolute error if N=None
-    #             relative error is N!=None
-    #     """
-    #     if N is None:
-    #         N = 1
-    #     return np.sqrt(k) / N 
-
     def get_poisson_bounds(self, k, confidence=0.68):
         """Get Poisson confidence intervals for rates"""
         alpha = 1 - confidence
@@ -54,12 +39,6 @@ class HistAnalyser():
             upper = stats.chi2.ppf(1-alpha/2, 2*(k+1)) / 2
         
         return lower, upper # Return interval
-        
-    # def _get_wilson_err(self, k, N, z=1.0):
-    #     """Calculate uncertainty with Wilson method"""
-    #     alpha = 2 * (1 - norm.cdf(z)) # 68% confidence with z=1.0
-    #     lower, upper = proportion_confint(k, N, alpha=alpha, method="wilson")
-    #     return (upper - lower) / 2 # half the interval 
 
     def _get_wilson_bounds(self, k, N, z=1.0):
         """Calculate uncertainty with Wilson method"""
@@ -69,6 +48,67 @@ class HistAnalyser():
         lower, upper = proportion_confint(k, N, alpha=alpha, method="wilson")
         return lower, upper # Return interval
         
+    ####################################################
+    # Livetime scaling methods
+    ####################################################
+    
+    def _get_livetime_scaling_factor(self, hists, momentum_window, reference_window="mom_sig"):
+        """
+        Calculate livetime scaling factor for different momentum windows
+        
+        Args:
+            hists: Selection of histograms
+            momentum_window (str): The momentum window to scale ("mom_full", "mom_ext", "mom_sig")
+            reference_window (str): Reference window (signal region, default "mom_sig")
+            
+        Returns:
+            float: Scaling factor (events_in_window / events_in_reference)
+        """
+        # Get total events in each window (sum over all selection types)
+        events_reference = self._get_total_events_in_window(hists, reference_window)
+        events_window = self._get_total_events_in_window(hists, momentum_window)
+        
+        if events_reference == 0:
+            self.logger.log(f"Zero events in reference window {reference_window}", "warning")
+            return 1.0
+            
+        scaling_factor = events_window / events_reference
+        
+        self.logger.log(f"Livetime scaling for {momentum_window}: {scaling_factor:.4f} "
+                       f"({events_window}/{events_reference})", "info")
+        
+        return scaling_factor
+    
+    def _get_total_events_in_window(self, hists, momentum_window):
+        """Get total events in a momentum window across all selection types"""
+        try:
+            h = hists[momentum_window]
+            return int(h.sum())
+        except KeyError:
+            self.logger.log(f"Momentum window {momentum_window} not found in histograms", "error")
+            return 0
+    
+    def _scale_livetime_for_window(self, livetime, hists, momentum_window, reference_window="mom_sig"):
+        """
+        Scale livetime for a specific momentum window
+        
+        Args:
+            livetime (float): Reference livetime (for signal region)
+            hists: Selection of histograms
+            momentum_window (str): Window to scale livetime for
+            reference_window (str): Reference window (signal region)
+            
+        Returns:
+            float: Scaled livetime for the momentum window
+        """
+        if momentum_window == reference_window:
+            return livetime
+            
+        scaling_factor = self._get_livetime_scaling_factor(hists, momentum_window, reference_window)
+        scaled_livetime = livetime * scaling_factor
+        
+        return scaled_livetime
+
     ####################################################
     # DataFrame methods
     ####################################################
@@ -180,7 +220,8 @@ class HistAnalyser():
         on_spill,
         on_spill_frac,
         generated_events, 
-        veto
+        veto,
+        reference_window="mom_sig"
     ):
         """
         Report efficiency results for signal and veto analysis.
@@ -192,6 +233,7 @@ class HistAnalyser():
             on_spill (bool): Whether we are using on spill cuts. 
             on_spill_frac (dict): The fraction of livetime in onspill single and two batch modes. 
             veto (bool): Whether to include veto analysis. Defaults to True. 
+            reference_window (str): Reference momentum window for livetime scaling (default "mom_sig")
             
         Returns:
             pd.DataFrame: Results containing efficiency calculations
@@ -203,195 +245,50 @@ class HistAnalyser():
         except (ValueError, TypeError):
             generated_events = 0
 
-
         # Check if livetime is valid 
         livetime_valid = livetime is not None and livetime > 0
         
-        if livetime_valid:
-            # Get walltime in days
-            walltime_days = {}
-            sec2day = 1 / (24*3600)
-            for batch_mode, frac in on_spill_frac.items():
-                if on_spill: 
-                    walltime = livetime / frac
-                else:
-                    walltime = livetime / (1-frac)    
-                walltime_days[batch_mode] = walltime * sec2day
-        else:
-            # Set dummy walltime for cases where we don't need rates
-            walltime_days = {"1batch": 1.0, "2batch": 1.0}  # Will result in rate = k
+        if not livetime_valid:
             self.logger.log(f"Livetime is 0 or None with veto={veto}", "warning")
 
         # Init results
         results = []
         
-        # Signal efficiency for CE selection over wide range
-        self._get_signal_eff_and_rate(hists, "mom_full", "CE-like (wide)", generated_events, walltime_days, results)
-        self._get_signal_eff_and_rate(hists, "mom_ext", "CE-like (ext)", generated_events, walltime_days, results)
-        self._get_signal_eff_and_rate(hists, "mom_sig", "CE-like (sig)", generated_events, walltime_days, results)
+        # Define momentum windows and their titles
+        momentum_windows = [
+            ("mom_full", "CE-like (wide)"),
+            ("mom_ext", "CE-like (ext)"), 
+            ("mom_sig", "CE-like (sig)")
+        ]
         
-        # Veto efficiency and rates
-        if veto:
-            self._get_veto_eff_and_rate(hists, "mom_full", "No veto (wide)", walltime_days, results)
-            self._get_veto_eff_and_rate(hists, "mom_ext", "No veto (ext)", walltime_days, results)
-            self._get_veto_eff_and_rate(hists, "mom_sig", "No veto (sig)", walltime_days, results)
+        # Process each momentum window
+        for mom_window, title in momentum_windows:
+            
+            if livetime_valid:
+                # Scale livetime for this momentum window
+                scaled_livetime = self._scale_livetime_for_window(livetime, hists, mom_window, reference_window)
+                
+                # Get walltime in days
+                walltime_days = {}
+                sec2day = 1 / (24*3600)
+                for batch_mode, frac in on_spill_frac.items():
+                    if on_spill: 
+                        walltime = scaled_livetime / frac
+                    else:
+                        walltime = scaled_livetime / (1-frac)    
+                    walltime_days[batch_mode] = walltime * sec2day
+            else:
+                # Set dummy walltime for cases where we don't need rates
+                walltime_days = {"1batch": 1.0, "2batch": 1.0}  # Will result in rate = k
+            
+            # Signal efficiency for this momentum window
+            self._get_signal_eff_and_rate(hists, mom_window, title, generated_events, walltime_days, results)
+            
+            # Veto efficiency and rates for this momentum window
+            if veto:
+                veto_title = f"No veto ({title.split('(')[1]}"  # Extract the momentum range part
+                self._get_veto_eff_and_rate(hists, mom_window, veto_title, walltime_days, results)
         
         self.logger.log("Returning efficiency information", "success")
         
         return pd.DataFrame(results)
-        
-    # With nested functions (can cause multiprocessing issues)
-    # def analyse_hists(
-    #     self, 
-    #     hists,
-    #     livetime,
-    #     on_spill,
-    #     on_spill_frac, 
-    #     generated_events, 
-    #     veto
-    # ):
-    #     """
-    #     Report efficiency results for signal and veto analysis.
-        
-    #     Args:
-    #         hists: Selection of histograms 
-    #         generated_events (int, opt): Number of generated events in dataset. Defaults to 4e6.
-    #         livetime (float): The total livetime in seconds for this dataset.
-    #         on_spill (bool): Whether we are using on spill cuts. 
-    #         on_spill_frac (float): The fraction of livetime in onspill. Defaults to 32.2%. 
-    #         veto (bool): Whether to include veto analysis. Defaults to True. 
-            
-    #     Returns:
-    #         pd.DataFrame: Results containing efficiency calculations
-    #     """
-    #     self.logger.log(f"Getting efficiency from histogams", "info")
-    
-    #     try:
-    #         generated_events = float(generated_events)
-    #     except (ValueError, TypeError):
-    #         generated_events = 0
-
-    #     # Get walltime
-    #     if on_spill:
-    #         walltime = livetime / on_spill_frac
-    #     else:
-    #         walltime = livetime / (1-on_spill_frac)
-    #     # Convert to days
-    #     walltime_days = walltime / (24*3600)
-
-    #     # Init results
-    #     results = []
-
-    #     def get_rates(k):
-    #         # Get rates
-    #         rate = k / walltime_days
-    #         k_lo, k_hi = self.get_poisson_bounds(k)
-    #         rate_err_lo = k_lo / walltime_days  
-    #         rate_err_hi = k_hi / walltime_days
-    #         return rate, rate_err_lo, rate_err_hi
-            
-    #     def get_signal_eff(selection, title): 
-    #         k = self._get_N_from_hists(hists, selection, label="CE-like")   
-    #          # Get efficiency
-    #         eff = k / generated_events if int(float(generated_events)) > 0 else 0
-    #         eff_err_lo, eff_err_hi = self._get_wilson_bounds(k, generated_events)
-    #         # Get rates
-    #         rate, rate_err_lo, rate_err_hi = get_rates(k)
-    #         self._append_result(results, title, int(k), int(float(generated_events)), eff, eff_err_lo, eff_err_hi, rate, rate_err_lo, rate_err_hi)
-    
-    #     # Signal efficiency for CE selection over wide range
-    #     get_signal_eff(selection="mom_full", title="Signal (wide)")
-    #     get_signal_eff(selection="mom_ext", title="Signal (ext)")
-    #     get_signal_eff(selection="mom_sig", title="Signal (sig)")
-
-    #     def get_veto_eff_and_rate(selection, title): 
-    #         k = self._get_N_from_hists(hists, selection, label="Unvetoed")    
-    #         N = self._get_N_from_hists(hists, selection, label="CE-like")   
-    #         # Get efficiency
-    #         eff = (1 - k / N) if N > 0 else 0
-    #         eff_err_lo, eff_err_hi = self._get_wilson_bounds(k, N)
-    #         # Get rates
-    #         rate, rate_err_lo, rate_err_hi = get_rates(k)
-    #         # Store result
-    #         self._append_result(results, title, int(k), int(N), eff, eff_err_lo, eff_err_hi, rate, rate_err_lo, rate_err_hi)
-    
-    #     # Signal efficiency for CE selection over wide range
-    #     get_veto_eff_and_rate(selection="mom_full", title="Veto (wide)")
-    #     get_veto_eff_and_rate(selection="mom_ext", title="Veto (ext)")
-    #     get_veto_eff_and_rate(selection="mom_sig", title="Veto (sig)")
-
-    #     self.logger.log("Returning efficiency information", "success")
-        
-    #     return pd.DataFrame(results)
-
-    # ####################################################
-    # # Efficiency from cuts DataFrame 
-    # # HISTORICAL METHOD
-    # ####################################################
-
-    # def get_eff_from_df(
-    #     self, 
-    #     df_stats,
-    #     N_gen=4e6, # typical 
-    #     ce_row_name="one_reco_electron", # subject to change
-    #     veto=True, 
-    #     wilson=True,
-    #     z=1.0
-    # ):
-    #     """
-    #     Report efficiency results for signal and veto analysis.
-        
-    #     Args:
-    #         df_stats (pd.DataFrame): DataFrame containing statistics
-    #         generated_events (int, opt): Number of generated events in dataset. Defaults to 4e6.
-    #         ce_row_name (str, opt): Name of the conversion electron row. Defaults to "one_reco_electron". 
-    #         veto (bool, opt): Whether to include veto analysis. Defaults to True. 
-    #         wilson (bool, opt): Use Wilson interval. Defaults to True.
-    #         z (float, opt): Wilson interval z-score. Defaults to 1.0 (68% confidence).
-            
-    #     Returns:
-    #         pd.DataFrame: Results containing efficiency calculations
-
-    #     TODO: automatic CE-like row selection
-
-    #     Better to get this from the histogram objects!
-    #     """
-    #     self.logger.log(f"Getting efficiency from DataFrame ce_row_name = {ce_row_name} and veto = {veto}", "info")
-        
-    #     results = []
-        
-    #     # Signal efficiency for CE selection over full range
-    #     k_sig_full = self._get_N_from_df(df_stats, row_name=ce_row_name)
-    #     eff_sig_full = k_sig_full / N_gen
-    #     eff_err_sig_full = self._get_binomial_err(k_sig_full, N_gen)
-    #     self._append_result_to_df(results, "Signal (full)", int(k_sig_full), int(N_gen), eff_sig_full, eff_err_sig_full)
-
-    #     if not veto:
-    #         # Signal efficiency for CE selection over extended window 
-    #         k_sig_ext = self._get_N_from_df(df_stats, row_name="within_ext_win")
-    #         eff_sig_ext = k_sig_ext / N_gen
-    #         eff_err_sig_ext = self._get_binomial_err(k_sig_ext, N_gen)
-    #         self._append_result_to_df(results, "Signal (ext)", int(k_sig_ext), int(N_gen), eff_sig_ext, eff_err_sig_ext)
-    
-    #         # Signal efficiency for CE selection over signal window 
-    #         k_sig_sig = self._get_N_from_df(df_stats, row_name="within_sig_win")
-    #         eff_sig_sig = k_sig_sig / N_gen
-    #         eff_err_sig_sig = self._get_binomial_err(k_sig_sig, N_gen)
-    #         self._append_result_to_df(results, "Signal (sig)", int(k_sig_sig), int(N_gen), eff_sig_sig, eff_err_sig_sig)
-
-    #     if veto:
-    #         # Veto efficiency over full range
-    #         k_veto_full = self._get_N_from_df(df_stats, row_name="unvetoed")
-    #         N_veto_full = self._get_N_from_df(df_stats, row_name=ce_row_name)
-    #         eff_veto_full = k_veto_full / N_veto_full
-    #         if wilson: 
-    #             eff_err_veto_full = self._get_wilson_err(k_veto_full, N_veto_full) 
-    #         if not wilson:
-    #             eff_err_veto_full = self._get_poisson_err(k_veto_full, N_veto_full)
-                
-    #         self._append_result_to_df(results, "Veto (full)", int(k_veto_full), int(N_veto_full), eff_veto_full, eff_err_veto_full)
-
-    #     self.logger.log("Returning efficiency information", "success")
-        
-    #     return pd.DataFrame(results)
-
