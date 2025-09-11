@@ -137,13 +137,19 @@ class Draw():
             "linewidth": 1.5, 
             "alpha": 0.8
         } if line_styles is None else line_styles
+
+        # Set high DPI globally for all plots
+        plt.rcParams['figure.dpi'] = 300
+        plt.rcParams['savefig.dpi'] = 300
+        
+        # Get colors from style file cycle (fallback)
+        prop_cycle = plt.rcParams["axes.prop_cycle"]
+        self.colours = [color["color"] for color in prop_cycle]
         
         # Confirm
         self.logger.log(f"Initialised", "info")
 
-        # Get colors from style file cycle (fallback)
-        prop_cycle = plt.rcParams["axes.prop_cycle"]
-        self.colours = [color["color"] for color in prop_cycle]
+
 
     def _count_events(self, hists, selection, label):
         """Utility to count events from hist selections"""
@@ -285,7 +291,7 @@ class Draw():
         
         plt.tight_layout()
         if out_path:
-            plt.savefig(out_path)
+            plt.savefig(out_path, dpi=300)
             self.logger.log(f"\tWrote {out_path}", "success")
         plt.show()
 
@@ -316,7 +322,7 @@ class Draw():
     
         plt.tight_layout()
         if out_path:
-            plt.savefig(out_path)
+            plt.savefig(out_path, dpi=300)
             self.logger.log(f"\tWrote {out_path}", "success")
         plt.show()
 

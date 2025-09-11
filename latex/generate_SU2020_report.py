@@ -17,8 +17,10 @@ ana_labels = [
     # "SU2020c_signal_onspill-LH_au",
     # "SU2020c_signal_onspill-LH_aw"
     "SU2020b_CRY_onspill-LH_aw",
-    "SU2020b_mix2bb_onspill-LH_aw",
-    "SU2020b_signal_onspill-LH_aw"
+    "SU2020b_signal_onspill-LH_aw",
+    "SU2020b_CRY_mix2BB_onspill-LH_aw",
+    "SU2020b_signal_mix2BB_onspill-LH_aw",
+    
 ]
 
 # Generate the report

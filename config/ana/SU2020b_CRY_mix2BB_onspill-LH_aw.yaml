@@ -1,5 +1,5 @@
 # ===============================
-# SU2020b_mix2bb_offspill-LH_aw.yaml
+# SU2020b_CRY_mix2BB_offspill-LH_aw.yaml
 # ===============================
 
 process:
@@ -13,4 +13,4 @@ postprocess:
     livetime: 10680000
 
 output:
-    out_path: "../output/results/SU2020b_mix2bb_onspill-LH_aw"
+    out_path: "../output/results/SU2020b_CRY_mix2BB_onspill-LH_aw"

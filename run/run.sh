@@ -73,10 +73,33 @@
 #     "SU2020e_signal_onspill-LH_aw"
 # )
 
+# ana_labels=(
+#     "preselection_CRY_onspill-LH_aw_bug"
+#     "preselection_signal_onspill-LH_aw_bug"
+# )
+
 ana_labels=(
-    "preselection_CRY_onspill-LH_aw_bug"
-    "preselection_signal_onspill-LH_aw_bug"
+    # "SU2020a_CRY_onspill-LH_aw"
+    # "SU2020a_mix2bb_onspill-LH_aw"
+    # "SU2020a_signal_onspill-LH_aw"
+    # "SU2020b_CRY_onspill-LH_aw"
+    "SU2020b_CRY_mix2BB_onspill-LH_aw"
+    "SU2020b_signal_mix2BB_onspill-LH_aw"
+    # "SU2020b_signal_onspill-LH_aw"
+    # "SU2020c_CRY_onspill-LH_aw"
+    # "SU2020c_mix2bb_onspill-LH_aw"
+    # "SU2020c_signal_onspill-LH_aw"
+    # "SU2020d_CRY_onspill-LH_aw"
+    # "SU2020d_mix2bb_onspill-LH_aw"
+    # "SU2020d_signal_onspill-LH_aw"
+    # "SU2020e_CRY_onspill-LH_aw"
+    # "SU2020e_mix2bb_onspill-LH_aw"
+    # "SU2020e_signal_onspill-LH_aw"
+    # "SU2020f_CRY_onspill-LH_aw"
+    # "SU2020f_mix2bb_onspill-LH_aw"
+    # "SU2020f_signal_onspill-LH_aw"
 )
+
 
 # Process each analysis label
 for ana_label in "${ana_labels[@]}"; do

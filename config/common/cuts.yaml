@@ -30,7 +30,7 @@ defaults:
         within_t0: true
         is_downstream: true
         has_hits: true
-        within_t0err: false
+        within_t0err: true
         within_d0: true
         within_pitch_angle_lo: true
         within_pitch_angle_hi: true

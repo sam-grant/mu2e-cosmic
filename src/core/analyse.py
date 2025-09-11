@@ -96,8 +96,8 @@ class Analyse:
             # Track segments level definition
             at_trk_front = self.selector.select_surface(data["trkfit"], surface_name="TT_Front") 
             at_trk_mid = self.selector.select_surface(data["trkfit"], surface_name="TT_Mid")
-            # at_trk_back = self.self.selector.select_surface(data["trkfit"], surface_name="TT_Back")
-            # in_trk = (at_trk_front | at_trk_mid | at_trk_back)
+            at_trk_back = self.selector.select_surface(data["trkfit"], surface_name="TT_Back")
+            in_trk = (at_trk_front | at_trk_mid | at_trk_back)
             
             # Track level definition 
             has_trk_front = ak.any(at_trk_front, axis=-1)
@@ -168,7 +168,10 @@ class Analyse:
             # Track segments level mask
             is_downstream = self.selector.is_downstream(data["trkfit"]) 
             # Track level mask
-            is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1) 
+            # "all" method handles reflections 
+            # is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1) 
+            is_downstream = ak.all(~in_trk | is_downstream, axis=-1) 
+            # "any" method does not handle reflections, may be closer to C++
             # is_downstream = ak.any(at_trk_front & is_downstream, axis=-1) 
             # Add cut 
             cut_manager.add_cut(
@@ -236,7 +239,8 @@ class Analyse:
                 within_t0 = ((self.thresholds["lo_t0_ns"] < data["trkfit"]["trksegs"]["time"]) & 
                              (data["trkfit"]["trksegs"]["time"] < self.thresholds["hi_t0_ns"]))
                 # Track level definition
-                within_t0 = ak.all(~at_trk_front | within_t0, axis=-1)
+                within_t0 = ak.all(~at_trk_mid | within_t0, axis=-1)
+                # within_t0 = ak.all(~at_trk_front | within_t0, axis=-1)
                 # Add cut 
                 cut_manager.add_cut( 
                     name="within_t0",
@@ -260,6 +264,7 @@ class Analyse:
             within_t0err = (data["trkfit"]["trksegpars_lh"]["t0err"] < self.thresholds["hi_t0err"])
 
             # Track level definition
+            # within_t0err = ak.all(~at_trk_front | within_t0err, axis=-1)
             within_t0err = ak.all(~at_trk_mid | within_t0err, axis=-1) 
 
             # Add cut 

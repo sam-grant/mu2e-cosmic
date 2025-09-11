@@ -16,7 +16,7 @@ import shutil
 
 def convert_png_to_pdf(png_path, pdf_path):
     """
-    Convert PNG to PDF using PIL/Pillow for better LaTeX quality.
+    Convert PNG to PDF using PIL/Pillow while preserving original size and DPI.
     
     Args:
         png_path (str): Path to input PNG file
@@ -30,6 +30,18 @@ def convert_png_to_pdf(png_path, pdf_path):
         
         # Open PNG image
         with Image.open(png_path) as img:
+            # Get original DPI if available, otherwise use a reasonable default
+            original_dpi = img.info.get('dpi')
+            if original_dpi is None:
+                # If no DPI info, assume 96 DPI (common screen resolution)
+                # or calculate based on typical plot sizes
+                dpi = 96
+            else:
+                # DPI can be a tuple (x_dpi, y_dpi) or a single value
+                dpi = original_dpi[0] if isinstance(original_dpi, tuple) else original_dpi
+            
+            print(f"    Original PNG: {img.size[0]}x{img.size[1]} pixels, DPI: {dpi}")
+            
             # Convert to RGB if necessary (PDFs don't support transparency)
             if img.mode in ('RGBA', 'LA', 'P'):
                 # Create white background
@@ -41,10 +53,14 @@ def convert_png_to_pdf(png_path, pdf_path):
             elif img.mode != 'RGB':
                 img = img.convert('RGB')
             
-            # Save as PDF with high quality
-            img.save(pdf_path, 'PDF', resolution=300.0, quality=95)
+            # Save as PDF preserving the original DPI
+            # This ensures the PDF has the same physical dimensions as the PNG
+            img.save(pdf_path, 'PDF', 
+                    dpi=(dpi, dpi),  # Explicitly set both x and y DPI
+                    quality=95,
+                    optimize=True)
         
-        print(f"    Converted PNG to PDF: {os.path.basename(pdf_path)}")
+        print(f"    Converted PNG to PDF: {os.path.basename(pdf_path)} (preserved DPI: {dpi})")
         return True
     
     except ImportError:
@@ -53,7 +69,6 @@ def convert_png_to_pdf(png_path, pdf_path):
     except Exception as e:
         print(f"    Warning: PNG to PDF conversion failed: {e}")
         return False
-
 
 def fix_math_formatting(text):
     """
@@ -74,9 +89,9 @@ def fix_math_formatting(text):
     if '$' in text and '\\text{' in text:
         # This is a math expression, leave $ alone
         pass
-    else:
-        # Regular text, escape $
-        text = text.replace('$', '\\$')
+    # else:
+    #     # Regular text, escape $
+    #     text = text.replace('$', '\\$')
     
     return text
 
@@ -212,30 +227,20 @@ def generate_introduction_section():
     # Create a LaTeX table for the dataset information
     intro_content += "\\begin{table}[H]\n"
     intro_content += "\\centering\n"
-    intro_content += "\\footnotesize\n"
-    intro_content += "\\begin{tabular}{|l|c|c|c|c|}\n"
-    intro_content += "\\hline\n"
-    intro_content += "\\textbf{Dataset Type} & \\textbf{Configuration} & \\textbf{Livetime [days]} & \\textbf{Triggered events} & \\textbf{Generated events} \\\\\n"
+    # intro_content += "\\footnotesize\n"
+    intro_content += "\\begin{tabular}{l|ccc}\n"
     intro_content += "\\hline\n"
     intro_content += "\\hline\n"
-    intro_content += "Cosmic CRY Off-spill & MDC2020as & 123 & 10,050,055 & 41.1B \\\\\n"
+    intro_content += "\\textbf{Type} & \\textbf{Livetime [days]} & \\textbf{Triggered events} & \\textbf{Generated events} \\\\\n"
     intro_content += "\\hline\n"
-    intro_content += "Cosmic CRY On-spill & MDC2020aq & 124 & 10,050,055 & 41.1B \\\\\n"
+    intro_content += "CosmicCRY & 124 & 10,050,055 & 41.1B \\\\\n"
+    intro_content += "CosmicCRY Mix2BB & 124 & 10,050,055 & 41.1B \\\\\n"
+    intro_content += "CeEndpoint & -- & 2,166,583 & 4M \\\\\n"
+    intro_content += "CeEndpoint Mix2BB & -- & 2,166,583 & 4M \\\\\n"
     intro_content += "\\hline\n"
-    intro_content += "Cosmic CRY On-spill & MDC2020aw & 124 & 10,050,055 & 41.1B \\\\\n"
-    intro_content += "\\hline\n"
-    intro_content += "Cosmic CRY On-spill & MDC2020au & 124 & 10,050,055 & 41.1B \\\\\n"
-    intro_content += "\\hline\n"
-    intro_content += "CE Signal & MDC2020an & -- & 2,166,583 & 4M \\\\\n"
-    intro_content += "\\hline\n"
-    intro_content += "CE Signal & MDC2020au & -- & 2,166,583 & 4M \\\\\n"
-    intro_content += "\\hline\n"
-    intro_content += "CE Signal & MDC2020aw & -- & 2,166,583 & 4M \\\\\n"
-    intro_content += "\\hline\n"
-    intro_content += "CE Signal & MDC2020aq & -- & 2,166,583 & 4M \\\\\n"
     intro_content += "\\hline\n"
     intro_content += "\\end{tabular}\n"
-    intro_content += "\\caption{Summary of Monte Carlo datasets used in the analysis.}\n"
+    intro_content += "\\caption{Summary of Monte Carlo datasets.}\n"
     intro_content += "\\label{tab:datasets}\n"
     intro_content += "\\end{table}\n\n"
     
@@ -248,23 +253,19 @@ def generate_introduction_section():
     # Beam timing table
     intro_content += "\\begin{table}[H]\n"
     intro_content += "\\centering\n"
-    intro_content += "\\begin{tabular}{|l|c|c|}\n"
+    intro_content += "\\begin{tabular}{l|cc}\n"
+    intro_content += "\\hline\n"
     intro_content += "\\hline\n"
     intro_content += "\\textbf{Parameter} & \\textbf{Single batch} & \\textbf{Two batch} \\\\\n"
     intro_content += "\\hline\n"
-    intro_content += "\\hline\n"
     intro_content += "Supercycle [ms] & 1333 & 1400 \\\\\n"
-    intro_content += "\\hline\n"
     intro_content += "Number of spills & 4 & 8 \\\\\n"
-    intro_content += "\\hline\n"
     intro_content += "Spill duration [ms] & 107.3 & 43.1 \\\\\n"
-    intro_content += "\\hline\n"
     intro_content += "Total spill time [ms] & 429.2 & 344.8 \\\\\n"
-    intro_content += "\\hline\n"
-    intro_content += "\\hline\n"
+    intro_content += "\\hdashline\n"
     intro_content += "On-spill fraction & 0.322 (32.2\\%) & 0.246 (24.6\\%) \\\\\n"
-    intro_content += "\\hline\n"
     intro_content += "Off-spill fraction & 0.678 (67.8\\%) & 0.754 (75.4\\%) \\\\\n"
+    intro_content += "\\hline\n"
     intro_content += "\\hline\n"
     intro_content += "\\end{tabular}\n"
     intro_content += "\\caption{Beam timing structure parameters for single and two-batch modes.}\n"
@@ -289,6 +290,8 @@ def generate_introduction_section():
     intro_content += "\\item \\texttt{is\\_downstream}: Downstream tracks ($p_z > 0$ at tracker entrance)\n"
     intro_content += "\\item \\texttt{is\\_truth\\_electron}: Truth PID (track parents are electrons)\n"
     intro_content += "\\end{itemize}\n\n"
+
+    intro_content += "Note that \\texttt{is\\_downstream} is defined through all tracker planes (front, middle, and back).\n\n"
     
     # Signal-like background cuts
     intro_content += "\\subsubsection{Signal-like background cuts}\n\n"
@@ -306,16 +309,15 @@ def generate_introduction_section():
     
     intro_content += "\\begin{table}[H]\n"
     intro_content += "\\centering\n"
-    intro_content += "\\begin{tabular}{|l|c|c|}\n"
+    intro_content += "\\begin{tabular}{l|cc}\n"
+    intro_content += "\\hline\n"
     intro_content += "\\hline\n"
     intro_content += "\\textbf{trkqual $\\backslash$ t0err} & \\textbf{< 0.9 ns} & \\textbf{> 0 (none)} \\\\\n"
     intro_content += "\\hline\n"
-    intro_content += "\\hline\n"
     intro_content += "> 0 (none) & SU2020a & SU2020d \\\\\n"
-    intro_content += "\\hline\n"
     intro_content += "> 0.2 & SU2020b & SU2020e \\\\\n"
-    intro_content += "\\hline\n"
     intro_content += "> 0.8 & SU2020c & SU2020f \\\\\n"
+    intro_content += "\\hline\n"
     intro_content += "\\hline\n"
     intro_content += "\\end{tabular}\n"
     intro_content += "\\caption{Matrix of cutset variations.}\n"
@@ -336,7 +338,9 @@ def generate_introduction_section():
     intro_content += "\\end{itemize}\n\n"
     
     intro_content += "The SU2020b cutset is used as the primary reference configuration, since it is the most "
-    intro_content += "to the baseline SU2020 analysis.\n\n"
+    intro_content += "to the baseline SU2020 analysis. Note that \\texttt{within\\_t0} and \\texttt{within\\_t0err} "
+    intro_content += "are measured at the tracker middle, since that is where $t_{0}$ is defined, while extrapolated "
+    intro_content +=  "parameters are measured at the tracker front.\n\n"
     
     # # Analysis methodology
     # intro_content += "\\subsection{Analysis methods}\n\n"
@@ -412,6 +416,7 @@ def generate_latex_report(ana_labels, output_file="report"):
     latex_content += "\\usepackage{adjustbox}\n"
     latex_content += "\\usepackage{tabularx}\n"
     latex_content += "\\usepackage{enumitem}\n"
+    latex_content += "\\usepackage{arydshln}\n"
     latex_content += "\n"
     latex_content += "\\geometry{margin=2.5cm}\n"
     latex_content += "\\graphicspath{{images/}}\n"
@@ -460,7 +465,7 @@ def generate_latex_report(ana_labels, output_file="report"):
         latex_content += "    \\vspace*{\\fill}\n"
         latex_content += "    \n"
         latex_content += "    \\Large\n"
-        latex_content += "    Analysis Results for Configuration\n"
+        latex_content += "    Analysis results for configuration\n"
         latex_content += "    \n"
         latex_content += "    \\vspace{2cm}\n"
         latex_content += "    \n"
@@ -519,10 +524,29 @@ def generate_latex_report(ana_labels, output_file="report"):
                     print("  Using PNG: " + ana_label + "/h1o_1x3_mom_windows.png")
             else:
                 print("  Warning: Plot 1 not found at " + plot1_source)
-            
+
+            # # Process first plot - use high-res PNG directly
+            # if os.path.exists(plot1_source):
+            #     plot1_dest = os.path.join(ana_images_dir, "h1o_1x3_mom_windows.png")
+            #     shutil.copy2(plot1_source, plot1_dest)
+            #     plot1_file = ana_label + "/h1o_1x3_mom_windows.png"
+            #     plot1_exists = True
+            #     print(f"  Using high-res PNG: {ana_label}/h1o_1x3_mom_windows.png")
+
+    
             # Process second plot
             plot2_exists = False
             plot2_file = None
+
+            # # Process second plot - use high-res PNG directly
+            # if os.path.exists(plot2_source):
+            #     plot2_dest = os.path.join(ana_images_dir, "h1o_3x3_summary.png")
+            #     shutil.copy2(plot2_source, plot2_dest)
+            #     plot2_file = ana_label + "/h1o_3x3_summary.png"
+            #     plot2_exists = True
+            #     print(f"  Using high-res PNG: {ana_label}/h1o_3x3_summary.png")
+
+
             
             if os.path.exists(plot2_source):
                 # Try to convert PNG to PDF for better quality
@@ -560,6 +584,30 @@ def generate_latex_report(ana_labels, output_file="report"):
                 latex_content += "    \\caption{Summary of cut parameters for configuration " + safe_ana_label + ".}"
                 latex_content += "    \\label{fig:h1o3x3" + clean_ana_label + "}\n"
                 latex_content += "\\end{figure}\n\n"
+
+            # if plot1_exists:
+            #     latex_content += "\\begin{figure}[H]\n"
+            #     latex_content += "    \\centering\n"
+            #     # Use width=\\textwidth or specify exact dimensions
+            #     latex_content += "    \\includegraphics[width=\\textwidth,keepaspectratio]{" + plot1_file + "}\n"
+            #     # Alternative: specify exact size
+            #     # latex_content += "    \\includegraphics[width=16cm,height=12cm,keepaspectratio]{" + plot1_file + "}\n"
+            #     latex_content += "    \\caption{Momentum windows analysis for configuration " + safe_ana_label + ". "
+            #     latex_content += "Momentum distributions over three windows: wide, extended, and signal.}\n"
+            #     latex_content += "    \\label{fig:h1o1x3" + clean_ana_label + "}\n"
+            #     latex_content += "\\end{figure}\n\n"
+            
+            # if plot2_exists:
+            #     latex_content += "\\begin{figure}[H]\n"
+            #     latex_content += "    \\centering\n"
+            #     # For larger plots, you might want to use a specific size
+            #     latex_content += "    \\includegraphics[width=\\textwidth,keepaspectratio]{" + plot2_file + "}\n"
+            #     # Alternative for very detailed plots:
+            #     # latex_content += "    \\includegraphics[width=1.2\\textwidth,keepaspectratio]{" + plot2_file + "}\n"
+            #     latex_content += "    \\caption{Summary of cut parameters for configuration " + safe_ana_label + ".}"
+            #     latex_content += "    \\label{fig:h1o3x3" + clean_ana_label + "}\n"
+            #     latex_content += "\\end{figure}\n\n"
+    
         else:
             latex_content += "\\textbf{Warning:} Images directory not found: \\texttt{" + source_images_path.replace('_', '\\_') + "}\n\n"
             print("  Warning: Images directory not found: " + source_images_path)
@@ -568,7 +616,7 @@ def generate_latex_report(ana_labels, output_file="report"):
         latex_content += "\\begin{landscape}\n\n"
         
         # Add cut flow table
-        latex_content += "\\subsection{Cut Flow}\n\n"
+        latex_content += "\\subsection{Cut flow}\n\n"
         latex_content += "The cut flow table for configuration " + safe_ana_label + ".\n\n"
         
         cut_flow_path = os.path.join(results_path, "cut_flow.csv")
