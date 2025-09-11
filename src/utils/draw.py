@@ -78,7 +78,7 @@ class Draw():
     # v3
 
 
-    def __init__(self, cutset_name="alpha", on_spill=False, hist_styles=None, line_styles=None, verbosity=1): 
+    def __init__(self, cutset_name="alpha", on_spill=False, hist_styles=None, line_styles=None, colourblind=True, verbosity=1): 
         """
         Initialise 
         
@@ -130,6 +130,39 @@ class Draw():
             }
         } if hist_styles is None else hist_styles
 
+        colourblind_styles = {
+            "All": {
+                "color": "#000000",  # black
+                "linewidth": 1.0,
+                "alpha": 0.7,
+                "linestyle": ":",
+                "histtype": "step"
+            },
+            "Preselect": {
+                "color": "#000000",  # black  
+                "linewidth": 2.0,
+                "alpha": 0.9,
+                "linestyle": "-",
+                "histtype": "step"
+            },
+            "CE-like": {
+                "color": "#0173B2",  # blue (colorblind safe)
+                "linewidth": 2.0,
+                "alpha": 0.6,
+                "linestyle": "-",
+                "histtype": "bar"
+            },
+            "Unvetoed": {
+                "color": "#FF6600",  # bright orange 
+                "linewidth": 2.0,
+                "alpha": 0.8,
+                "linestyle": "-", 
+                "histtype": "bar"
+            }
+        }
+
+        self.hist_styles = colourblind_styles
+
         # Threshold line styling
         self.line_styles = { 
             "linestyle": "--", 
@@ -139,8 +172,9 @@ class Draw():
         } if line_styles is None else line_styles
 
         # Set high DPI globally for all plots
-        plt.rcParams['figure.dpi'] = 300
-        plt.rcParams['savefig.dpi'] = 300
+        # plt.rcParams['figure.dpi'] = 300
+        plt.rcParams["savefig.dpi"] = 300
+        plt.rcParams["savefig.bbox"] = "tight"
         
         # Get colors from style file cycle (fallback)
         prop_cycle = plt.rcParams["axes.prop_cycle"]
