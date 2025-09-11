@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-LaTeX Report Generator
+LaTeX Report Generator with Introduction
 
 This script generates a LaTeX report from analysis results.
 It reads CSV tables and includes PNG plots for each analysis configuration.
+Now includes comprehensive introduction section with datasets, beam timing, and cutsets.
 """
 
 import os
@@ -95,7 +96,7 @@ def csv_to_latex_table(csv_path, caption="", label="", output_dir="", use_adjust
         str: LaTeX table code
     """
     if not os.path.exists(csv_path):
-        return f"% Table not found: {csv_path}\n"
+        return "% Table not found: " + csv_path + "\n"
     
     try:
         df = pd.read_csv(csv_path)
@@ -124,11 +125,11 @@ def csv_to_latex_table(csv_path, caption="", label="", output_dir="", use_adjust
             latex_table = "\\begin{table}[H]\n"
             latex_table += "\\centering{}\n"
             latex_table += "\\adjustbox{width=1.5\\textwidth,center}{\n"
-            latex_table += f"\\begin{{tabular}}{{{col_spec}}}\n"
+            latex_table += "\\begin{tabular}{" + col_spec + "}\n"
         else:
             latex_table = "\\begin{table}[H]\n"
             latex_table += "\\centering{}\n"
-            latex_table += f"\\begin{{tabular}}{{{col_spec}}}\n"
+            latex_table += "\\begin{tabular}{" + col_spec + "}\n"
         
         latex_table += "\\hline\n"
         latex_table += "\\hline\n"
@@ -178,14 +179,185 @@ def csv_to_latex_table(csv_path, caption="", label="", output_dir="", use_adjust
         if use_adjustbox:
             latex_table += "}\n"  # Close adjustbox
         
-        latex_table += f"\\caption{{{caption}}}\n"
-        latex_table += f"\\label{{{label}}}\n"
+        latex_table += "\\caption{" + caption + "}\n"
+        latex_table += "\\label{" + label + "}\n"
         latex_table += "\\end{table}\n\n"
         
         return latex_table
     
     except Exception as e:
-        return f"% Error reading {csv_path}: {str(e)}\n"
+        return "% Error reading " + csv_path + ": " + str(e) + "\n"
+
+
+def generate_introduction_section():
+    """
+    Generate the introduction section with datasets, beam timing, and cutsets information.
+    
+    Returns:
+        str: LaTeX content for the introduction section
+    """
+    
+    intro_content = ""
+    
+    # Introduction header
+    intro_content += "\\section{Introduction}\n\n"
+    
+    intro_content += "This genetated report presents the results of cosmic-ray-induced background analysis for the Mu2e experiment."
+    
+    # Datasets subsection
+    intro_content += "\\subsection{Datasets}\n\n"
+    
+    intro_content += "The analysis utilises Monte Carlo simulation datasets."
+    
+    # Create a LaTeX table for the dataset information
+    intro_content += "\\begin{table}[H]\n"
+    intro_content += "\\centering\n"
+    intro_content += "\\footnotesize\n"
+    intro_content += "\\begin{tabular}{|l|c|c|c|c|}\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\textbf{Dataset Type} & \\textbf{Configuration} & \\textbf{Livetime [days]} & \\textbf{Triggered events} & \\textbf{Generated events} \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\hline\n"
+    intro_content += "Cosmic CRY Off-spill & MDC2020as & 123 & 10,050,055 & 41.1B \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "Cosmic CRY On-spill & MDC2020aq & 124 & 10,050,055 & 41.1B \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "Cosmic CRY On-spill & MDC2020aw & 124 & 10,050,055 & 41.1B \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "Cosmic CRY On-spill & MDC2020au & 124 & 10,050,055 & 41.1B \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "CE Signal & MDC2020an & -- & 2,166,583 & 4M \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "CE Signal & MDC2020au & -- & 2,166,583 & 4M \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "CE Signal & MDC2020aw & -- & 2,166,583 & 4M \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "CE Signal & MDC2020aq & -- & 2,166,583 & 4M \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\end{tabular}\n"
+    intro_content += "\\caption{Summary of Monte Carlo datasets used in the analysis.}\n"
+    intro_content += "\\label{tab:datasets}\n"
+    intro_content += "\\end{table}\n\n"
+    
+    # Beam timing structure subsection
+    intro_content += "\\subsection{Beam timing structure}\n\n"
+    
+    intro_content += "The Mu2e experiment operates with a pulsed beam structure. The beam structure is characterised "
+    intro_content += "by supercycles with distinct on-spill and off-spill periods.\n\n"
+    
+    # Beam timing table
+    intro_content += "\\begin{table}[H]\n"
+    intro_content += "\\centering\n"
+    intro_content += "\\begin{tabular}{|l|c|c|}\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\textbf{Parameter} & \\textbf{Single batch} & \\textbf{Two batch} \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\hline\n"
+    intro_content += "Supercycle [ms] & 1333 & 1400 \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "Number of spills & 4 & 8 \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "Spill duration [ms] & 107.3 & 43.1 \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "Total spill time [ms] & 429.2 & 344.8 \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\hline\n"
+    intro_content += "On-spill fraction & 0.322 (32.2\\%) & 0.246 (24.6\\%) \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "Off-spill fraction & 0.678 (67.8\\%) & 0.754 (75.4\\%) \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\end{tabular}\n"
+    intro_content += "\\caption{Beam timing structure parameters for single and two-batch modes.}\n"
+    intro_content += "\\label{tab:beam_timing}\n"
+    intro_content += "\\end{table}\n\n"
+    
+    # Cutsets subsection
+    intro_content += "\\subsection{Cutsets}\n\n"
+    
+    intro_content += "The analyses employ hierarchical cutsets based on the SU2020 analysis."
+    intro_content += "The cutsets are designed to select high-quality downstream electron tracks "
+    intro_content += "originating from the stopping target\\footnote{See arXiv:2210.11380 for "
+    intro_content += "details.}.\n\n"
+    
+    # Preselection cuts
+    intro_content += "\\subsubsection{Preselection}\n\n"
+    intro_content += "All analysis configurations apply a common set of preselection cuts:\n\n"
+    intro_content += "\\begin{itemize}\n"
+    intro_content += "\\item \\texttt{has\\_trk\\_front}: Track intersects the tracker entrance\n"
+    intro_content += "\\item \\texttt{is\\_reco\\_electron}: Track fit uses electron hypothesis\n"
+    intro_content += "\\item \\texttt{one\\_reco\\_electron}: One electron fit per event\n"
+    intro_content += "\\item \\texttt{is\\_downstream}: Downstream tracks ($p_z > 0$ at tracker entrance)\n"
+    intro_content += "\\item \\texttt{is\\_truth\\_electron}: Truth PID (track parents are electrons)\n"
+    intro_content += "\\end{itemize}\n\n"
+    
+    # Signal-like background cuts
+    intro_content += "\\subsubsection{Signal-like background cuts}\n\n"
+    intro_content += "Common signal-like background selection cuts include:\n\n"
+    intro_content += "\\begin{itemize}\n"
+    intro_content += "\\item \\texttt{unvetoed}: No veto requirement ($|\\Delta t| \\geq 150$ ns)\n"
+    intro_content += "\\item \\texttt{within\\_ext\\_win}: Extended momentum window (100 < $p$ < 110 MeV/c)\n"
+    intro_content += "\\item \\texttt{within\\_sig\\_win}: Signal momentum window (103.6 < $p$ < 104.9 MeV/c)\n"
+    intro_content += "\\end{itemize}\n\n"
+    
+    # Signal-like cuts variations
+    intro_content += "\\subsubsection{Signal-like cut variations}\n\n"
+    intro_content += "These analyses may include combinations of track quality (\\texttt{trkqual}) and "
+    intro_content += "time uncertainty (\\texttt{t0err}) cuts:\n\n"
+    
+    intro_content += "\\begin{table}[H]\n"
+    intro_content += "\\centering\n"
+    intro_content += "\\begin{tabular}{|l|c|c|}\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\textbf{trkqual $\\backslash$ t0err} & \\textbf{< 0.9 ns} & \\textbf{> 0 (none)} \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\hline\n"
+    intro_content += "> 0 (none) & SU2020a & SU2020d \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "> 0.2 & SU2020b & SU2020e \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "> 0.8 & SU2020c & SU2020f \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\end{tabular}\n"
+    intro_content += "\\caption{Matrix of cutset variations.}\n"
+    intro_content += "\\label{tab:cutset_matrix}\n"
+    intro_content += "\\end{table}\n\n"
+    
+    # Detailed cut descriptions
+    intro_content += "Each cutset variation includes the following track-based cuts:\n\n"
+    intro_content += "\\begin{itemize}\n"
+    intro_content += "\\item \\texttt{good\\_trkqual}: Track quality requirement (varies by cutset)\n"
+    intro_content += "\\item \\texttt{within\\_t0}: Track time at tracker entrance (640 < $t_0$ < 1650 ns)\n"
+    intro_content += "\\item \\texttt{within\\_t0err}: Track fit time uncertainty (varies by cutset)\n"
+    intro_content += "\\item \\texttt{has\\_hits}: Minimum number of active tracker hits (> 20)\n"
+    intro_content += "\\item \\texttt{within\\_d0}: Distance of closest approach ($d_0 < 100$ mm)\n"
+    intro_content += "\\item \\texttt{within\\_pitch\\_angle\\_lo}: Lower pitch angle cut ($p_z/p_t > 0.5$)\n"
+    intro_content += "\\item \\texttt{within\\_pitch\\_angle\\_hi}: Upper pitch angle cut ($p_z/p_t < 1.0$)\n"
+    intro_content += "\\item \\texttt{within\\_lhr\\_max\\_hi}: Loop helix maximum radius ($R_{\\text{max}} < 680$ mm)\n"
+    intro_content += "\\end{itemize}\n\n"
+    
+    intro_content += "The SU2020b cutset is used as the primary reference configuration, since it is the most "
+    intro_content += "to the baseline SU2020 analysis.\n\n"
+    
+    # # Analysis methodology
+    # intro_content += "\\subsection{Analysis methods}\n\n"
+    
+    # intro_content += "The analysis framework processes each dataset through the defined cutset configurations. "
+    # intro_content += "Key results include:\n\n"
+    
+    # intro_content += "\\begin{itemize}\n"
+    # intro_content += "\\item \\textbf{Cut flow Analysis}: Sequential application of cuts to determine selection efficiency\n"
+    # intro_content += "\\item \\textbf{Momentum Window Studies}: Optimization of signal and extended momentum windows\n"
+    # intro_content += "\\item \\textbf{Background Characterization}: Detailed study of cosmic ray background distributions\n"
+    # intro_content += "\\item \\textbf{Signal Extraction}: Statistical methods for signal identification and quantification\n"
+    # intro_content += "\\end{itemize}\n\n"
+    
+    # intro_content += "Each analysis configuration is identified by a label combining the cutset type, dataset "
+    # intro_content += "configuration, and timing window (e.g., \\texttt{SU2020b\\_CRY\\_onspill-LH\\_au}). This "
+    # intro_content += "systematic approach enables comprehensive comparison across different analysis strategies.\n\n"
+    
+    intro_content += "\\newpage\n\n"
+    
+    return intro_content
 
 
 def generate_latex_report(ana_labels, output_file="report"):
@@ -203,7 +375,7 @@ def generate_latex_report(ana_labels, output_file="report"):
         output_file = output_file[:-4]
     
     # Create main report directory
-    report_dir = f"../output/latex/{output_file}"
+    report_dir = "../output/latex/" + output_file
     os.makedirs(report_dir, exist_ok=True)
     
     # Create subdirectories
@@ -212,10 +384,10 @@ def generate_latex_report(ana_labels, output_file="report"):
     os.makedirs(images_dir, exist_ok=True)
     os.makedirs(tables_dir, exist_ok=True)
     
-    print(f"Creating report in: {report_dir}")
+    print("Creating report in: " + report_dir)
     
     # Full path for output file
-    full_output_path = os.path.join(report_dir, f"{output_file}.tex")
+    full_output_path = os.path.join(report_dir, output_file + ".tex")
     
     # Start building LaTeX content
     latex_content = ""
@@ -239,29 +411,43 @@ def generate_latex_report(ana_labels, output_file="report"):
     latex_content += "\\usepackage{pdflscape}\n"
     latex_content += "\\usepackage{adjustbox}\n"
     latex_content += "\\usepackage{tabularx}\n"
+    latex_content += "\\usepackage{enumitem}\n"
     latex_content += "\n"
     latex_content += "\\geometry{margin=2.5cm}\n"
     latex_content += "\\graphicspath{{images/}}\n"
     latex_content += "\\DeclareGraphicsExtensions{.pdf,.png,.jpg}\n"
     latex_content += "\n"
-    latex_content += "\\title{Analysis Results Report}\n"
+    latex_content += "% Custom commands for better formatting\n"
+    latex_content += "\\newcommand{\\MuE}{Mu2e}\n"
+    latex_content += "\\newcommand{\\trkqual}{\\texttt{trkqual}}\n"
+    latex_content += "\\newcommand{\\toerr}{\\texttt{t0err}}\n"
+    latex_content += "\n"
+    latex_content += "\\title{Cosmic-ray-induced background analysis report\\\\}\n"
     latex_content += "\\author{Samuel Grant}\n"
     latex_content += "\\date{\\today}\n"
     latex_content += "\n"
     latex_content += "\\begin{document}\n"
     latex_content += "\n"
     latex_content += "\\maketitle\n"
+    latex_content += "\n"
+    latex_content += "\\begin{abstract}\n"
+    latex_content += "This is an auto-generated report presenting the results of cosmic-ray-induced background analysis for the Mu2e experiment.\n"
+    latex_content += "\\end{abstract}\n"
+    latex_content += "\n"
     latex_content += "\\tableofcontents\n"
     latex_content += "\\newpage\n"
     latex_content += "\n"
+    
+    # Add the introduction section
+    latex_content += generate_introduction_section()
 
     # Generate content for each analysis label
     for ana_label in ana_labels:
-        print(f"Processing analysis: {ana_label}")
+        print("Processing analysis: " + ana_label)
         
         # Paths
-        results_path = f"../output/results/{ana_label}"
-        source_images_path = f"../output/images/{ana_label}"
+        results_path = "../output/results/" + ana_label
+        source_images_path = "../output/images/" + ana_label
         
         # Create subdirectory for this analysis in images
         ana_images_dir = os.path.join(images_dir, ana_label)
@@ -279,7 +465,7 @@ def generate_latex_report(ana_labels, output_file="report"):
         latex_content += "    \\vspace{2cm}\n"
         latex_content += "    \n"
         latex_content += "    \\Huge\n"
-        latex_content += f"    \\texttt{{{safe_ana_label}}}\n"
+        latex_content += "    \\texttt{" + safe_ana_label + "}\n"
         latex_content += "    \n"
         latex_content += "    \\vspace*{\\fill}\n"
         latex_content += "    \n"
@@ -295,14 +481,14 @@ def generate_latex_report(ana_labels, output_file="report"):
         
         # Section header
         section_title = ana_label.replace('_', '\\_').replace('-', '--')
-        latex_content += f"\\section{{{section_title}}}\n\n"
+        latex_content += "\\section{" + section_title + "}\n\n"
         
         # Check if results directory exists
         if not os.path.exists(results_path):
-            latex_content += f"\\textbf{{Warning:}} Results directory not found: \\texttt{{{results_path.replace('_', '\\_')}}}\n\n"
+            latex_content += "\\textbf{Warning:} Results directory not found: \\texttt{" + results_path.replace('_', '\\_') + "}\n\n"
             continue
         
-        latex_content += f"This section presents the analysis results for configuration \\texttt{{{safe_ana_label}}}\n\n"
+        latex_content += "This section presents the analysis results for configuration \\texttt{" + safe_ana_label + "}. "
         
         # Add plots first
         latex_content += "\\subsection{Plots}\n\n"
@@ -321,18 +507,18 @@ def generate_latex_report(ana_labels, output_file="report"):
                 # Try to convert PNG to PDF for better quality
                 plot1_pdf_dest = os.path.join(ana_images_dir, "h1o_1x3_mom_windows.pdf")
                 if convert_png_to_pdf(plot1_source, plot1_pdf_dest):
-                    plot1_file = f"{ana_label}/h1o_1x3_mom_windows.pdf"
+                    plot1_file = ana_label + "/h1o_1x3_mom_windows.pdf"
                     plot1_exists = True
-                    print(f"  Using PDF: {ana_label}/h1o_1x3_mom_windows.pdf")
+                    print("  Using PDF: " + ana_label + "/h1o_1x3_mom_windows.pdf")
                 else:
                     # Fallback to PNG
                     plot1_png_dest = os.path.join(ana_images_dir, "h1o_1x3_mom_windows.png")
                     shutil.copy2(plot1_source, plot1_png_dest)
-                    plot1_file = f"{ana_label}/h1o_1x3_mom_windows.png"
+                    plot1_file = ana_label + "/h1o_1x3_mom_windows.png"
                     plot1_exists = True
-                    print(f"  Using PNG: {ana_label}/h1o_1x3_mom_windows.png")
+                    print("  Using PNG: " + ana_label + "/h1o_1x3_mom_windows.png")
             else:
-                print(f"  Warning: Plot 1 not found at {plot1_source}")
+                print("  Warning: Plot 1 not found at " + plot1_source)
             
             # Process second plot
             plot2_exists = False
@@ -342,18 +528,18 @@ def generate_latex_report(ana_labels, output_file="report"):
                 # Try to convert PNG to PDF for better quality
                 plot2_pdf_dest = os.path.join(ana_images_dir, "h1o_3x3_summary.pdf")
                 if convert_png_to_pdf(plot2_source, plot2_pdf_dest):
-                    plot2_file = f"{ana_label}/h1o_3x3_summary.pdf"
+                    plot2_file = ana_label + "/h1o_3x3_summary.pdf"
                     plot2_exists = True
-                    print(f"  Using PDF: {ana_label}/h1o_3x3_summary.pdf")
+                    print("  Using PDF: " + ana_label + "/h1o_3x3_summary.pdf")
                 else:
                     # Fallback to PNG
                     plot2_png_dest = os.path.join(ana_images_dir, "h1o_3x3_summary.png")
                     shutil.copy2(plot2_source, plot2_png_dest)
-                    plot2_file = f"{ana_label}/h1o_3x3_summary.png"
+                    plot2_file = ana_label + "/h1o_3x3_summary.png"
                     plot2_exists = True
-                    print(f"  Using PNG: {ana_label}/h1o_3x3_summary.png")
+                    print("  Using PNG: " + ana_label + "/h1o_3x3_summary.png")
             else:
-                print(f"  Warning: Plot 2 not found at {plot2_source}")
+                print("  Warning: Plot 2 not found at " + plot2_source)
             
             # Generate LaTeX for plots
             clean_ana_label = ana_label.replace('-', '_').replace('_', '')
@@ -361,54 +547,77 @@ def generate_latex_report(ana_labels, output_file="report"):
             if plot1_exists:
                 latex_content += "\\begin{figure}[H]\n"
                 latex_content += "    \\centering\n"
-                latex_content += f"    \\includegraphics[width=\\textwidth]{{{plot1_file}}}\n"
-                latex_content += f"    \\label{{fig:h1o1x3{clean_ana_label}}}\n"
-                latex_content += f"    \\caption{{Momentum windows for {safe_ana_label}}}\n"
+                latex_content += "    \\includegraphics[width=\\textwidth]{" + plot1_file + "}\n"
+                latex_content += "    \\caption{Momentum windows analysis for configuration " + safe_ana_label + ". "
+                latex_content += "Momentum distributions over three windows: wide, extended, and signal.}\n"
+                latex_content += "    \\label{fig:h1o1x3" + clean_ana_label + "}\n"
                 latex_content += "\\end{figure}\n\n"
             
             if plot2_exists:
                 latex_content += "\\begin{figure}[H]\n"
-                latex_content += f"    \\includegraphics[width=\\textwidth]{{{plot2_file}}}\n"
-                latex_content += f"    \\label{{fig:h1o3x3{clean_ana_label}}}\n"
-                latex_content += f"    \\caption{{Cut parameters for {safe_ana_label}}}\n"
+                latex_content += "    \\centering\n"
+                latex_content += "    \\includegraphics[width=\\textwidth]{" + plot2_file + "}\n"
+                latex_content += "    \\caption{Summary of cut parameters for configuration " + safe_ana_label + ".}"
+                latex_content += "    \\label{fig:h1o3x3" + clean_ana_label + "}\n"
                 latex_content += "\\end{figure}\n\n"
         else:
-            latex_content += f"\\textbf{{Warning:}} Images directory not found: \\texttt{{{source_images_path.replace('_', '\\_')}}}\n\n"
-            print(f"  Warning: Images directory not found: {source_images_path}")
+            latex_content += "\\textbf{Warning:} Images directory not found: \\texttt{" + source_images_path.replace('_', '\\_') + "}\n\n"
+            print("  Warning: Images directory not found: " + source_images_path)
         
         # Start landscape for tables
         latex_content += "\\begin{landscape}\n\n"
         
         # Add cut flow table
         latex_content += "\\subsection{Cut Flow}\n\n"
+        latex_content += "The cut flow table for configuration " + safe_ana_label + ".\n\n"
+        
         cut_flow_path = os.path.join(results_path, "cut_flow.csv")
         latex_content += csv_to_latex_table(
             cut_flow_path,
-            caption=f"Cut flow table for {safe_ana_label}",
-            label=f"tab:cutflow_{clean_ana_label}",
+            caption="Cut flow table for configuration " + safe_ana_label + ".",
+            label="tab:cutflow_" + clean_ana_label,
             output_dir=report_dir,
             use_adjustbox=False
         )
+
+        latex_content += "\\newpage\n\n"
         
         # Add analysis table
-        latex_content += "\\subsection{Analysis}\n"
+        latex_content += "\\subsection{Analysis results}\n\n"
+        latex_content += "Analysis results for configuration " + safe_ana_label + ".\n\n"
+        
         analysis_path = os.path.join(results_path, "analysis.csv")
         
         if os.path.exists(analysis_path):
             latex_content += csv_to_latex_table(
                 analysis_path,
-                caption=f"Analysis results for {safe_ana_label}",
-                label=f"tab:analysis_{clean_ana_label}",
-                output_dir=report_dir,
+                caption="Analysis results for configuration " + safe_ana_label + ".",
                 use_adjustbox=True
             )
         else:
-            latex_content += f"\\textbf{{Warning:}} Analysis results file not found: \\texttt{{{analysis_path.replace('_', '\\_')}}}\n\n"
-            print(f"  Warning: Analysis results file not found: {analysis_path}")
+            latex_content += "\\textbf{Warning:} Analysis results file not found: \\texttt{" + analysis_path.replace('_', '\\_') + "}\n\n"
+            print("  Warning: Analysis results file not found: " + analysis_path)
         
         # End landscape and add page break
         latex_content += "\\end{landscape}\n"
         latex_content += "\\newpage\n\n"
+    
+    # Add bibliography section
+    # latex_content += "\\section{References}\n\n"
+    # latex_content += "\\begin{thebibliography}{9}\n\n"
+    # latex_content += "\\bibitem{SU2020}\n"
+    # latex_content += "Mu2e Collaboration,\n"
+    # latex_content += "\\textit{Search for muon-to-electron conversion: an experiment in the Stopped Muon (SU2020) approach},\n"
+    # latex_content += "arXiv:2210.11380 [hep-ex] (2022).\n\n"
+    # latex_content += "\\bibitem{MDC2020}\n"
+    # latex_content += "Mu2e Collaboration,\n"
+    # latex_content += "\\textit{Mu2e Data Challenge 2020 Monte Carlo Production},\n"
+    # latex_content += "Mu2e-doc-33162 (2020).\n\n"
+    # latex_content += "\\bibitem{CRY}\n"
+    # latex_content += "C. Hagmann et al.,\n"
+    # latex_content += "\\textit{Cosmic-ray shower generator (CRY) for Monte Carlo transport codes},\n"
+    # latex_content += "IEEE Nuclear Science Symposium Conference Record, 1143-1146 (2007).\n\n"
+    # latex_content += "\\end{thebibliography}\n\n"
     
     # Document footer
     latex_content += "\\end{document}\n"
@@ -417,7 +626,7 @@ def generate_latex_report(ana_labels, output_file="report"):
     with open(full_output_path, 'w', encoding='utf-8') as f:
         f.write(latex_content)
     
-    print(f"LaTeX report generated: {full_output_path}")
+    print("LaTeX report generated: " + full_output_path)
     return full_output_path
 
 
@@ -429,39 +638,9 @@ def main():
     parser.add_argument('--compile', action='store_true', help='Compile LaTeX to PDF using pdflatex')
     
     args = parser.parse_args()
-
-    
-    # ana_labels=[
-    #     "SU2020a_CRY_offspill-LH_as"
-    #     # ,"SU2020a_CRY_onspill-LH_aq"
-    #     ,"SU2020a_CRY_onspill-LH_au"
-    #     ,"SU2020a_CRY_onspill-LH_aw"
-    #     # ,"SU2020a_signal_onspill-LH_an"
-    #     # ,"SU2020a_signal_onspill-LH_aq"
-    #     ,"SU2020a_signal_onspill-LH_au"
-    #     ,"SU2020a_signal_onspill-LH_aw"
-    #     ,"SU2020b_CRY_offspill-LH_as"
-    #     # ,"SU2020b_CRY_onspill-LH_aq"
-    #     ,"SU2020b_CRY_onspill-LH_au"
-    #     ,"SU2020b_CRY_onspill-LH_aw"
-    #     # ,"SU2020b_signal_onspill-LH_an"
-    #     # ,"SU2020b_signal_onspill-LH_aq"
-    #     ,"SU2020b_signal_onspill-LH_au"
-    #     ,"SU2020b_signal_onspill-LH_aw"
-    #     ,"SU2020c_CRY_offspill-LH_as"
-    #     # ,"SU2020c_CRY_onspill-LH_aq"
-    #     ,"SU2020c_CRY_onspill-LH_au"
-    #     ,"SU2020c_CRY_onspill-LH_aw"
-    #     # ,"SU2020c_signal_onspill-LH_an"
-    #     # ,"SU2020c_signal_onspill-LH_aq"
-    #     ,"SU2020c_signal_onspill-LH_au"
-    #     ,"SU2020c_signal_onspill-LH_aw"
-    # ]
     
     # Generate the report
     latex_file = generate_latex_report(args.ana_labels, args.output)
-    # latex_file = generate_latex_report(ana_labels, args.output)
-    # latex_file = generate_latex_report(ana_labels, "SU2020")
     
     # Optionally compile to PDF
     if args.compile:
@@ -476,13 +655,13 @@ def main():
                                   capture_output=True, text=True, cwd=latex_dir)
             if result.returncode == 0:
                 pdf_path = os.path.join(latex_dir, latex_filename.replace('.tex', '.pdf'))
-                print(f"PDF generated successfully: {pdf_path}")
+                print("PDF generated successfully: " + pdf_path)
                 # Run twice for proper references
                 subprocess.run(['pdflatex', latex_filename], 
                              capture_output=True, text=True, cwd=latex_dir)
                 print("Second pass completed for proper references")
             else:
-                print(f"LaTeX compilation failed:\n{result.stderr}")
+                print("LaTeX compilation failed:\n" + result.stderr)
         except FileNotFoundError:
             print("pdflatex not found. Please install LaTeX to compile PDFs.")
 
