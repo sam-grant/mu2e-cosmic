@@ -400,15 +400,20 @@ class Draw():
         
         # Set default toggle_lines if not provided
         if toggle_lines is None:
+            # toggle_lines = {
+            #     "mom_full": True, "pz": True, "t0": True,
+            #     "trkqual": True, "nactive": True, "t0err": True,
+            #     "d0": True, "maxr": True, "pitch_angle": True
+            # }
             toggle_lines = {
-                "mom_full": True, "pz": True, "t0": True,
-                "trkqual": True, "nactive": True, "t0err": True,
-                "d0": True, "maxr": True, "pitch_angle": True
+                "pz": True, "t0": True, "trkqual": True,
+                "nactive": True, "t0err": True, "d0": True, 
+                "maxr": True, "pitch_angle": True, "dT": True
             }
         
         # Variable info for axis labels
         var_info = {
-            "mom_full": ("Momentum [MeV/c]", "", "upper right", 1.0, 1), # xlabel, title, loc, y_ext_factor, ncols
+            # "mom_full": ("Momentum [MeV/c]", "", "upper right", 1.0, 1), # xlabel, title, loc, y_ext_factor, ncols
             "mom_z": (r"$p_{z}$ [MeV/c]", "", "upper right", 20, 2), 
             "t0": ("Track fit time [ns]", "", "upper center", 20, 2), 
             "trkqual": ("Track quality", "", "upper right", 5, 2), 
@@ -417,15 +422,21 @@ class Draw():
             "d0": (r"$d_{0}$ [mm]", "", "upper right", 20, 2), 
             "maxr": (r"$R_{\text{max}}$ [mm]", "", "upper left", 12, 1), 
             "pitch_angle": (r"$p_{z}/p_{T}$", "", "upper right", 20, 1), 
+            "dT": (r"$\Delta t$ [ns]", "", "upper left", 5, 1), 
         }
         
         # Plot all 9 histograms
-        plot_positions = [
-            ("mom_full", (0, 0)), ("mom_z", (0, 1)), ("t0", (0, 2)),
-            ("trkqual", (1, 0)), ("nactive", (1, 1)), ("t0err", (1, 2)),
-            ("d0", (2, 0)), ("maxr", (2, 1)), ("pitch_angle", (2, 2))
-        ]
+        # plot_positions = [
+        #     ("mom_full", (0, 0)), ("mom_z", (0, 1)), ("t0", (0, 2)),
+        #     ("trkqual", (1, 0)), ("nactive", (1, 1)), ("t0err", (1, 2)),
+        #     ("d0", (2, 0)), ("maxr", (2, 1)), ("pitch_angle", (2, 2))
+        # ]
         
+        plot_positions = [
+            ("mom_z", (0, 0)), ("t0", (0, 1)), ("trkqual", (0, 2)),
+            ("nactive", (1, 0)), ("t0err", (1, 1)), ("d0", (1, 2)),
+            ("maxr", (2, 0)), ("pitch_angle", (2, 1)), ("dT", (2, 2))
+        ]
         for var_name, (row, col) in plot_positions:
             # Plot histograms
             labels = self._plot_histogram(hists[var_name], ax[row, col], list(hists[var_name].axes["selection"])) # , selection)
@@ -468,7 +479,7 @@ class Draw():
             "mom_z": (r"$p_{z}$ [MeV/c]", "", "upper right", 20, 2), # xlabel, title, loc, y_ext_factor, ncols
             "mom_T": (r"$p_{T}$ [MeV/c]", "", "upper right", 20, 2), 
             "mom_err": (r"$\sigma_{p}$ [MeV/c]", "", "upper right", 1.0, 1), 
-            "mom_res": (r"$\delta p = p_{\text{reco}} - p_{\text{truth}}$ [MeV/c]", "", "upper left", 15, 2)
+            "mom_res": (r"$\delta p = p_{\text{reco}} - p_{\text{truth}}$ [MeV/c]", "", "upper left", 10, 1)
         }
                  
         # Plot all 4 histograms
@@ -543,3 +554,10 @@ class Draw():
                 ax.axvline(self.analyse.thresholds["lo_pitch_angle"], **line_kwargs)
             if self.analyse.active_cuts["within_pitch_angle_hi"]:
                 ax.axvline(self.analyse.thresholds["hi_pitch_angle"], **line_kwargs)
+
+
+        elif var_name == "dT":
+            if self.analyse.active_cuts["unvetoed"]:
+                ax.axvline(self.analyse.thresholds["veto_dt_ns"], **line_kwargs)
+            if self.analyse.active_cuts["unvetoed"]:
+                ax.axvline(-self.analyse.thresholds["veto_dt_ns"], **line_kwargs)

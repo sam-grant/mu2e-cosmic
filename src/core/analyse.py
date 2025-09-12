@@ -71,7 +71,20 @@ class Analyse:
         pt = np.sqrt(pvec["x"]**2 + pvec["y"]**2) 
         pz = trkfit["trksegs"]["mom"]["fCoordinates"]["fZ"]
         return pz/pt 
-            
+
+    def get_trk_crv_dt(self, trkfit, crv):
+        """Helper to get trk/crv time difference"""
+        # Find dT 
+        trk_times = trkfit["trksegs"]["time"] # events × tracks × segments
+        coinc_times = crv["crvcoincs.time"]   # events × coincidences
+        # Broadcast CRV times to match track structure, so that we can compare element-wise
+        coinc_broadcast = coinc_times[:, None, None, :]  # Add dimensions for tracks and segments
+        trk_broadcast = trk_times[:, :, :, None]         # Add dimension for coincidences
+        # coinc_broadcast shape is [E, 1, 1, C] 
+        # trk_broadcast shape is [E, T, S, 1]
+        # Return time differences
+        return (trk_broadcast - coinc_broadcast)
+        
     def define_cuts(self, data, cut_manager):
         """Define analysis cuts
         
@@ -425,19 +438,12 @@ class Analyse:
         # Check if EACH track is within 150 ns of ANY coincidence 
         ###################################################
         try:
-            # Get track and coincidence times
-            trk_times = data["trkfit"]["trksegs"]["time"][at_trk_front]  # events × tracks × segments
-            coinc_times = data["crv"]["crvcoincs.time"]                  # events × coincidences
-            # Broadcast CRV times to match track structure, so that we can compare element-wise
-            # Could use ak.broadcast?
-            coinc_broadcast = coinc_times[:, None, None, :]  # Add dimensions for tracks and segments
-            trk_broadcast = trk_times[:, :, :, None]         # Add dimension for coincidences
-            # coinc_broadcast shape is [E, 1, 1, C] 
-            # trk_broadcast shape is [E, T, S, 1]
             # Calculate time differences
-            dt = abs(trk_broadcast - coinc_broadcast)
+            dT = self.get_trk_crv_dt(data["trkfit"], data["crv"])
+            # Absolute time differences
+            dt = abs(dT)
             # Check if within threshold
-            within_threshold = dt < self.thresholds["veto_dt_ns"]
+            within_threshold = dT < self.thresholds["veto_dt_ns"]
             # Reduce one axis at a time 
             # First reduce over coincidences (axis=3)
             any_coinc = ak.any(within_threshold, axis=3)

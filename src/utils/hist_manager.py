@@ -139,6 +139,12 @@ class HistManager:
                 "filter": None
             }, 
 
+            "dT": { # 1 ns binning
+                "axis": hist.axis.Regular(500, -200, 300, name="dT", label=r"Track time $-$ CRV time [ns]"),
+                "param": "dT",
+                "filter": None
+            }, 
+
             # # Trkqual histograms (excluding t0err, momerr, and nactive which we already have)
             # "factive": {},
             # "fambig": {},
@@ -168,51 +174,15 @@ class HistManager:
             # },
             # "calo_Ep": {
             # }
-  
-        
-
-        
-            # "pdg": { # Integer binning
-            #     "axis": hist.axis.Regular(30, -15, 15, name="pdg", label="Track PDG"),
-            #     "param": "pdg",
-            #     "filter": None
-            # },
-            # "sid": { # Integer binning
-            #     "axis": hist.axis.Regular(60, -10, 50, name="sid", label="Surface ID"),
-            #     "param": "sid", 
-            #     "filter": None
-            # # },
-            # "pz": { # 1 MeV/c binning
-            #     "axis": hist.axis.Regular(125, -25, 100, name="pz", label=r"$p_{z}$ [MeV/c]"),
-            #     "param": "pz",
-            #     "filter": None
-            # }
-            
-            # # Debug histograms
-            # "pdg": { # Integer binning
-            #     "axis": hist.axis.Regular(30, -15, 15, name="pdg", label="Track PDG"),
-            #     "param": "pdg",
-            #     "filter": None
-            # },
-            # "sid": { # Integer binning
-            #     "axis": hist.axis.Regular(60, -10, 50, name="sid", label="Surface ID"),
-            #     "param": "sid", 
-            #     "filter": None
-            # },
-            # "pz": { # 1 MeV/c binning
-            #     "axis": hist.axis.Regular(125, -25, 100, name="pz", label=r"$p_{z}$ [MeV/c]"),
-            #     "param": "pz",
-            #     "filter": None
-            # }
         }
     
-    def _prepare_track_data(self, data, debug=False):
+    def _prepare_track_data(self, data, surface_name="TT_Front", debug=False):
         """
         Loose cuts
 
         We have to select 
-        - Electron fits at the tracker entrance
-        - MC track parents 
+        - Electron fits at a tracker surface (front for extrap and middle for t0)
+        - MC track parents (for momentum resolution)
 
         and everything needs to align! 
         
@@ -223,8 +193,8 @@ class HistManager:
         is_reco_electron = self.selector.is_electron(data["trk"])
 
         # Select tracker front
-        at_trk_front = self.selector.select_surface(data["trkfit"], surface_name="TT_Front")
-        has_trk_front = ak.any(at_trk_front, axis=-1)
+        at_trk_surf = self.selector.select_surface(data["trkfit"], surface_name=surface_name)
+        has_trk_surf = ak.any(at_trk_surf, axis=-1)
 
         # MC truth selections
         # Truth track parent is electron 
@@ -237,13 +207,13 @@ class HistManager:
         data_cut = ak.copy(data)
     
         # Construct combined trk level mask 
-        trk_mask = is_reco_electron & has_trk_front # & has_trk_parent_electron
+        trk_mask = is_reco_electron & has_trk_surf # & has_trk_parent_electron
         
         # Event level mask 
         has_trks = ak.any(trk_mask, axis=-1)
 
         # # Apply trksegs-level selection
-        data_cut["trkfit"] = data_cut["trkfit"][at_trk_front]
+        data_cut["trkfit"] = data_cut["trkfit"][at_trk_surf]
 
         # # # Apply trkmcsim-level selection
         data_cut["trkmc"] = data_cut["trkmc"][is_trk_parent_electron]
@@ -322,11 +292,11 @@ class HistManager:
             return ak.flatten(trk["trk.nactive"], axis=None)
 
         elif param == "t0":
-            _, trkfit, _  = self._prepare_track_data(data)
+            _, trkfit, _  = self._prepare_track_data(data, surface_name="TT_Mid")
             return ak.flatten(trkfit["trksegs"]["time"], axis=None)
             
         elif param == "t0err":
-            _, trkfit, _  = self._prepare_track_data(data)
+            _, trkfit, _  = self._prepare_track_data(data, surface_name="TT_Mid")
             return ak.flatten(trkfit["trksegpars_lh"]["t0err"], axis=None)
             
         elif param == "d0":
@@ -377,6 +347,20 @@ class HistManager:
                 self.logger.log(f"Misalignment in momentum resolution calculation for {selection} (returning mom_res=[]):\n\tmom_reco has length {len(mom_reco)}\n\tmom_truth has length {len(mom_truth)}", "warning")
                 return []
 
+        elif param == "dT":
+            _, trkfit, _ = self._prepare_track_data(data)
+            # Get time differences
+            try:
+                # mom_res = mom_reco - mom_truth
+                dT = self.analyse.get_trk_crv_dt(trkfit, data["crv"])
+                return ak.flatten(dT, axis=None)
+            except:
+                self.logger.log(f"Misalignment in dT calculation for {selection} (returning dT=[])", "warning")
+                return []
+                
+            # dT = self.analyse.get_trk_crv_dt(trkfit, data["crv"])
+            # return ak.flatten(dT, axis=None)
+        
             
             # "mom_z": { # 1 MeV/c binning
             #     "axis": hist.axis.Regular(125, -25, 100, name="mom_z", label=r"$p_{z}$ [MeV/c]"),
