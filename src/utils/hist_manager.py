@@ -82,15 +82,15 @@ class HistManager:
                 "param": "nactive", 
                 "filter": None
             },
-            "t0": { # 10 ns binning
-                "axis": hist.axis.Regular(140, 400, 1800, name="t0err", 
+            "t0": { # 1 ns binning
+                "axis": hist.axis.Regular(1400, 400, 1800, name="t0err", 
                                         label=r"Track fit time [ns]"),
                 "param": "t0",
                 "filter": None
             },
             # Track-fit parameter histograms
-            "t0err": { # 0.05 ns binning
-                "axis": hist.axis.Regular(100, 0, 5.0, name="t0err", 
+            "t0err": { # 0.01 ns binning
+                "axis": hist.axis.Regular(500, 0, 5.0, name="t0err", 
                                         label=r"Track $t_{0}$ uncertainty, $\sigma_{t_{0}}$ [ns]"),
                 "param": "t0err",
                 "filter": None
