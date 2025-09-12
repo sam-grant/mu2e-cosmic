@@ -3,7 +3,8 @@
 # ===============================
 
 process:
-    defname: "nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_05_00.root"
+    # defname: "nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_05_00.root"
+    defname: "nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root"
     cutset_name: "SU2020b"
 
 postprocess:
