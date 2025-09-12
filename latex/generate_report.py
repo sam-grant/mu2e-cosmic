@@ -223,6 +223,26 @@ def generate_introduction_section():
     intro_content += "\\subsection{Datasets}\n\n"
     
     intro_content += "The analysis utilises Monte Carlo simulation datasets."
+
+    # Create a LaTeX table for the dataset names
+    intro_content += "\\begin{table}[H]\n"
+    intro_content += "\\centering\n"
+    # intro_content += "\\footnotesize\n"
+    intro_content += "\\begin{tabular}{l}\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\textbf{Name} \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\texttt{nts.mu2e.CosmicCRYSignalAllOnSpillTriggered.MDC2020aw\\_perfect\\_v1\\_3\\_v06\\_06\\_00.root} \\\\\n"
+    intro_content += "\\texttt{nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw\\_best\\_v1\\_3\\_v06\\_06\\_00.root} \\\\\n"
+    intro_content += "\\texttt{nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aw\\_perfect\\_v1\\_3\\_v06\\_06\\_00.root} \\\\\n"
+    intro_content += "\\texttt{nts.mu2e.CeEndpointMix2BBTriggered.MDC2020aw\\_best\\_v1\\_3\\_v06\\_06\\_00.root} \\\\\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\hline\n"
+    intro_content += "\\end{tabular}\n"
+    intro_content += "\\caption{Monte Carlo dataset names.}\n"
+    intro_content += "\\label{tab:dataset_names}\n"
+    intro_content += "\\end{table}\n\n"
     
     # Create a LaTeX table for the dataset information
     intro_content += "\\begin{table}[H]\n"
@@ -275,7 +295,7 @@ def generate_introduction_section():
     # Cutsets subsection
     intro_content += "\\subsection{Cutsets}\n\n"
     
-    intro_content += "The analyses employ hierarchical cutsets based on the SU2020 analysis."
+    intro_content += "The analyses employ hierarchical cutsets based on the SU2020 analysis. "
     intro_content += "The cutsets are designed to select high-quality downstream electron tracks "
     intro_content += "originating from the stopping target\\footnote{See arXiv:2210.11380 for "
     intro_content += "details.}.\n\n"
@@ -504,6 +524,7 @@ def generate_latex_report(ana_labels, output_file="report"):
             # Define source paths for images
             plot1_source = os.path.join(source_images_path, "h1o_1x3_mom_windows.png")
             plot2_source = os.path.join(source_images_path, "h1o_3x3_summary.png")
+            plot3_source = os.path.join(source_images_path, "h1o_2x2_mom_summary.png")
             
             # Process first plot
             plot1_exists = False
@@ -565,6 +586,27 @@ def generate_latex_report(ana_labels, output_file="report"):
                     print("  Using PNG: " + ana_label + "/h1o_3x3_summary.png")
             else:
                 print("  Warning: Plot 2 not found at " + plot2_source)
+
+            # Process first plot
+            plot3_exists = False
+            plot3_file = None
+            
+            if os.path.exists(plot3_source):
+                # Try to convert PNG to PDF for better quality
+                plot3_pdf_dest = os.path.join(ana_images_dir, "h1o_2x2_summary.pdf")
+                if convert_png_to_pdf(plot3_source, plot3_pdf_dest):
+                    plot3_file = ana_label + "/h1o_2x2_summary.pdf"
+                    plot3_exists = True
+                    print("  Using PDF: " + ana_label + "/h1o_2x2_summary.pdf")
+                else:
+                    # Fallback to PNG
+                    plot3_png_dest = os.path.join(ana_images_dir, "h1o_2x2_summary.png")
+                    shutil.copy2(plot1_source, plot1_png_dest)
+                    plot3_file = ana_label + "/h1o_2x2_summary.png"
+                    plot3_exists = True
+                    print("  Using PNG: " + ana_label + "/h1o_2x2_summary.png")
+            else:
+                print("  Warning: Plot 3 not found at " + plot3_source)
             
             # Generate LaTeX for plots
             clean_ana_label = ana_label.replace('-', '_').replace('_', '')
@@ -584,6 +626,14 @@ def generate_latex_report(ana_labels, output_file="report"):
                 latex_content += "    \\includegraphics[width=\\textwidth]{" + plot2_file + "}\n"
                 latex_content += "    \\caption{Summary of cut parameters for configuration " + safe_ana_label + ".}"
                 latex_content += "    \\label{fig:h1o3x3" + clean_ana_label + "}\n"
+                latex_content += "\\end{figure}\n\n"
+
+            if plot3_exists:
+                latex_content += "\\begin{figure}[H]\n"
+                latex_content += "    \\centering\n"
+                latex_content += "    \\includegraphics[width=\\textwidth]{" + plot3_file + "}\n"
+                latex_content += "    \\caption{Summary of momentum parameters for configuration " + safe_ana_label + ".}"
+                latex_content += "    \\label{fig:h1o2x2" + clean_ana_label + "}\n"
                 latex_content += "\\end{figure}\n\n"
 
             # if plot1_exists:
