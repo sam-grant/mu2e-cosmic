@@ -417,6 +417,7 @@ def generate_latex_report(ana_labels, output_file="report"):
     latex_content += "\\usepackage{tabularx}\n"
     latex_content += "\\usepackage{enumitem}\n"
     latex_content += "\\usepackage{arydshln}\n"
+    latex_content += "\\usepackage[labelfont=bf]{caption}\n"
     latex_content += "\n"
     latex_content += "\\geometry{margin=2.5cm}\n"
     latex_content += "\\graphicspath{{images/}}\n"
