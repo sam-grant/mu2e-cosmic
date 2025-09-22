@@ -101,9 +101,6 @@ which will output
 [generate_notebook] ✅ Successfully generated notebook: example/example.ipynb
 ```
 
-##  start
-
-
 ## Analysis configuration template
 
 Analyses are configured via YAML, which pass arguments directly to the `process.py` and `postprocess.py` modules. Many of the arguments are optional, but a template containing the full suite of options is below. 
