@@ -424,7 +424,7 @@ class HistManager:
         
         Args:
             datasets: Dictionary with selection labels as keys and data as values
-                     e.g., {"All": data, "CE-like": data_CE, "Unvetoed": data_CE_unvetoed}
+                     e.g., {"All": data, "Select": data_CE, "Unvetoed": data_CE_unvetoed}
             
         Returns:
             dict: Dictionary of filled histograms

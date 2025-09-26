@@ -33,7 +33,7 @@ class Draw():
     #         "alpha": 1.0,
     #         "linestyle": "-"
     #     },
-    #     "CE-like": {
+    #     "Select": {
     #         "color": "#228B22",      # Forest green (signal)
     #         "linewidth": 2.0,        # Thicker for importance
     #         "alpha": 1.0,
@@ -61,7 +61,7 @@ class Draw():
     #         "alpha": 0.6,
     #         "linestyle": "--"
     #     },
-    #     "CE-like": {
+    #     "Select": {
     #         "color": "#C41E3A",  
     #         "linewidth": 2.5,
     #         "alpha": 0.8,
@@ -114,7 +114,7 @@ class Draw():
                 "linestyle": "-",
                 "histtype" : "step"
             },
-            "CE-like": {
+            "Select": {
                 "color": "#228B22", # forest green
                 "linewidth": 1.5,
                 "alpha": 0.5,
@@ -145,7 +145,7 @@ class Draw():
                 "linestyle": "-",
                 "histtype": "step"
             },
-            "CE-like": {
+            "Select": {
                 "color": "#0173B2",  # blue (colorblind safe)
                 "linewidth": 2.0,
                 "alpha": 0.6,
@@ -282,7 +282,7 @@ class Draw():
         self._format_axis(ax[0], labels, 
                          xlabel="Momentum [MeV/c]",
                          ylabel="Tracks",
-                         title="Wide range: 0-1000 MeV/c")
+                         title="Wide range: 50-200 MeV/c")
     
         # Extended window 
         name = "mom_ext"
@@ -331,7 +331,7 @@ class Draw():
 
     def plot_crv_z(self, hists, out_path=None):
         """Plot CRV z-position histograms"""
-        selection = ["All", "Preselect", "CE-like"]
+        selection = ["All", "Preselect", "Select"]
         fig, ax = plt.subplots(figsize=(8, 6)) 
         
         name = "crv_z"
@@ -362,7 +362,7 @@ class Draw():
 
     def plot_crv_z_long(self, hists, out_path=None):
         """Plot CRV z-position histograms"""
-        selection = ["All", "Preselect", "CE-like"]
+        selection = ["All", "Preselect", "Select"]
         fig, ax = plt.subplots(figsize=(8*2, 6/1.5)) 
         
         name = "crv_z"
@@ -396,7 +396,7 @@ class Draw():
         fig, ax = plt.subplots(3, 3, figsize=(3*6.4, 3*4.8))
         fig.subplots_adjust(hspace=0.3, wspace=0.25)
         
-        # selection = ["All", "Preselect", "CE-like", "Unvetoed"]
+        # selection = ["All", "Preselect", "Select", "Unvetoed"]
         
         # Set default toggle_lines if not provided
         if toggle_lines is None:

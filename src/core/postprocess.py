@@ -151,7 +151,7 @@ class PostProcess():
             self.logger.log(f"Exception while combining arrays: {e}", "error")
             return None
 
-    def get_combined_analysis(self, hists, transpose=True):
+    def get_combined_analysis(self, hists): # , transpose=True):
         """
         Calculate combined analysis of efficiency and rates from histograms
 
@@ -170,20 +170,73 @@ class PostProcess():
                 generated_events=self.generated_events,
                 veto=self.veto
             )            
-            if transpose:
-                 # Transpose and reset index
-                result = result.T.reset_index()
-                # Replace headers with the first row
-                result.columns = result.iloc[0]
-                # Drop first redundant and reset indices again
-                result = result.drop(0).reset_index(drop=True)
-                
+            # if transpose:
+            #      # Transpose and reset index
+            #     result = result.T.reset_index()
+            #     # Replace headers with the first row
+            #     result.columns = result.iloc[0]
+            #     # Drop first redundant and reset indices again
+            #     result = result.drop(0).reset_index(drop=True)
+
+            # Just transpose - the index (row labels) automatically becomes a column
+            # result = result.T
+            # # Reset index to make the momentum windows (Wide, Extended, Signal) regular rows
+            # result = result.reset_index()
+            # # Rename the first column to something meaningful
+            # result = result.rename(columns={'index': 'Window'})
+            
             self.logger.log(f"Analysed histograms:", "success")
             return result
         except Exception as e:
             self.logger.log(f"Exception while analysing histograms: {e}", "error")
             return None
+
+    # def get_combined_analysis(self, hists, transpose=True):
+    #     """Calculate combined analysis of efficiency and rates from histograms"""
+    #     try:
+    #         result = self.hist_analyser.analyse_hists(
+    #             hists, 
+    #             livetime=self.livetime,
+    #             on_spill=self.on_spill,
+    #             on_spill_frac=self.on_spill_frac,
+    #             generated_events=self.generated_events,
+    #             veto=self.veto
+    #         )
             
+    #         print("Original DataFrame shape:", result.shape)
+    #         print("Original DataFrame columns:", result.columns.tolist())
+    #         print("Original DataFrame index:", result.index.tolist())
+            
+    #         if transpose:
+    #             print("Before transpose:")
+    #             print(result.head(3))
+                
+    #             # Just transpose
+    #             result = result.T
+    #             print("After transpose shape:", result.shape)
+    #             print("After transpose columns:", result.columns.tolist())
+    #             print("After transpose index:", result.index.tolist())
+    #             print("After transpose:")
+    #             print(result.head(3))
+                
+    #             # Reset index
+    #             result = result.reset_index()
+    #             print("After reset_index shape:", result.shape)
+    #             print("After reset_index columns:", result.columns.tolist())
+    #             print("Final result:")
+    #             print(result.head())
+                
+    #             # Rename the first column
+    #             result = result.rename(columns={'index': 'Window'})
+                    
+    #         self.logger.log(f"Analysed histograms:", "success")
+    #         return result
+    #     except Exception as e:
+    #         self.logger.log(f"Exception while analysing histograms: {e}", "error")
+    #         import traceback
+    #         traceback.print_exc()
+    #         return None
+        
     def get_event_info(self, results): 
         """
         Get filtered event info
