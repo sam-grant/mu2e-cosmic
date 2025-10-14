@@ -61,8 +61,9 @@ class Write:
         # Convert to DataFrame if not already one
         if not isinstance(df, pd.DataFrame):
            df = pd.DataFrame(df)
+
         # Open and write file
-        df.to_csv(out_path, index=False)
+        df.to_csv(out_path, index=True)
         # Pass out_path back for logging
         return out_path
             

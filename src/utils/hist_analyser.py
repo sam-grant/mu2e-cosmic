@@ -112,99 +112,6 @@ class HistAnalyser():
         
         return scaled_livetime
 
-    # def _get_rate_results(self, k, rates_dict): 
-    #     """ Get rates for both modes """
-
-    #     if rates_dict is None:
-    #         return {}
-        
-    #     rate_1batch = rates_dict["1batch"]["rate"]
-    #     rate_err_lo_1batch = rates_dict["1batch"]["rate_err_lo"] - rate_1batch
-    #     rate_err_hi_1batch = rates_dict["1batch"]["rate_err_hi"] - rate_1batch
-        
-    #     rate_2batch = rates_dict["2batch"]["rate"] 
-    #     rate_err_lo_2batch = rates_dict["2batch"]["rate_err_lo"] - rate_2batch
-    #     rate_err_hi_2batch = rates_dict["2batch"]["rate_err_hi"] - rate_2batch
-
-    #     # FIXME FIXME FIXME FIXME FIXME FIXME
-    #     # Hardcode Run-1 livetime as 3.46e6 seconds (from Natalie)
-    #     # FIXME/TODO: verify this and put it in YAML (or an arg in PostProcess)
-    #     run1_livetime_seconds = 3.46e6
-    #     run1_livetime_ratio = getattr(self, '_current_scaled_livetime', 0) / run1_livetime_seconds if hasattr(self, '_current_scaled_livetime') else 0
-
-    #     # Calculate rates per Run-1 
-    #     if run1_livetime_ratio > 0:
-    #         rate_1b_per_run1 = k / run1_livetime_ratio
-    #         rate_2b_per_run1 = k / run1_livetime_ratio
-            
-    #         # Calculate uncertainties for Run-1 rates using Poisson bounds
-    #         k_lo, k_hi = self.get_poisson_bounds(k)
-    #         rate_1b_err_lo_per_run1 = k_lo / run1_livetime_ratio - rate_1b_per_run1
-    #         rate_1b_err_hi_per_run1 = k_hi / run1_livetime_ratio - rate_1b_per_run1
-    #         rate_2b_err_lo_per_run1 = rate_1b_err_lo_per_run1
-    #         rate_2b_err_hi_per_run1 = rate_1b_err_hi_per_run1
-    #     else:
-    #         rate_1b_per_run1 = 0
-    #         rate_2b_per_run1 = 0
-    #         rate_1b_err_lo_per_run1 = 0
-    #         rate_1b_err_hi_per_run1 = 0
-    #         rate_2b_err_lo_per_run1 = 0
-    #         rate_2b_err_hi_per_run1 = 0
-
-    #     return {
-    #         r"Rate 1B [$\text{day}^{-1}$]": float(rate_1batch),
-    #         r"Rate 1B Err$-$ [$\text{day}^{-1}$]": float(rate_err_lo_1batch),
-    #         r"Rate 1B Err$+$ [$\text{day}^{-1}$]": float(rate_err_hi_1batch),
-    #         r"Rate 2B [$\text{day}^{-1}$]": float(rate_2batch),
-    #         r"Rate 2B Err$-$ [$\text{day}^{-1}$]": float(rate_err_lo_2batch),
-    #         r"Rate 2B Err$+$ [$\text{day}^{-1}$]": float(rate_err_hi_2batch),
-    #         r"Run-1 Livetimes": float(run1_livetime_ratio),
-    #         r"Rate 1B [$\text{Run-1}^{-1}$]": float(rate_1b_per_run1),
-    #         r"Rate 1B Err$-$ [$\text{Run-1}^{-1}$]": float(rate_1b_err_lo_per_run1),
-    #         r"Rate 1B Err$+$ [$\text{Run-1}^{-1}$]": float(rate_1b_err_hi_per_run1),
-    #         r"Rate 2B [$\text{Run-1}^{-1}$]": float(rate_2b_per_run1),
-    #         r"Rate 2B Err$-$ [$\text{Run-1}^{-1}$]": float(rate_2b_err_lo_per_run1),
-    #         r"Rate 2B Err$+$ [$\text{Run-1}^{-1}$]": float(rate_2b_err_hi_per_run1)
-    #     }
-        
-    ####################################################
-    # DataFrame methods
-    ####################################################
-
-    # def _append_result(self, results, label, k, N, eff, eff_err_lo, eff_err_hi, rates_dict=None):
-    #     """Add efficiency and rate result with batch mode information"""
-    #     # Get efficiency results
-    #     eff_results = {
-    #         "Type": label,
-    #         "Passing": k,
-    #         "Initial": N,
-    #         "Eff [%]": float(eff * 100),
-    #         r"Eff Err$-$ [%]": float((eff_err_lo - eff) * 100),
-    #         r"Eff Err$+$ [%]": float((eff_err_hi - eff) * 100)
-    #     }
-    #     # Get rates results
-    #     rates_results = self._get_rate_results(k, rates_dict) # Returns {} for signal datasets
-    #     # Combine 
-    #     results_dict = eff_results | rates_results
-    #     # Append
-    #     results.append(results_dict)
-
-    ####################################################
-    # Histogram methods
-    ####################################################
-    
-    def _get_N_from_hists(self, hists, selection, label): 
-        """
-        Retrieve number of events passing in a histogram
-        """
-        h = hists[selection] 
-        h = h[{"selection": label}]  
-        return int(h.sum())
-        
-    ####################################################
-    # Efficiency from histograms methods 
-    ####################################################
-
     def get_rates(self, k, walltime_days_dict):
         """Calculate rates and rate errors for given counts and walltime"""
         rates = {}
@@ -221,65 +128,38 @@ class HistAnalyser():
             }
             
         return rates
+        
+    ####################################################
+    # Histogram methods
+    ####################################################
     
-    # def _get_signal_eff_and_rate(self, hists, selection, title, generated_events, walltime_days_dict, results, veto):
-    #     """Calculate signal efficiency for given selection"""
-    #     k = self._get_N_from_hists(hists, selection, label="Select")   
-        
-    #     # Get efficiency
-    #     eff = k / generated_events if int(float(generated_events)) > 0 else 0
-    #     eff_err_lo, eff_err_hi = self._get_wilson_bounds(k, generated_events)
-        
-    #     # Get rates for all batch modes
-    #     rates_dict = self.get_rates(k, walltime_days_dict) if veto else {}
-        
-    #     # Store result
-    #     self._append_result(
-    #         results, title, int(k), int(float(generated_events)), 
-    #         eff, eff_err_lo, eff_err_hi, rates_dict
-    #     )
+    def _get_N_from_hists(self, hists, selection, label): 
+        """
+        Retrieve number of events passing in a histogram
+        """
+        # print("_get_N_from_hists")
 
-    # def _get_signal_eff(self, hists, selection, title, generated_events, results):
-    #     """Calculate signal efficiency for given selection
-    #     Do not calculate rates for signal-only 
-    #     """
-    #     k = self._get_N_from_hists(hists, selection, label="Select")   
-        
-    #     # Get efficiency
-    #     eff = k / generated_events if int(float(generated_events)) > 0 else 0
-    #     eff_err_lo, eff_err_hi = self._get_wilson_bounds(k, generated_events)
+        h = hists[selection] 
+        h = h[{"selection": label}]  
 
-    #     # Get rates for all batch modes
-    #     rates_dict = None # (not used for signal datasets)
-        
-    #     # Store result
-    #     self._append_result(
-    #         results, title, int(k), int(float(generated_events)), 
-    #         eff, eff_err_lo, eff_err_hi, rates_dict
-    #     )
+        # print("h", h)
+        # print("selection ", selection)
+        # print("label ", label)
+        # print(int(h.sum()))
+        return int(h.sum())
 
-    
-    # def _get_veto_eff_and_rate(self, hists, selection, title, walltime_days_dict, results):
-    #     """Calculate veto efficiency and rate for given selection"""
-    #     k = self._get_N_from_hists(hists, selection, label="Unvetoed")    
-    #     N = self._get_N_from_hists(hists, selection, label="Select")   
+    # def _get_N_from_hists(self, hists, selection, label): 
+    #     print(selection, label)
+    #     h = hists[selection]
+    #     print(h)
+    #     h = h[:, hist.loc(label)]  # select along the StrCategory axis
+    #     print(h)
+    #     return int(h.sum())
         
-    #     # Get efficiency
-    #     eff = (1 - k / N) if N > 0 else 0
-    #     k_bound_lo, k_bound_hi = self._get_wilson_bounds(k, N)
-    #     # Transform 
-    #     eff_err_lo = 1 - k_bound_hi  
-    #     eff_err_hi = 1 - k_bound_lo  
-        
-    #     # Get rates for all batch modes
-    #     rates_dict = self.get_rates(k, walltime_days_dict)
-        
-    #     # Store result
-    #     self._append_result(
-    #         results, title, int(k), int(N),
-    #         eff, eff_err_lo, eff_err_hi, rates_dict
-    #     )
-    
+    ####################################################
+    # Main histogram analysis 
+    ####################################################
+
     def analyse_hists(
         self, 
         hists,
@@ -311,7 +191,7 @@ class HistAnalyser():
             generated_events = float(generated_events)
         except (ValueError, TypeError):
             generated_events = 0
-
+    
         # Check if livetime is valid 
         livetime_valid = livetime is not None and livetime > 0
         
@@ -326,12 +206,13 @@ class HistAnalyser():
         ]
         
         # Collect data for each window
-        results = {}
+        results = []
         
-        for mom_window, col_name in momentum_windows:
+        for mom_window_label, mom_window_name in momentum_windows:
+            
             # Get event counts
-            select_count = self._get_N_from_hists(hists, mom_window, label="Select")
-            unvetoed_count = self._get_N_from_hists(hists, mom_window, label="Unvetoed") if veto else 0
+            select_count = self._get_N_from_hists(hists, mom_window_label, label="Select")
+            unvetoed_count = self._get_N_from_hists(hists, mom_window_label, label="Unvetoed") if veto else 0
             
             # Calculate efficiencies
             select_eff = select_count / generated_events if generated_events > 0 else 0
@@ -347,8 +228,7 @@ class HistAnalyser():
             
             # Calculate rates if doing veto analysis
             if veto and livetime_valid:
-                scaled_livetime = self._scale_livetime_for_window(livetime, hists, mom_window, reference_window)
-                self._current_scaled_livetime = scaled_livetime
+                scaled_livetime = self._scale_livetime_for_window(livetime, hists, mom_window_label, reference_window)
                 
                 # Get walltime in days for both batch modes
                 sec2day = 1 / (24*3600)
@@ -373,9 +253,10 @@ class HistAnalyser():
                 rate_2b_lo = rates_dict["2batch"]["rate_err_lo"] - rate_2b
                 rate_2b_hi = rates_dict["2batch"]["rate_err_hi"] - rate_2b
                 
-                # Run-1 rates (same for both batch modes)
+                # Run-1 rates (based on livetime ratio - same for both batch modes)
                 run1_livetime_seconds = 3.46e6
                 run1_livetime_ratio = scaled_livetime / run1_livetime_seconds
+                
                 if run1_livetime_ratio > 0:
                     rate_run1 = unvetoed_count / run1_livetime_ratio
                     k_lo, k_hi = self.get_poisson_bounds(unvetoed_count)
@@ -391,78 +272,39 @@ class HistAnalyser():
                 run1_livetime_ratio = 0
                 walltime_days = {"1batch": 0, "2batch": 0}
             
-            # Store data for this column
-            results[col_name] = {
+            # Store data 
+            # Just report single batch mode...
+            results.append({
+                "Window": mom_window_name,
                 "Generated": int(generated_events),
                 "Selected": int(select_count),
-                "Unvetoed": int(unvetoed_count) if veto else None,
+                "Unvetoed": int(unvetoed_count), 
                 "Selection Eff [%]": float(select_eff * 100),
                 r"Selection Eff Err$-$ [%]": float((select_eff_lo - select_eff) * 100),
                 r"Selection Eff Err$+$ [%]": float((select_eff_hi - select_eff) * 100),
-                "Veto Eff [%]": float(veto_eff * 100) if veto else None,
-                "Veto Eff Err$-$ [%]": float((veto_eff_lo - veto_eff) * 100) if veto else None,
-                "Veto Eff Err$+$ [%]": float((veto_eff_hi - veto_eff) * 100) if veto else None,
-                "Livetime [days]": float(scaled_livetime / 3600) if veto else None,
-                r"Rate 1B [$\text{day}^{-1}$]": float(rate_1b) if veto else None,
-                r"Rate 1B Err- [$\text{day}^{-1}$]": float(rate_1b_lo) if veto else None,
-                r"Rate 1B Err+ [$\text{day}^{-1}$]": float(rate_1b_hi) if veto else None,
-                r"Rate 2B [$\text{day}^{-1}$]": float(rate_2b) if veto else None,
-                r"Rate 2B Err$-$ [$\text{day}^{-1}$]": float(rate_2b_lo) if veto else None,
-                r"Rate 2B Err$+$ [$\text{day}^{-1}$]": float(rate_2b_hi) if veto else None,
-                "Run-1 Livetimes": run1_livetime_ratio if veto else None,
-                r"Rate 1B [$\text{Run-1}^{-1}$]": float(rate_run1) if veto else None,
-                r"Rate 1B Err$-$ [$\text{Run-1}^{-1}$]": float(rate_run1_lo) if veto else None,
-                r"Rate 1B Err$+$ [$\text{Run-1}^{-1}$]": float(rate_run1_hi) if veto else None,
-                r"Rate 2B [$\text{Run-1}^{-1}$]": float(rate_run1) if veto else None,  # Same as 1B for Run-1
-                r"Rate 2B Err$-$ [$\text{Run-1}^{-1}$]": float(rate_run1_lo) if veto else None,
-                r"Rate 2B Err$+$ [$\text{Run-1}^{-1}$]": float(rate_run1_hi) if veto else None,
-            }
-        
+                "Veto Eff [%]": float(veto_eff * 100), 
+                "Veto Eff Err$-$ [%]": float((veto_eff_lo - veto_eff) * 100), 
+                "Veto Eff Err$+$ [%]": float((veto_eff_hi - veto_eff) * 100),
+                "Livetime [days]": float(scaled_livetime / (24*3600)),
+                r"Unvetoed Rate [$\text{day}^{-1}$]": float(rate_1b), 
+                r"Unvetoed Rate Err$-$ [$\text{day}^{-1}$]": float(rate_1b_lo),
+                r"Unvetoed Rate Err$+$ [$\text{day}^{-1}$]": float(rate_1b_hi),
+                # r"Rate 2B [$\text{day}^{-1}$]": round(float(rate_2b), 2) if veto else None,
+                # r"Rate 2B Err$-$ [$\text{day}^{-1}$]": round(float(rate_2b_lo), 2) if veto else None,
+                # r"Rate 2B Err$+$ [$\text{day}^{-1}$]": round(float(rate_2b_hi), 2) if veto else None,
+                "Run-1 Livetimes": float(run1_livetime_ratio),
+                r"Unvetoed Rate [$\text{Run-1}^{-1}$]": float(rate_run1),
+                r"Unvetoed Rate Err$-$ [$\text{Run-1}^{-1}$]": float(rate_run1_lo),
+                r"Unvetoed Rate Err$+$ [$\text{Run-1}^{-1}$]": float(rate_run1_hi)
+            })
+
         # Create DataFrame from the results
-        df = pd.DataFrame(results, )
-
-        # Remove rows with all None values (for non-veto analysis)
-        if not veto:
-            df = df.dropna(how="all")
-
-        # # FIXME
-        # # Attempting correct formatting
-        # # So awful
-        # df.style.format({
-        #     "Generated": "{:d}",
-        #     "Selected": "{:d}",
-        #     "Unvetoed": "{:d}",
-        
-        #     "Selection Eff [%]": "{:.3f}",
-        #     "Selection Eff Err$-$ [%]": "{:.3f}",
-        #     "Selection Eff Err$+$ [%]": "{:.3f}",
-        
-        #     "Veto Eff [%]": "{:.3f}",
-        #     r"Veto Eff Err$-$ [%]": "{:.3f}",
-        #     r"Veto Eff Err$+$ [%]": "{:.3f}",
-        
-        #     "Livetime [days]": "{:.2f}",
-        
-        #     "Rate 1B [$\\text{day}^{-1}$]": "{:.2f}",
-        #     "Rate 1B Err$-$ [$\\text{day}^{-1}$]": "{:.2f}",
-        #     "Rate 1B Err$+$ [$\\text{day}^{-1}$]": "{:.2f}",
-        
-        #     "Rate 2B [$\\text{day}^{-1}$]": "{:.2f}",
-        #     "Rate 2B Err$-$ [$\\text{day}^{-1}$]": "{:.2f}",
-        #     "Rate 2B Err$+$ [$\\text{day}^{-1}$]": "{:.2f}",
-        
-        #     "Run-1 Livetimes": "{:.3f}",
-        
-        #     r"Rate 1B [$\text{Run-1}^{-1}$]": "{:.2f}",
-        #     r"Rate 1B Err$-$ [$\text{Run-1}^{-1}$]": "{:.2f}",
-        #     r"Rate 1B Err$+$ [$\text{Run-1}^{-1}$]": "{:.2f}",
-        
-        #     r"Rate 2B [$\text{Run-1}^{-1}$]": "{:.2f}",
-        #     r"Rate 2B Err$-$ [$\text{Run-1}^{-1}$]": "{:.2f}",
-        #     r"Rate 2B Err$+$ [$\text{Run-1}^{-1}$]": "{:.2f}",
-        # })
+        df = pd.DataFrame(results)
+    
+        # Set Window as index and transpose
+        df = df.set_index("Window").T
 
         
         self.logger.log("Completed analysis", "success")
         
-        return df 
+        return df

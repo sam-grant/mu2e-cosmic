@@ -184,7 +184,7 @@ class Analyse:
             # "all" method handles reflections 
             # is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1) 
             is_downstream = ak.all(~in_trk | is_downstream, axis=-1) 
-            # "any" method does not handle reflections, may be closer to C++
+            # "any" method does not handle reflections, but may be closer to C++
             # is_downstream = ak.any(at_trk_front & is_downstream, axis=-1) 
             # Add cut 
             cut_manager.add_cut(
@@ -214,7 +214,7 @@ class Analyse:
                 name="is_truth_electron", 
                 description="Track parents are electrons (truth PID)", 
                 mask=has_trk_parent_electron,
-                active=self.active_cuts["is_truth_electron"] ,
+                active=self.active_cuts["is_truth_electron"],
                 group="Preselect"
             )
             # Append for debugging
@@ -435,15 +435,14 @@ class Analyse:
 
         ###################################################
         # CRV veto: |dt| < 150 ns 
-        # Check if EACH track is within 150 ns of ANY coincidence 
+        # Alternative veto: -25 < dt < 100 ns 
+        # Check if ANY track is within 150 ns of ANY coincidence 
         ###################################################
         try:
             # Calculate time differences
             dT = self.get_trk_crv_dt(data["trkfit"], data["crv"])
-            # Absolute time differences
-            dt = abs(dT)
             # Check if within threshold
-            within_threshold = dT < self.thresholds["veto_dt_ns"]
+            within_threshold = (abs(dT) < self.thresholds["veto_dt_ns"])
             # Reduce one axis at a time 
             # First reduce over coincidences (axis=3)
             any_coinc = ak.any(within_threshold, axis=3)
@@ -463,6 +462,31 @@ class Analyse:
             self.logger.log(f"Error defining 'unvetoed': {e}", "error") 
             raise e
 
+        # ###################################################
+        # # Wide window 
+        # ###################################################
+        # try:
+        #     # Get momentum magnitude 
+        #     mom = self.vector.get_mag(data["trkfit"]["trksegs"], "mom") 
+        #     # Track segments level definition 
+        #     within_wide_win = (mom > self.thresholds["lo_wide_win_mevc"]) & (mom < self.thresholds["hi_wide_win_mevc"])
+        #     # Track level definition
+        #     within_wide_win = ak.all(~at_trk_front | within_wide_win, axis=-1)
+        #     # Add cut 
+        #     cut_manager.add_cut(
+        #         name="within_wide_win",
+        #         description=f"Wide window ({self.thresholds["lo_wide_win_mevc"]}"\
+        #                     f" < p < {self.thresholds["hi_wide_win_mevc"]} MeV/c)",
+        #         mask=within_wide_win,
+        #         active=self.active_cuts["within_wide_win"],
+        #         group="Momentum"
+        #     )
+        #     # Append 
+        #     data["within_wide_win"] = within_wide_win
+        # except Exception as e:
+        #     self.logger.log(f"Error defining 'within_wide_win': {e}", "error") 
+        #     raise e
+            
         ###################################################
         # Extended window 
         ###################################################
@@ -628,8 +652,8 @@ class Analyse:
             data["preselect"] = cut_manager.combine_cuts(active_only=True)
             data_preselect = self.apply_cuts(data, cut_manager)
 
-            # Apply CE-like cuts (without veto & momentum windows)
-            self.logger.log("Applying CE-like cuts", "max")
+            # Apply selection cuts (without veto & momentum windows)
+            self.logger.log("Applying Select cuts", "max")
             # Restore state
             # Toggling Tracker to True will activate tracker cuts from different
             # cutsets that we may not want
@@ -641,8 +665,8 @@ class Analyse:
             # cut_manager.save_state("CE_like")
             # Print active cuts
             cut_manager.list_groups()
-            # Save CE-like selection
-            data["CE_like"] = cut_manager.combine_cuts(active_only=True)
+            # Save Select selection
+            data["Select"] = cut_manager.combine_cuts(active_only=True)
             data_CE = self.apply_cuts(data, cut_manager)
 
             # Apply CRV cuts
@@ -661,7 +685,7 @@ class Analyse:
                 datasets = { 
                     "All": data,
                     "Preselect": data_preselect,
-                    "CE-like": data_CE,
+                    "Select": data_CE,
                     "Unvetoed": data_CE_unvetoed
                 }
             )
