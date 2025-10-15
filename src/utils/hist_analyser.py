@@ -266,6 +266,7 @@ class HistAnalyser():
                     rate_run1 = rate_run1_lo = rate_run1_hi = 0
                     
             else:
+                scaled_livetime = 0
                 rate_1b = rate_1b_lo = rate_1b_hi = 0
                 rate_2b = rate_2b_lo = rate_2b_hi = 0
                 rate_run1 = rate_run1_lo = rate_run1_hi = 0
