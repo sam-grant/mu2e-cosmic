@@ -175,6 +175,11 @@ def csv_to_latex_table(csv_path, caption="", label="", output_dir="", use_adjust
                             row_data.append(f'{val:.0f}')
                         elif abs(val) >= 1:
                             row_data.append(f'{val:.2f}')
+                        elif abs(val) >= 0.001:
+                            row_data.append(f'{val:.3f}')
+                        elif abs(val) > 0:
+                            # Use scientific notation for very small values
+                            row_data.append(f'{val:.2e}')
                         else:
                             row_data.append(f'{val:.3f}')
                     else:
@@ -679,6 +684,7 @@ def generate_latex_report(ana_labels, output_file="report"):
             use_adjustbox=False
         )
 
+        latex_content += "\\end{landscape}\n"
         latex_content += "\\newpage\n\n"
         
         # Add analysis table
@@ -686,19 +692,32 @@ def generate_latex_report(ana_labels, output_file="report"):
         latex_content += "Analysis results for configuration " + safe_ana_label + ".\n\n"
         
         analysis_path = os.path.join(results_path, "analysis.csv")
-        
+
         if os.path.exists(analysis_path):
             latex_content += csv_to_latex_table(
                 analysis_path,
                 caption="Analysis results for configuration " + safe_ana_label + ".",
-                use_adjustbox=True
+                label="tab:analysis_" + clean_ana_label,
+                output_dir=report_dir,
+                use_adjustbox=False
             )
         else:
             latex_content += "\\textbf{Warning:} Analysis results file not found: \\texttt{" + analysis_path.replace('_', '\\_') + "}\n\n"
             print("  Warning: Analysis results file not found: " + analysis_path)
+            
+        # if os.path.exists(analysis_path):
+        #     latex_content += 
+        #     (
+        #         analysis_path,
+        #         caption="Analysis results for configuration " + safe_ana_label + ".",
+        #         use_adjustbox=False
+        #     )
+        # else:
+        #     latex_content += "\\textbf{Warning:} Analysis results file not found: \\texttt{" + analysis_path.replace('_', '\\_') + "}\n\n"
+        #     print("  Warning: Analysis results file not found: " + analysis_path)
         
         # End landscape and add page break
-        latex_content += "\\end{landscape}\n"
+        
         latex_content += "\\newpage\n\n"
     
     # Add bibliography section
