@@ -462,30 +462,30 @@ class Analyse:
             self.logger.log(f"Error defining 'unvetoed': {e}", "error") 
             raise e
 
-        # ###################################################
-        # # Wide window 
-        # ###################################################
-        # try:
-        #     # Get momentum magnitude 
-        #     mom = self.vector.get_mag(data["trkfit"]["trksegs"], "mom") 
-        #     # Track segments level definition 
-        #     within_wide_win = (mom > self.thresholds["lo_wide_win_mevc"]) & (mom < self.thresholds["hi_wide_win_mevc"])
-        #     # Track level definition
-        #     within_wide_win = ak.all(~at_trk_front | within_wide_win, axis=-1)
-        #     # Add cut 
-        #     cut_manager.add_cut(
-        #         name="within_wide_win",
-        #         description=f"Wide window ({self.thresholds["lo_wide_win_mevc"]}"\
-        #                     f" < p < {self.thresholds["hi_wide_win_mevc"]} MeV/c)",
-        #         mask=within_wide_win,
-        #         active=self.active_cuts["within_wide_win"],
-        #         group="Momentum"
-        #     )
-        #     # Append 
-        #     data["within_wide_win"] = within_wide_win
-        # except Exception as e:
-        #     self.logger.log(f"Error defining 'within_wide_win': {e}", "error") 
-        #     raise e
+        ###################################################
+        # Wide window 
+        ###################################################
+        try:
+            # Get momentum magnitude 
+            mom = self.vector.get_mag(data["trkfit"]["trksegs"], "mom") 
+            # Track segments level definition 
+            within_wide_win = (mom > self.thresholds["lo_wide_win_mevc"]) & (mom < self.thresholds["hi_wide_win_mevc"])
+            # Track level definition
+            within_wide_win = ak.all(~at_trk_front | within_wide_win, axis=-1)
+            # Add cut 
+            cut_manager.add_cut(
+                name="within_wide_win",
+                description=f"Wide window ({self.thresholds["lo_wide_win_mevc"]}"\
+                            f" < p < {self.thresholds["hi_wide_win_mevc"]} MeV/c)",
+                mask=within_wide_win,
+                active=self.active_cuts["within_wide_win"],
+                group="Momentum"
+            )
+            # Append 
+            data["within_wide_win"] = within_wide_win
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_wide_win': {e}", "error") 
+            raise e
             
         ###################################################
         # Extended window 

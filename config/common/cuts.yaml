@@ -19,6 +19,8 @@ defaults:
         lo_pitch_angle: 0.5
         hi_pitch_angle: 1.0 
         veto_dt_ns: 150
+        lo_wide_win_mevc: 85
+        hi_wide_win_mevc: 200
         lo_ext_win_mevc: 100
         hi_ext_win_mevc: 110
         lo_sig_win_mevc: 103.6
@@ -39,6 +41,7 @@ defaults:
         is_truth_electron: true
         one_reco_electron: true
         unvetoed: true
+        within_wide_win: true
         within_ext_win: true
         within_sig_win: true
 
