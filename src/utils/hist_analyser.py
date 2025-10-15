@@ -240,41 +240,64 @@ class HistAnalyser():
                         walltime = scaled_livetime / (1-frac)    
                     walltime_days[batch_mode] = walltime * sec2day
                 
-                # Calculate rates for both batch modes
-                rates_dict = self.get_rates(unvetoed_count, walltime_days)
+                # Calculate SELECTION rates for both batch modes
+                selection_rates_dict = self.get_rates(select_count, walltime_days)
                 
-                # 1-batch rates
-                rate_1b = rates_dict["1batch"]["rate"]
-                rate_1b_lo = rates_dict["1batch"]["rate_err_lo"] - rate_1b
-                rate_1b_hi = rates_dict["1batch"]["rate_err_hi"] - rate_1b
+                # Calculate UNVETOED rates for both batch modes
+                unvetoed_rates_dict = self.get_rates(unvetoed_count, walltime_days)
                 
-                # 2-batch rates
-                rate_2b = rates_dict["2batch"]["rate"]
-                rate_2b_lo = rates_dict["2batch"]["rate_err_lo"] - rate_2b
-                rate_2b_hi = rates_dict["2batch"]["rate_err_hi"] - rate_2b
+                # 1-batch selection rates
+                sel_rate_1b = selection_rates_dict["1batch"]["rate"]
+                sel_rate_1b_lo = selection_rates_dict["1batch"]["rate_err_lo"] - sel_rate_1b
+                sel_rate_1b_hi = selection_rates_dict["1batch"]["rate_err_hi"] - sel_rate_1b
                 
-                # Run-1 rates (based on livetime ratio - same for both batch modes)
+                # 2-batch selection rates
+                sel_rate_2b = selection_rates_dict["2batch"]["rate"]
+                sel_rate_2b_lo = selection_rates_dict["2batch"]["rate_err_lo"] - sel_rate_2b
+                sel_rate_2b_hi = selection_rates_dict["2batch"]["rate_err_hi"] - sel_rate_2b
+                
+                # 1-batch unvetoed rates
+                unv_rate_1b = unvetoed_rates_dict["1batch"]["rate"]
+                unv_rate_1b_lo = unvetoed_rates_dict["1batch"]["rate_err_lo"] - unv_rate_1b
+                unv_rate_1b_hi = unvetoed_rates_dict["1batch"]["rate_err_hi"] - unv_rate_1b
+                
+                # 2-batch unvetoed rates
+                unv_rate_2b = unvetoed_rates_dict["2batch"]["rate"]
+                unv_rate_2b_lo = unvetoed_rates_dict["2batch"]["rate_err_lo"] - unv_rate_2b
+                unv_rate_2b_hi = unvetoed_rates_dict["2batch"]["rate_err_hi"] - unv_rate_2b
+                
+                # Run-1 rates (based on livetime ratio)
                 run1_livetime_seconds = 3.46e6
                 run1_livetime_ratio = scaled_livetime / run1_livetime_seconds
                 
                 if run1_livetime_ratio > 0:
-                    rate_run1 = unvetoed_count / run1_livetime_ratio
-                    k_lo, k_hi = self.get_poisson_bounds(unvetoed_count)
-                    rate_run1_lo = k_lo / run1_livetime_ratio - rate_run1
-                    rate_run1_hi = k_hi / run1_livetime_ratio - rate_run1
-                else:
-                    rate_run1 = rate_run1_lo = rate_run1_hi = 0
+                    # Selection rate for Run-1
+                    sel_rate_run1 = select_count / run1_livetime_ratio
+                    k_lo_sel, k_hi_sel = self.get_poisson_bounds(select_count)
+                    sel_rate_run1_lo = k_lo_sel / run1_livetime_ratio - sel_rate_run1
+                    sel_rate_run1_hi = k_hi_sel / run1_livetime_ratio - sel_rate_run1
                     
+                    # Unvetoed rate for Run-1
+                    unv_rate_run1 = unvetoed_count / run1_livetime_ratio
+                    k_lo_unv, k_hi_unv = self.get_poisson_bounds(unvetoed_count)
+                    unv_rate_run1_lo = k_lo_unv / run1_livetime_ratio - unv_rate_run1
+                    unv_rate_run1_hi = k_hi_unv / run1_livetime_ratio - unv_rate_run1
+                else:
+                    sel_rate_run1 = sel_rate_run1_lo = sel_rate_run1_hi = 0
+                    unv_rate_run1 = unv_rate_run1_lo = unv_rate_run1_hi = 0
+
             else:
                 scaled_livetime = 0
-                rate_1b = rate_1b_lo = rate_1b_hi = 0
-                rate_2b = rate_2b_lo = rate_2b_hi = 0
-                rate_run1 = rate_run1_lo = rate_run1_hi = 0
+                sel_rate_1b = sel_rate_1b_lo = sel_rate_1b_hi = 0
+                sel_rate_2b = sel_rate_2b_lo = sel_rate_2b_hi = 0
+                unv_rate_1b = unv_rate_1b_lo = unv_rate_1b_hi = 0
+                unv_rate_2b = unv_rate_2b_lo = unv_rate_2b_hi = 0
+                sel_rate_run1 = sel_rate_run1_lo = sel_rate_run1_hi = 0
+                unv_rate_run1 = unv_rate_run1_lo = unv_rate_run1_hi = 0
                 run1_livetime_ratio = 0
                 walltime_days = {"1batch": 0, "2batch": 0}
-            
+                
             # Store data 
-            # Just report single batch mode...
             results.append({
                 "Window": mom_window_name,
                 "Generated": int(generated_events),
@@ -287,16 +310,30 @@ class HistAnalyser():
                 "Veto Eff Err$-$ [%]": float((veto_eff_lo - veto_eff) * 100), 
                 "Veto Eff Err$+$ [%]": float((veto_eff_hi - veto_eff) * 100),
                 "Livetime [days]": float(scaled_livetime / (24*3600)),
-                r"Unvetoed Rate [$\text{day}^{-1}$]": float(rate_1b), 
-                r"Unvetoed Rate Err$-$ [$\text{day}^{-1}$]": float(rate_1b_lo),
-                r"Unvetoed Rate Err$+$ [$\text{day}^{-1}$]": float(rate_1b_hi),
-                # r"Rate 2B [$\text{day}^{-1}$]": round(float(rate_2b), 2) if veto else None,
-                # r"Rate 2B Err$-$ [$\text{day}^{-1}$]": round(float(rate_2b_lo), 2) if veto else None,
-                # r"Rate 2B Err$+$ [$\text{day}^{-1}$]": round(float(rate_2b_hi), 2) if veto else None,
+                # Selection rates - 1 batch
+                r"Selection Rate 1BB [$\text{day}^{-1}$]": float(sel_rate_1b), 
+                r"Selection Rate 1BB Err$-$ [$\text{day}^{-1}$]": float(sel_rate_1b_lo),
+                r"Selection Rate 1BB Err$+$ [$\text{day}^{-1}$]": float(sel_rate_1b_hi),
+                # Selection rates - 2 batch
+                r"Selection Rate 2BB [$\text{day}^{-1}$]": float(sel_rate_2b), 
+                r"Selection Rate 2BB Err$-$ [$\text{day}^{-1}$]": float(sel_rate_2b_lo),
+                r"Selection Rate 2BB Err$+$ [$\text{day}^{-1}$]": float(sel_rate_2b_hi),
+                # Unvetoed rates - 1 batch
+                r"Unvetoed Rate 1BB [$\text{day}^{-1}$]": float(unv_rate_1b), 
+                r"Unvetoed Rate 1BB Err$-$ [$\text{day}^{-1}$]": float(unv_rate_1b_lo),
+                r"Unvetoed Rate 1BB Err$+$ [$\text{day}^{-1}$]": float(unv_rate_1b_hi),
+                # Unvetoed rates - 2 batch
+                r"Unvetoed Rate 2BB [$\text{day}^{-1}$]": float(unv_rate_2b), 
+                r"Unvetoed Rate 2BB Err$-$ [$\text{day}^{-1}$]": float(unv_rate_2b_lo),
+                r"Unvetoed Rate 2BB Err$+$ [$\text{day}^{-1}$]": float(unv_rate_2b_hi),
+                # Run-1 metrics
                 "Run-1 Livetimes": float(run1_livetime_ratio),
-                r"Unvetoed Rate [$\text{Run-1}^{-1}$]": float(rate_run1),
-                r"Unvetoed Rate Err$-$ [$\text{Run-1}^{-1}$]": float(rate_run1_lo),
-                r"Unvetoed Rate Err$+$ [$\text{Run-1}^{-1}$]": float(rate_run1_hi)
+                r"Selection Rate Run-1 [$\text{Run-1}^{-1}$]": float(sel_rate_run1),
+                r"Selection Rate Run-1 Err$-$ [$\text{Run-1}^{-1}$]": float(sel_rate_run1_lo),
+                r"Selection Rate Run-1 Err$+$ [$\text{Run-1}^{-1}$]": float(sel_rate_run1_hi),
+                r"Unvetoed Rate Run-1 [$\text{Run-1}^{-1}$]": float(unv_rate_run1),
+                r"Unvetoed Rate Run-1 Err$-$ [$\text{Run-1}^{-1}$]": float(unv_rate_run1_lo),
+                r"Unvetoed Rate Run-1 Err$+$ [$\text{Run-1}^{-1}$]": float(unv_rate_run1_hi)
             })
 
         # Create DataFrame from the results
