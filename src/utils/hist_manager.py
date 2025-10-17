@@ -62,6 +62,18 @@ class HistManager:
                 "param": "mom", 
                 "filter": "sig_window"
             },
+
+            "pdg": { # Integer binning
+                "axis": hist.axis.Regular(41, -20.5, 20.5, name="pdg", label="PDG"),
+                "param": "pdg", 
+                "filter": None
+            },
+
+            "sid": { # Integer binning
+                "axis": hist.axis.Regular(51, -0.5, 50.0, name="sid", label="SID"),
+                "param": "sid", 
+                "filter": None
+            },
             
             # CRV histograms
             "crv_z": { # 25 cm binning
@@ -145,6 +157,11 @@ class HistManager:
                 "filter": None
             }, 
 
+            "trk_per_event": { # Integer binning
+                "axis": hist.axis.Regular(6, -0.5, 5.5, name="trk_per_event", label=r"Track / event"),
+                "param": "trk_per_event",
+                "filter": None
+            }, 
             # # Trkqual histograms (excluding t0err, momerr, and nactive which we already have)
             # "factive": {},
             # "fambig": {},
@@ -185,6 +202,8 @@ class HistManager:
         - MC track parents (for momentum resolution)
 
         and everything needs to align! 
+
+        This is slightly problematic in that the histograms may not align with analysis histograms?
         
         Returns:
             tuple: (trk, trkfit, trkmcsim)
@@ -267,6 +286,8 @@ class HistManager:
     def _extract_data(self, data, param, selection):
         """
         Extract histogram data based on parameter name
+
+        TODO: do we always need to prepare track data, this seems to be asking for trouble!
         
         Args:
             data: Input data array
@@ -284,11 +305,13 @@ class HistManager:
             return ak.flatten(data["crv"]["crvcoincs.pos.fCoordinates.fZ"], axis=None)
             
         elif param == "trkqual":
-            trk, _, _  = self._prepare_track_data(data)
+            # trk, _, _  = self._prepare_track_data(data)
+            trk = data["trk"]
             return ak.flatten(trk["trkqual.result"], axis=None)
             
         elif param == "nactive":
-            trk, _, _  = self._prepare_track_data(data)
+            # trk, _, _  = self._prepare_track_data(data)
+            trk = data["trk"]
             return ak.flatten(trk["trk.nactive"], axis=None)
 
         elif param == "t0":
@@ -313,7 +336,8 @@ class HistManager:
             return ak.flatten(pitch_angle, axis=None)
             
         elif param == "pdg":
-            trk, _, _  = self._prepare_track_data(data)
+            # trk, _, _  = self._prepare_track_data(data)
+            trk = data["trk"]
             return ak.flatten(trk["trk.pdg"], axis=None)
             
         elif param == "sid":
@@ -348,7 +372,7 @@ class HistManager:
                 return []
 
         elif param == "dT":
-            _, trkfit, _ = self._prepare_track_data(data)
+            _, trkfit, _ = self._prepare_track_data(data, surface_name="TT_Mid")
             # Get time differences
             try:
                 # mom_res = mom_reco - mom_truth
@@ -357,7 +381,12 @@ class HistManager:
             except:
                 self.logger.log(f"Misalignment in dT calculation for {selection} (returning dT=[])", "warning")
                 return []
-                
+
+        elif param == "trk_per_event":
+            trk, _, _ = self._prepare_track_data(data)
+            trk_event = ak.count(trk["trk.pdg"], axis=-1)
+            return ak.flatten(trk_event, axis=None)
+
             # dT = self.analyse.get_trk_crv_dt(trkfit, data["crv"])
             # return ak.flatten(dT, axis=None)
         

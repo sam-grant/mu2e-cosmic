@@ -187,27 +187,51 @@ class Write:
         except Exception as e:
             self.logger.log(f"Failed to write info: {e}", "error")
 
+    # def write_all(self, results):
+    #     self.logger.log(f"Saving all", "info")
+        
+    #     self.logger.log(f"Writing all results to pickle", "info")
+    #     self.write_pkl(results)
+        
+    #     self.logger.log(f"Writing cut flow to csv", "info")
+    #     self.write_cut_flow_csv(results["cut_flow"])
+        
+    #     self.logger.log(f"Writing hists to h5", "info")
+    #     self.write_hists_h5(results["hists"])
+
+    #     self.logger.log(f"Writing analysis info to csv", "info")
+    #     self.write_analysis_csv(results["analysis"])
+        
+    #     self.logger.log(f"Writing background events to parquet", "info")
+    #     self.write_events_parquet(results["events"])
+
+    #     self.logger.log(f"Writing background info to txt", "info")
+    #     self.write_info_txt(results["event_info"])
+
     def write_all(self, results):
         self.logger.log(f"Saving all", "info")
         
+        # Always write full pickle
         self.logger.log(f"Writing all results to pickle", "info")
         self.write_pkl(results)
         
-        self.logger.log(f"Writing cut flow to csv", "info")
-        self.write_cut_flow_csv(results["cut_flow"])
+        # Define what to write
+        write_tasks = [
+            ("cut_flow", "cut flow to csv", self.write_cut_flow_csv),
+            ("hists", "hists to h5", self.write_hists_h5),
+            ("analysis", "analysis info to csv", self.write_analysis_csv),
+            ("events", "events to parquet", self.write_events_parquet),
+            ("event_info", "event info to txt", self.write_info_txt),
+        ]
         
-        self.logger.log(f"Writing hists to h5", "info")
-        self.write_hists_h5(results["hists"])
-
-        self.logger.log(f"Writing analysis info to csv", "info")
-        self.write_analysis_csv(results["analysis"])
-        
-        self.logger.log(f"Writing background events to parquet", "info")
-        self.write_events_parquet(results["events"])
-
-        self.logger.log(f"Writing background info to txt", "info")
-        self.write_info_txt(results["event_info"])
-
+        # Execute each write task if data exists
+        for key, description, write_func in write_tasks:
+            if key in results and results[key] is not None:
+                self.logger.log(f"Writing {description}", "info")
+                write_func(results[key])
+            else:
+                self.logger.log(f"Skipping {description} (not found in results)", "warning")
+            
 class Load:
     def __init__(self, in_path="test_out", verbosity=1):
         """Load analysis outputs 

@@ -78,12 +78,12 @@ class Draw():
     # v3
 
 
-    def __init__(self, cutset_name="alpha", on_spill=False, hist_styles=None, line_styles=None, colourblind=True, verbosity=1): 
+    def __init__(self, cutset_name="SU2020b", on_spill=False, hist_styles=None, line_styles=None, colourblind=True, verbosity=1): 
         """
         Initialise 
         
         Args:
-            cutset_name (str, opt): The cutset name. Defaults to "alpha".
+            cutset_name (str, opt): The cutset name. Defaults to "SU2020b".
             on_spill (bool, opt): Whether we are using onspill time cuts. Defaults to False.
             verbosity (int, optional): Level of output detail (0: critical errors only, 1: info, 2: debug, 3: deep debug)
         """
@@ -127,6 +127,21 @@ class Draw():
                 "alpha": 0.8,
                 "linestyle": "-",
                 "histtype" : "bar"
+            },
+            # ML stuff
+            "Before cuts": {
+                "color": "#228B22", # forest green
+                "linewidth": 1.5,
+                "alpha": 0.5,
+                "linestyle": "-",
+                "histtype" : "bar"
+            },
+            "After cuts": {
+                "color": "#C41E3A", # cardinal red
+                "linewidth": 1.5,
+                "alpha": 0.8,
+                "linestyle": "-",
+                "histtype" : "bar"
             }
         } if hist_styles is None else hist_styles
 
@@ -153,6 +168,21 @@ class Draw():
                 "histtype": "bar"
             },
             "Unvetoed": {
+                "color": "#FF6600",  # bright orange 
+                "linewidth": 2.0,
+                "alpha": 0.8,
+                "linestyle": "-", 
+                "histtype": "bar"
+            },
+            # ML stuff
+            "Before cuts": {
+                "color": "#0173B2",  # blue (colorblind safe)
+                "linewidth": 2.0,
+                "alpha": 0.6,
+                "linestyle": "-",
+                "histtype": "bar"
+            },
+            "After cuts": {
                 "color": "#FF6600",  # bright orange 
                 "linewidth": 2.0,
                 "alpha": 0.8,
@@ -487,6 +517,57 @@ class Draw():
             ("mom_z", (0, 0)), ("mom_T", (0, 1)), 
             ("mom_err", (1, 0)), ("mom_res", (1, 1))
         ]        
+        for var_name, (row, col) in plot_positions:
+            # Plot histograms
+            labels = self._plot_histogram(hists[var_name], ax[row, col], list(hists[var_name].axes["selection"])) # , selection)
+            
+            # Get axis labels and title
+            xlabel, title, loc, y_ext_factor, ncols = var_info[var_name]
+            ylabel = "Tracks" if col==0 else ""
+            
+            # Only show legend on first subplot
+            show_legend = True # (row == 0 and col == 0)
+            
+            # Apply formatting
+            self._format_axis(
+                ax[row, col], 
+                labels, 
+                xlabel=xlabel, 
+                ylabel=ylabel, 
+                title=title, 
+                leg=show_legend,
+                loc=loc,
+                y_ext_factor=y_ext_factor,
+                ncols=ncols
+                
+            )
+        
+        plt.tight_layout()
+        if out_path:
+            plt.savefig(out_path)
+            self.logger.log(f"\tWrote {out_path}", "success")
+        plt.show()
+
+    def plot_ml_summary(self, hists, out_path=None):
+        "mom, pz, pdg, trk_per_event, t0, trkqual"""
+         # pdg, pz, electron / event, t0, trkqual
+        
+        fig, ax = plt.subplots(2, 3, figsize=(3*6.4, 2*4.8))        # Variable info for axis labels
+        var_info = {
+            
+            "mom_full": (r"Momentum [MeV/c]", "", "upper right", 1.0, 1), # xlabel, title, loc, y_ext_factor, ncols
+            "mom_z": (r"$p_{z}$ [MeV/c]", "", "upper left", 1.0, 1), 
+            "pdg": (r"PDG", "", "upper left", 1.0, 1), 
+            "trk_per_event": (r"Tracks per event", "", "upper right", 1.0, 1),
+            "t0": (r"Track $t_{0}$ [ns]", "", "upper center", 5, 2),
+            "trkqual": (r"Track quality", "", "upper right", 5, 2), 
+        }
+        
+        plot_positions = [
+            ("mom_full", (0, 0)), ("mom_z", (0, 1)), ("pdg", (0, 2)),
+            ("trk_per_event", (1, 0)), ("t0", (1, 1)), ("trkqual", (1, 2))
+        ]
+        
         for var_name, (row, col) in plot_positions:
             # Plot histograms
             labels = self._plot_histogram(hists[var_name], ax[row, col], list(hists[var_name].axes["selection"])) # , selection)

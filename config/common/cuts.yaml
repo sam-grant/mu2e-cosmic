@@ -71,7 +71,7 @@ cutsets:
 #             within_lhr_max_hi: false
 #             within_lhr_max_lo: false
 #             lo_trkqual: 0.2
-            
+
     SU2020a:
         description:
             "SU2020a (trkqual > 0 (none) and t0err < 0.9 ns)"
@@ -115,3 +115,29 @@ cutsets:
         active:
             within_lhr_max_lo: false
             within_t0err: false
+
+    MLPreprocess:
+        description:
+            "Preselection cuts, plus time window and trkqual > 0.2" 
+        thresholds:
+            lo_trkqual: 0.2
+        active:
+            is_reco_electron: true
+            has_trk_front: true
+            within_t0: true
+            is_downstream: true
+            is_truth_electron: true
+            one_reco_electron: true
+            good_trkqual: true
+            has_hits: false
+            within_t0err: false
+            within_d0: false
+            within_pitch_angle_lo: false
+            within_pitch_angle_hi: false
+            within_lhr_max_lo: false
+            within_lhr_max_hi: false
+            unvetoed: false
+            within_wide_win: false
+            within_ext_win: false
+            within_sig_win: false
+            

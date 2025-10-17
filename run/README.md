@@ -5,7 +5,7 @@
 Example, from this directory run:
 
 ```bash
-python run.py --config test.yaml
+python run_ana.py --config test.yaml
 ```
 
 Once done, navigate to notebooks/ana and create a notebook to display your results:
@@ -15,7 +15,7 @@ cd ../notebooks/ana
 python generate_notebook.c test 
 ```
 
-Full example output for `run.py`: 
+Full example output for `run_ana.py`: 
 
 ```
 (ana_v2.2.0) [sgrant@jupyter-sgrant run]$ python run.py -c alpha_CRY_offspill-LH_as.yaml

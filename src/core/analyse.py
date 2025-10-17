@@ -270,7 +270,7 @@ class Analyse:
             raise e
 
         ###################################################
-        # t0 uncertainty distance of closest approach
+        # t0 uncertainty 
         ###################################################
         try:
             # Track segments level definition
@@ -649,7 +649,7 @@ class Analyse:
                 "Momentum": False
             })  
             # cut_manager.save_state("preselect")
-            data["preselect"] = cut_manager.combine_cuts(active_only=True)
+            data["preselect"] = cut_manager.combine_cuts(active_only=True) # only for debugging
             data_preselect = self.apply_cuts(data, cut_manager)
 
             # Apply selection cuts (without veto & momentum windows)
