@@ -118,7 +118,7 @@ cutsets:
 
     MLPreprocess:
         description:
-            "Preselection cuts, plus time window and trkqual > 0.2" 
+            "Preselection cuts for ML"
         thresholds:
             lo_trkqual: 0.2
         active:
@@ -129,8 +129,8 @@ cutsets:
             is_truth_electron: true
             one_reco_electron: true
             good_trkqual: true
-            has_hits: false
-            within_t0err: false
+            has_hits: true
+            within_t0err: true
             within_d0: false
             within_pitch_angle_lo: false
             within_pitch_angle_hi: false
