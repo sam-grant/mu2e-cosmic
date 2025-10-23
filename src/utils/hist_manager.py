@@ -53,7 +53,7 @@ class HistManager:
                                           self.thresholds["hi_wide_win_mevc"], 
                                           name="mom", label="Momentum [MeV/c]"),
                 "param": "mom",
-                "filter": None
+                "filter": "wide_window"
             },
             "mom_ext": { # 0.5 MeV/c binning
                 "axis": hist.axis.Regular(20, self.thresholds["lo_ext_win_mevc"], 
