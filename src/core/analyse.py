@@ -73,17 +73,46 @@ class Analyse:
         return pz/pt 
 
     def get_trk_crv_dt(self, trkfit, crv):
-        """Helper to get trk/crv time difference"""
-        # Find dT 
-        trk_times = trkfit["trksegs"]["time"] # events × tracks × segments
-        coinc_times = crv["crvcoincs.time"]   # events × coincidences
-        # Broadcast CRV times to match track structure, so that we can compare element-wise
-        coinc_broadcast = coinc_times[:, None, None, :]  # Add dimensions for tracks and segments
-        trk_broadcast = trk_times[:, :, :, None]         # Add dimension for coincidences
-        # coinc_broadcast shape is [E, 1, 1, C] 
+        """Helper to get trk/crv time difference (dT).
+
+        Calculates the time difference between every track segment in trkfit and
+        every CRV coincidence in crv for the same event.
+
+        Args:
+            trkfit (ak.Array): Contains track fit information per segment. 
+            crv (ak.Array): Contains CRV coincidence information.
+
+        Returns:
+            ak.Array: Time difference dT (track segment time - CRV coincidence time).
+                      Shape: [event, track, segment, coincidence]
+        """
+        # Find dT
+        # Extract track segment times. Shape is [E, T, S] (Event, Track, Segment).
+        trk_times = trkfit["trksegs"]["time"] 
+        # Extract CRV coincidence times. Shape is [E, C] (Event, Coincidence).
+        coinc_times = crv["crvcoincs.time"]  
+
+        # Broadcast CRV times to match track structure so we can element-wise subtract.
+
+        # Shape transform: [E, C] -> [E, 1, 1, C].
+        # The '1' dimensions will be automatically expanded to match the
+        # T and S dimensions during subtraction.
+        coinc_broadcast = coinc_times[:, None, None, :] 
+        
+        # Broadcast track times to match the CRV structure.
+        # Shape transform: [E, T, S] -> [E, T, S, 1].
+        # The final '1' dimension will be broadcast to match the C dimension.
+        trk_broadcast = trk_times[:, :, :, None] 
+        
+        # coinc_broadcast shape is [E, 1, 1, C]
         # trk_broadcast shape is [E, T, S, 1]
+        
+        # The subtraction now yields the desired shape [E, T, S, C], 
+        # containing dT for every possible track-segment/CRV-coincidence pairing.
+
         # Return time differences
         return (trk_broadcast - coinc_broadcast)
+    
         
     def define_cuts(self, data, cut_manager):
         """Define analysis cuts
@@ -436,38 +465,49 @@ class Analyse:
         ###################################################
         # CRV veto: |dt| < 150 ns 
         # Alternative veto: -25 < dt < 100 ns 
-        # Check if ANY track is within 150 ns of ANY coincidence 
+        # Check if ANY track has mid segment within 150 ns of ANY coincidence 
         ###################################################
         try:
             # Calculate time differences
             dT = self.get_trk_crv_dt(data["trkfit"][at_trk_mid], data["crv"])
-            # Check if within threshold
-            within_threshold = (abs(dT) < self.thresholds["veto_dt_ns"])
-            # Reduce one axis at a time 
-            # First reduce over coincidences (axis=3)
-            any_coinc = ak.any(within_threshold, axis=3)
-            # Then reduce over trks (axis=2) 
-            veto = ak.any(any_coinc, axis=2)
+            # dT shape: [E, T, S, C] (Event, Track, Segment, Coincidence)
+            
+            # 1. Calculate the minimum absolute dT over all segments (S) and coincidences (C)
+            # for each track (T). ak.min will return 'None' for empty lists (S=0 or C=0).
+            # abs_dT_min = ak.min(abs(dT), axis=[2, 3])  # Shape [E, T] - includes 'None'
+            abs_dT_min = ak.min(ak.min(abs(dT), axis=3), axis=2)  # [E, T] - includes 'None'
+            
+            # 2. Convert 'None' values (where there was no CRV data for the track) to infinity.
+            # This is the track-level array you want to store and analyse.
+            data["abs_dT_min"] = ak.fill_none(abs_dT_min, np.inf)
+            
+            # 3. Define the unvetoed cut mask using the filled array.
+            # (np.inf >= threshold) is True, correctly marking tracks with no CRV data as unvetoed.
+            unvetoed = (data["abs_dT_min"] >= self.thresholds["veto_dt_ns"])
+
             # Add cut 
             cut_manager.add_cut(
                 name="unvetoed",
                 description=f"No veto: |dt| >= {self.thresholds["veto_dt_ns"]} ns",
-                mask=~veto,
+                mask=unvetoed,
                 active=self.active_cuts["unvetoed"],
                 group="CRV"
             )
-            # Append for debugging
-            data["unvetoed"] = ~veto
+            # Store 
+            data["raw_unvetoed"] = unvetoed # "true" unvetoed involves combined cuts
+            
         except Exception as e:
             self.logger.log(f"Error defining 'unvetoed': {e}", "error") 
             raise e
 
+            
         ###################################################
         # Wide window 
         ###################################################
         try:
             # Get momentum magnitude 
             mom = self.vector.get_mag(data["trkfit"]["trksegs"], "mom") 
+            data["mom_mag"] = mom # store at this stage (array written to "events" before momentum cuts)
             # Track segments level definition 
             within_wide_win = (mom > self.thresholds["lo_wide_win_mevc"]) & (mom < self.thresholds["hi_wide_win_mevc"])
             # Track level definition
@@ -491,7 +531,7 @@ class Analyse:
         # Extended window 
         ###################################################
         try:
-            # Get momentum magnitude 
+            # Get momentum magnitude again
             mom = self.vector.get_mag(data["trkfit"]["trksegs"], "mom") 
             # Track segments level definition 
             within_ext_win = (mom > self.thresholds["lo_ext_win_mevc"]) & (mom < self.thresholds["hi_ext_win_mevc"])
@@ -516,8 +556,7 @@ class Analyse:
         # Signal window 
         ###################################################
         try:
-            # Get momentum magnitude 
-            # FIXME: should probably only do this once...
+            # Get momentum magnitude again
             mom = self.vector.get_mag(data["trkfit"]["trksegs"], "mom") 
             # Track segments level definition 
             within_sig_win = (mom > self.thresholds["lo_sig_win_mevc"]) & (mom < self.thresholds["hi_sig_win_mevc"])
@@ -662,11 +701,10 @@ class Analyse:
                 "CRV": False,       # Keep CRV off (this turns off "unvetoed")
                 "Momentum": False   # Keep Momentum off (this turns off both momentum windows)
             })
-            # cut_manager.save_state("CE_like")
             # Print active cuts
             cut_manager.list_groups()
             # Save Select selection
-            data["Select"] = cut_manager.combine_cuts(active_only=True)
+            data["select"] = cut_manager.combine_cuts(active_only=True)
             data_CE = self.apply_cuts(data, cut_manager)
 
             # Apply CRV cuts
@@ -674,9 +712,9 @@ class Analyse:
             if veto:  
                 self.logger.log("Applying veto cuts", "max")  
                 # Turn veto on
-                cut_manager.toggle_group({"CRV": True}) # same thing
+                cut_manager.toggle_group({"CRV": True}) 
                 # cut_manager.toggle_cut({"unvetoed": True}) # same thing
-                data["unvetoed_CE_like"] = cut_manager.combine_cuts(active_only=True)
+                data["unvetoed"] = cut_manager.combine_cuts(active_only=True)
                 data_CE_unvetoed = self.apply_cuts(data, cut_manager) 
             
             # Create histograms and compile results
