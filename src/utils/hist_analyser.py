@@ -200,7 +200,8 @@ class HistAnalyser():
         
         # Define momentum windows
         momentum_windows = [
-            ("mom_full", "Wide"),
+            ("mom_full", "Inclusive"),
+            ("mom_wide", "Wide"),
             ("mom_ext", "Extended"), 
             ("mom_sig", "Signal")
         ]

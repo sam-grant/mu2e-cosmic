@@ -1,11 +1,14 @@
 # ===============================
-# SU2020b_CRY_offspill-LH_aw.yaml
+# SU2020b_CRY_onspill-LH_aw.yaml
 # ===============================
 
 process:
     defname: "nts.mu2e.CosmicCRYSignalAllOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.root"
     cutset_name: "SU2020b"
     use_remote: true
+    max_workers: 75
+    verbosity: 1
+    worker_verbosity: 0
 
 postprocess:
     write_events: true

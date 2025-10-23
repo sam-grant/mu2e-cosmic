@@ -440,7 +440,7 @@ class Analyse:
         ###################################################
         try:
             # Calculate time differences
-            dT = self.get_trk_crv_dt(data["trkfit"], data["crv"])
+            dT = self.get_trk_crv_dt(data["trkfit"][at_trk_mid], data["crv"])
             # Check if within threshold
             within_threshold = (abs(dT) < self.thresholds["veto_dt_ns"])
             # Reduce one axis at a time 

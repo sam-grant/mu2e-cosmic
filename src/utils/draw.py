@@ -176,16 +176,16 @@ class Draw():
             },
             # ML stuff
             "Before cuts": {
-                "color": "#0173B2",  # blue (colorblind safe)
+                "color": "#121212",  # dark grey 
                 "linewidth": 2.0,
                 "alpha": 0.6,
                 "linestyle": "-",
-                "histtype": "bar"
+                "histtype": "step"
             },
             "After cuts": {
-                "color": "#FF6600",  # bright orange 
+                "color": "#228B22", # forest green 
                 "linewidth": 2.0,
-                "alpha": 0.8,
+                "alpha": 0.6,
                 "linestyle": "-", 
                 "histtype": "bar"
             }
@@ -295,29 +295,113 @@ class Draw():
         
         return labels
     
-    def plot_mom_windows(self, hists, out_path=None):
-        """Plot 1x3 momentum window histograms"""
-        fig, ax = plt.subplots(1, 3, figsize=(6.4*3, 4.8))
+    # def plot_mom_windows(self, hists, out_path=None):
+    #     """Plot 1x3 momentum window histograms"""
+    #     fig, ax = plt.subplots(1, 3, figsize=(6.4*3, 4.8))
         
-        # Wide range 
+    #     # Wide range 
+    #     name = "mom_full"
+    #     h1o_mom_wide = hists[name]
+    #     labels = self._plot_histogram(h1o_mom_wide, ax[0], 
+    #                                  list(h1o_mom_wide.axes["selection"]))
+        
+    #     # Add event counts to labels
+    #     for i, label in enumerate(labels):
+    #         labels[i] = f"{label}: {self._count_events(hists, name, label):,}"
+        
+    #     self._format_axis(ax[0], labels, 
+    #                      xlabel="Momentum [MeV/c]",
+    #                      ylabel="Tracks",
+    #                      title="Wide range: 50-200 MeV/c")
+    
+    #     # Extended window 
+    #     name = "mom_ext"
+    #     h1o_mom_ext = hists[name]
+    #     labels = self._plot_histogram(h1o_mom_ext, ax[1],
+    #                                  list(h1o_mom_ext.axes["selection"]))
+        
+    #     for i, label in enumerate(labels):
+    #         labels[i] = f"{label}: {self._count_events(hists, name, label):,}"
+        
+    #     title = f"Extended window: {self.analyse.thresholds['lo_ext_win_mevc']}" \
+    #             f"-{self.analyse.thresholds['hi_ext_win_mevc']} MeV/c"
+    #     self._format_axis(ax[1], labels, 
+    #         xlabel="Momentum [MeV/c]",
+    #         title=title,
+    #         ncols=2,
+    #         y_ext_factor=40,
+    #         loc="upper center"
+    #     ) 
+        
+    #     # Signal window 
+    #     name = "mom_sig"
+    #     h1o_mom_sig = hists[name]
+    #     labels = self._plot_histogram(h1o_mom_sig, ax[2],
+    #                                  list(h1o_mom_sig.axes["selection"]))
+        
+    #     for i, label in enumerate(labels):
+    #         labels[i] = f"{label}: {self._count_events(hists, name, label):,}"
+        
+    #     title = f"Signal window: {self.analyse.thresholds['lo_sig_win_mevc']}" \
+    #             f"-{self.analyse.thresholds['hi_sig_win_mevc']} MeV/c"
+
+    #     self._format_axis(ax[2], labels, 
+    #         xlabel="Momentum [MeV/c]",
+    #         title=title,
+    #         ncols=2,
+    #         y_ext_factor=40,
+    #         loc="upper center"
+    #     ) 
+        
+    #     plt.tight_layout()
+    #     if out_path:
+    #         plt.savefig(out_path, dpi=300)
+    #         self.logger.log(f"\tWrote {out_path}", "success")
+    #     plt.show()
+
+    def plot_mom_windows(self, hists, out_path=None):
+        """Plot 2x2 momentum window histograms"""
+        fig, ax = plt.subplots(2, 2, figsize=(2*6.4, 2*4.8))
+        
+        # Full range 
         name = "mom_full"
         h1o_mom_wide = hists[name]
-        labels = self._plot_histogram(h1o_mom_wide, ax[0], 
+        labels = self._plot_histogram(h1o_mom_wide, ax[0,0], 
                                      list(h1o_mom_wide.axes["selection"]))
         
         # Add event counts to labels
         for i, label in enumerate(labels):
             labels[i] = f"{label}: {self._count_events(hists, name, label):,}"
         
-        self._format_axis(ax[0], labels, 
+        self._format_axis(ax[0,0], labels, 
                          xlabel="Momentum [MeV/c]",
                          ylabel="Tracks",
-                         title="Wide range: 50-200 MeV/c")
-    
+                         title="Inclusive window: 0-1000 MeV/c")
+
+        # Wide window 
+        name = "mom_wide"
+        h1o_mom_ext = hists[name]
+        labels = self._plot_histogram(h1o_mom_ext, ax[0,1],
+                                     list(h1o_mom_ext.axes["selection"]))
+        
+        for i, label in enumerate(labels):
+            labels[i] = f"{label}: {self._count_events(hists, name, label):,}"
+        
+        title = f"Wide window: {self.analyse.thresholds['lo_wide_win_mevc']}" \
+                f"-{self.analyse.thresholds['hi_wide_win_mevc']} MeV/c"
+        self._format_axis(ax[0,1], labels, 
+            xlabel="Momentum [MeV/c]",
+            ylabel="Tracks",
+            title=title,
+            ncols=2,
+            y_ext_factor=40,
+            loc="upper center"
+        ) 
+        
         # Extended window 
         name = "mom_ext"
         h1o_mom_ext = hists[name]
-        labels = self._plot_histogram(h1o_mom_ext, ax[1],
+        labels = self._plot_histogram(h1o_mom_ext, ax[1,0],
                                      list(h1o_mom_ext.axes["selection"]))
         
         for i, label in enumerate(labels):
@@ -325,8 +409,9 @@ class Draw():
         
         title = f"Extended window: {self.analyse.thresholds['lo_ext_win_mevc']}" \
                 f"-{self.analyse.thresholds['hi_ext_win_mevc']} MeV/c"
-        self._format_axis(ax[1], labels, 
+        self._format_axis(ax[1,0], labels, 
             xlabel="Momentum [MeV/c]",
+            ylabel="Tracks",
             title=title,
             ncols=2,
             y_ext_factor=40,
@@ -336,7 +421,7 @@ class Draw():
         # Signal window 
         name = "mom_sig"
         h1o_mom_sig = hists[name]
-        labels = self._plot_histogram(h1o_mom_sig, ax[2],
+        labels = self._plot_histogram(h1o_mom_sig, ax[1,1],
                                      list(h1o_mom_sig.axes["selection"]))
         
         for i, label in enumerate(labels):
@@ -345,8 +430,9 @@ class Draw():
         title = f"Signal window: {self.analyse.thresholds['lo_sig_win_mevc']}" \
                 f"-{self.analyse.thresholds['hi_sig_win_mevc']} MeV/c"
 
-        self._format_axis(ax[2], labels, 
+        self._format_axis(ax[1,1], labels, 
             xlabel="Momentum [MeV/c]",
+            ylabel="Tracks",
             title=title,
             ncols=2,
             y_ext_factor=40,
@@ -358,7 +444,7 @@ class Draw():
             plt.savefig(out_path, dpi=300)
             self.logger.log(f"\tWrote {out_path}", "success")
         plt.show()
-
+        
     def plot_crv_z(self, hists, out_path=None):
         """Plot CRV z-position histograms"""
         selection = ["All", "Preselect", "Select"]
@@ -500,7 +586,7 @@ class Draw():
             plt.savefig(out_path)
             self.logger.log(f"\tWrote {out_path}", "success")
         plt.show()
-
+        
     def plot_mom_summary(self, hists, out_path=None):
         
         fig, ax = plt.subplots(2, 2, figsize=(6.4*2, 2*4.8))        # Variable info for axis labels
@@ -547,7 +633,7 @@ class Draw():
             plt.savefig(out_path)
             self.logger.log(f"\tWrote {out_path}", "success")
         plt.show()
-
+        
     def plot_ml_summary(self, hists, out_path=None):
         "mom, pz, pdg, trk_per_event, t0, trkqual"""
          # pdg, pz, electron / event, t0, trkqual
@@ -557,10 +643,10 @@ class Draw():
             
             "mom_full": (r"Momentum [MeV/c]", "", "upper right", 1.0, 1), # xlabel, title, loc, y_ext_factor, ncols
             "mom_z": (r"$p_{z}$ [MeV/c]", "", "upper left", 1.0, 1), 
-            "pdg": (r"PDG", "", "upper left", 1.0, 1), 
+            "pdg": (r"PDG", "", "upper center", 1.0, 1), 
             "trk_per_event": (r"Tracks per event", "", "upper right", 1.0, 1),
             "t0": (r"Track $t_{0}$ [ns]", "", "upper center", 5, 2),
-            "trkqual": (r"Track quality", "", "upper right", 5, 2), 
+            "trkqual": (r"Track quality", "", "upper center", 5, 2), 
         }
         
         plot_positions = [

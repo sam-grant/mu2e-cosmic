@@ -48,6 +48,13 @@ class HistManager:
                 "param": "mom",
                 "filter": None
             },
+            "mom_wide": { # 1 MeV/c binning
+                "axis": hist.axis.Regular(115, self.thresholds["lo_wide_win_mevc"], 
+                                          self.thresholds["hi_wide_win_mevc"], 
+                                          name="mom", label="Momentum [MeV/c]"),
+                "param": "mom",
+                "filter": None
+            },
             "mom_ext": { # 0.5 MeV/c binning
                 "axis": hist.axis.Regular(20, self.thresholds["lo_ext_win_mevc"], 
                                         self.thresholds["hi_ext_win_mevc"], 
@@ -433,6 +440,10 @@ class HistManager:
         """
         if filter_name is None:
             return values
+
+        elif filter_name == "wide_window":
+            return values[(values > self.thresholds["lo_wide_win_mevc"]) & 
+                         (values < self.thresholds["hi_wide_win_mevc"])]
             
         elif filter_name == "ext_window":
             return values[(values > self.thresholds["lo_ext_win_mevc"]) & 
