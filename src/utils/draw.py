@@ -702,7 +702,7 @@ class Draw():
             ax.axvline(self.analyse.thresholds["lo_trkqual"], **line_kwargs)
             
         elif var_name == "nactive" and self.analyse.active_cuts["has_hits"]:
-            ax.axvline(self.analyse.thresholds["lo_nactive"], **line_kwargs) #  - 0.5
+            ax.axvline(self.analyse.thresholds["lo_nactive"], **line_kwargs) 
             
         elif var_name == "t0err" and self.analyse.active_cuts["within_t0err"]:
             ax.axvline(self.analyse.thresholds["hi_t0err"], **line_kwargs)
@@ -722,9 +722,7 @@ class Draw():
             if self.analyse.active_cuts["within_pitch_angle_hi"]:
                 ax.axvline(self.analyse.thresholds["hi_pitch_angle"], **line_kwargs)
 
-
         elif var_name == "dT":
             if self.analyse.active_cuts["unvetoed"]:
-                ax.axvline(self.analyse.thresholds["veto_dt_ns"], **line_kwargs)
-            if self.analyse.active_cuts["unvetoed"]:
-                ax.axvline(-self.analyse.thresholds["veto_dt_ns"], **line_kwargs)
+                ax.axvline(self.analyse.thresholds["lo_veto_dt_ns"], **line_kwargs)
+                ax.axvline(self.analyse.thresholds["hi_veto_dt_ns"], **line_kwargs)

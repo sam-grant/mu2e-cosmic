@@ -18,7 +18,8 @@ defaults:
         hi_t0err: 0.9 
         lo_pitch_angle: 0.5
         hi_pitch_angle: 1.0 
-        veto_dt_ns: 150
+        lo_veto_dt_ns: -150.0
+        hi_veto_dt_ns: 150.0
         lo_wide_win_mevc: 85
         hi_wide_win_mevc: 200
         lo_ext_win_mevc: 100

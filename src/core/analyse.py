@@ -467,39 +467,45 @@ class Analyse:
         # Alternative veto: -25 < dt < 100 ns 
         # Check if ANY track has mid segment within 150 ns of ANY coincidence 
         ###################################################
-        try:
-            # Calculate time differences
-            dT = self.get_trk_crv_dt(data["trkfit"][at_trk_mid], data["crv"])
-            # dT shape: [E, T, S, C] (Event, Track, Segment, Coincidence)
-            
-            # 1. Calculate the minimum absolute dT over all segments (S) and coincidences (C)
-            # for each track (T). ak.min will return 'None' for empty lists (S=0 or C=0).
-            # abs_dT_min = ak.min(abs(dT), axis=[2, 3])  # Shape [E, T] - includes 'None'
-            abs_dT_min = ak.min(ak.min(abs(dT), axis=3), axis=2)  # [E, T] - includes 'None'
-            
-            # 2. Convert 'None' values (where there was no CRV data for the track) to infinity.
-            # This is the track-level array you want to store and analyse.
-            data["abs_dT_min"] = ak.fill_none(abs_dT_min, np.inf)
-            
-            # 3. Define the unvetoed cut mask using the filled array.
-            # (np.inf >= threshold) is True, correctly marking tracks with no CRV data as unvetoed.
-            unvetoed = (data["abs_dT_min"] >= self.thresholds["veto_dt_ns"])
 
-            # Add cut 
+        try: 
+            # Calculate time differences: [E, T, S, C] (Event, Track, Segment, Coincidence)
+            dT = self.get_trk_crv_dt(data["trkfit"][at_trk_mid], data["crv"])
+
+            # Fill in None with inf, for cases where we have no coinc 
+            dT = ak.fill_none(dT, -np.inf)
+
+            # Store 
+            data["dT"] = dT 
+
+            # Time window cut 
+            unvetoed = (
+                (dT <= self.thresholds["lo_veto_dt_ns"]) 
+                | (dT >= self.thresholds["hi_veto_dt_ns"])
+            )
+
+            # Reduce to track level and fill none values again
+            # unvetoed = ak.any(ak.any(unvetoed, axis=3), axis=2)
+            unvetoed = ak.all(ak.all(ak.fill_none(unvetoed, True), axis=3), axis=2)
+            
+            # Add cut
+            description = (
+                f"No veto: {self.thresholds["lo_veto_dt_ns"]} < "
+                f"dT < {self.thresholds["hi_veto_dt_ns"]} ns"
+            )
             cut_manager.add_cut(
                 name="unvetoed",
-                description=f"No veto: |dt| >= {self.thresholds["veto_dt_ns"]} ns",
+                description=description, 
                 mask=unvetoed,
                 active=self.active_cuts["unvetoed"],
                 group="CRV"
             )
             # Store 
-            data["raw_unvetoed"] = unvetoed # "true" unvetoed involves combined cuts
+            data["unvetoed_raw"] = unvetoed # unvetoed proper depends on combination
             
         except Exception as e:
             self.logger.log(f"Error defining 'unvetoed': {e}", "error") 
             raise e
-
             
         ###################################################
         # Wide window 
