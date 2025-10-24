@@ -471,10 +471,8 @@ class Analyse:
         try: 
             # Calculate time differences: [E, T, S, C] (Event, Track, Segment, Coincidence)
             dT = self.get_trk_crv_dt(data["trkfit"][at_trk_mid], data["crv"])
-
-            # Fill in None with inf, for cases where we have no coinc 
+            # Fill in None with -inf, for cases where we have no coinc 
             dT = ak.fill_none(dT, -np.inf)
-
             # Store 
             data["dT"] = dT 
 
@@ -484,9 +482,10 @@ class Analyse:
                 | (dT >= self.thresholds["hi_veto_dt_ns"])
             )
 
-            # Reduce to track level and fill none values again
-            # unvetoed = ak.any(ak.any(unvetoed, axis=3), axis=2)
-            unvetoed = ak.all(ak.all(ak.fill_none(unvetoed, True), axis=3), axis=2)
+            # Fill None values with True for robustness
+            unvetoed = ak.fill_none(unvetoed, True)
+            # Reduce to track level 
+            unvetoed = ak.all(ak.all(unvetoed, axis=3), axis=2)
             
             # Add cut
             description = (
