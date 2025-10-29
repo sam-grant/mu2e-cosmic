@@ -113,6 +113,23 @@ class Analyse:
         # Return time differences
         return (trk_broadcast - coinc_broadcast)
     
+    def _append_array(self, data, arr, name):
+        """Helper to append arrays/masks to dev field 
+        This is useful for debugging and development
+        Must be trk or trkfit level
+        """
+        try:
+            if "dev" not in ak.fields(data):
+                # Initialise dev field - structure will be determined by first array added
+                data = ak.with_field(data, ak.zip({name: arr}, depth_limit=1), "dev")
+            else: 
+                # Add new field to existing 'dev' record
+                new_dev = ak.with_field(data.dev, arr, name)
+                data = ak.with_field(data, new_dev, "dev")
+            return data
+        except Exception as e:
+            self.logger.log(f"Error appending '{name}' to data array: {e}", "error") 
+            raise e
         
     def define_cuts(self, data, cut_manager):
         """Define analysis cuts
@@ -143,6 +160,7 @@ class Analyse:
             
             # Track level definition 
             has_trk_front = ak.any(at_trk_front, axis=-1)
+            
             # Add cut 
             cut_manager.add_cut(
                 name="has_trk_front", 
@@ -152,8 +170,10 @@ class Analyse:
                 group="Preselect"
             )
             # Append for debugging
-            data["at_trk_front"] = at_trk_front
-            data["has_trk_front"] = has_trk_front
+            data = self._append_array(data, at_trk_front, "at_trk_front")
+            data = self._append_array(data, has_trk_front, "has_trk_front")
+            # data["at_trk_front"] = at_trk_front
+            # data["has_trk_front"] = has_trk_front
         except Exception as e:
             self.logger.log(f"Error defining 'has_trk_front': {e}", "error") 
             raise e
@@ -173,7 +193,8 @@ class Analyse:
                 group="Preselect"
             )
             # Append mask for debugging
-            data["is_reco_electron"] = is_reco_electron
+            data = self._append_array(data, is_reco_electron, "is_reco_electron")
+            # data["is_reco_electron"] = is_reco_electron
         except Exception as e:
             self.logger.log(f"Error defining 'is_reco_electron': {e}", "error") 
             raise e
@@ -197,8 +218,10 @@ class Analyse:
                 group="Preselect"
             )
             # Append for debugging 
-            data["one_reco_electron"] = one_reco_electron
-            data["one_reco_electron_per_event"] = one_reco_electron_per_event
+            data = self._append_array(data, one_reco_electron, "one_reco_electron")
+            data = self._append_array(data, one_reco_electron_per_event, "one_reco_electron_per_event")
+            # data["one_reco_electron"] = one_reco_electron
+            # data["one_reco_electron_per_event"] = one_reco_electron_per_event
         except Exception as e:
             self.logger.log(f"Error defining 'one_reco_electron': {e}", "error") 
             raise e
@@ -224,7 +247,8 @@ class Analyse:
                 group="Preselect"
             )
             # Append for debugging
-            data["is_downstream"] = is_downstream
+            data = self._append_array(data, is_downstream, "is_downstream")
+            # data["is_downstream"] = is_downstream
         except Exception as e:
             self.logger.log(f"Error defining 'is_downstream': {e}", "error") 
             raise e
@@ -247,7 +271,8 @@ class Analyse:
                 group="Preselect"
             )
             # Append for debugging
-            data["is_truth_electron"] = has_trk_parent_electron
+            data = self._append_array(data, has_trk_parent_electron, "has_trk_parent_electron")
+            # data["has_trk_parent_electron"] = has_trk_parent_electron
         except Exception as e:
             self.logger.log(f"Error defining 'is_truth_electron': {e}", "error") 
             raise e 
@@ -267,7 +292,8 @@ class Analyse:
                 group="Tracker"
             )
             # Append for debugging
-            data["good_trkqual"] = good_trkqual
+            data = self._append_array(data, good_trkqual, "good_trkqual")
+            # data["good_trkqual"] = good_trkqual
         except Exception as e:
             self.logger.log(f"Error defining 'good_trkqual': {e}", "error") 
             raise e
@@ -293,7 +319,8 @@ class Analyse:
                     group="Tracker"
                 )
                 # Append for debugging
-                data["within_t0"] = within_t0
+                data = self._append_array(data, within_t0, "within_t0")
+                # data["within_t0"] = within_t0
         except Exception as e:
             self.logger.log(f"Error defining 'within_t0': {e}", "error") 
             raise e
@@ -318,7 +345,8 @@ class Analyse:
                 group="Tracker"
             )
             # Append for debugging
-            data["within_t0err"] = within_t0err
+            data = self._append_array(data, within_t0err, "within_t0err")
+            # data["within_t0err"] = within_t0err
         except Exception as e:
             self.logger.log(f"Error defining 'within_t0err': {e}", "error") 
             raise e
@@ -340,7 +368,8 @@ class Analyse:
                 group="Tracker"
             )
             # Append for debugging
-            data["has_hits"] = has_hits
+            data = self._append_array(data, has_hits, "has_hits")
+            # data["has_hits"] = has_hits
         except Exception as e:
             self.logger.log(f"Error defining 'has_hits': {e}", "error") 
             raise e
@@ -364,7 +393,8 @@ class Analyse:
                 group="Tracker"
             )
             # Append for debugging
-            data["within_d0"] = within_d0
+            data = self._append_array(data, within_d0, "within_d0")
+            # data["within_d0"] = within_d0
         except Exception as e:
             self.logger.log(f"Error defining 'within_d0': {e}", "error") 
             raise e
@@ -388,8 +418,10 @@ class Analyse:
                 group="Tracker"
             )
             # Append 
-            data["pitch_angle"] = pitch_angle
-            data["within_pitch_angle_lo"] = within_pitch_angle_lo
+            data = self._append_array(data, pitch_angle, "pitch_angle")
+            data = self._append_array(data, within_pitch_angle_lo, "within_pitch_angle_lo")
+            # data["pitch_angle"] = pitch_angle
+            # data["within_pitch_angle_lo"] = within_pitch_angle_lo
         except Exception as e:
             self.logger.log(f"Error defining 'within_pitch_angle_lo': {e}", "error") 
             raise e
@@ -413,7 +445,8 @@ class Analyse:
                 group="Tracker"
             )
             # Append 
-            data["within_pitch_angle_hi"] = within_pitch_angle_hi
+            data = self._append_array(data, within_pitch_angle_hi, "within_pitch_angle_hi")
+            # data["within_pitch_angle_hi"] = within_pitch_angle_hi
         except Exception as e:
             self.logger.log(f"Error defining 'within_pitch_angle_hi': {e}", "error") 
             raise e
@@ -435,7 +468,8 @@ class Analyse:
                 group="Tracker"
             )
             # Append for debugging
-            data["within_lhr_max_lo"] = within_lhr_max_lo
+            data = self._append_array(data, within_lhr_max_lo, "within_lhr_max_lo")
+            # data["within_lhr_max_lo"] = within_lhr_max_lo
         except Exception as e:
             self.logger.log(f"Error defining 'within_lhr_max_lo': {e}", "error") 
             raise e
@@ -457,50 +491,69 @@ class Analyse:
                 group="Tracker"
             )
             # Append for debugging
-            data["within_lhr_max_hi"] = within_lhr_max_hi
+            data = self._append_array(data, within_lhr_max_hi, "within_lhr_max_hi")
+            # data["within_lhr_max_hi"] = within_lhr_max_hi
         except Exception as e:
             self.logger.log(f"Error defining 'within_lhr_max_hi': {e}", "error") 
             raise e
 
         ###################################################
-        # CRV veto: |dt| < 150 ns 
-        # Alternative veto: -25 < dt < 100 ns 
-        # Check if ANY track has mid segment within 150 ns of ANY coincidence 
+        # CRV veto: trk/crv time window cut  
+        # Check if ANY track has mid segment within time of ANY coincidence 
         ###################################################
 
         try: 
             # Calculate time differences: [E, T, S, C] (Event, Track, Segment, Coincidence)
             dT = self.get_trk_crv_dt(data["trkfit"][at_trk_mid], data["crv"])
-            # Fill in None with -inf, for cases where we have no coinc 
-            dT = ak.fill_none(dT, -np.inf)
-            # Store 
-            data["dT"] = dT 
+            # Flatten to over coindidences (3) and segments (2) 
+            dT = ak.flatten(ak.flatten(dT, axis=3), axis=2) # [E, T]
 
             # Time window cut 
-            unvetoed = (
-                (dT <= self.thresholds["lo_veto_dt_ns"]) 
-                | (dT >= self.thresholds["hi_veto_dt_ns"])
+            veto_condition = (
+                (dT > self.thresholds["lo_veto_dt_ns"])
+                & (dT < self.thresholds["hi_veto_dt_ns"])
             )
 
-            # Fill None values with True for robustness
-            unvetoed = ak.fill_none(unvetoed, True)
-            # Reduce to track level 
-            unvetoed = ak.all(ak.all(unvetoed, axis=3), axis=2)
+            # Event level veto 
+            # A track is vetoed if *any* coincidence lies within the window
+            vetoed = ak.any(veto_condition, axis=-1)
+            unvetoed = ~vetoed # invert
+            unvetoed_trk = unvetoed[:, None] # trk-level mask
             
             # Add cut
             description = (
-                f"No veto: {self.thresholds["lo_veto_dt_ns"]} < "
-                f"dT < {self.thresholds["hi_veto_dt_ns"]} ns"
+                f"No veto: {self.thresholds['lo_veto_dt_ns']} < "
+                f"dT < {self.thresholds['hi_veto_dt_ns']} ns"
             )
             cut_manager.add_cut(
                 name="unvetoed",
                 description=description, 
-                mask=unvetoed,
+                mask=unvetoed, # _trk,
                 active=self.active_cuts["unvetoed"],
                 group="CRV"
             )
+
+            # Define vetoed and unvetoed dT for analysis 
+            # Use ak.mask to preserve structure 
+            dT_vetoed = ak.mask(dT, veto_condition)
+            dT_unvetoed = ak.mask(dT, ~veto_condition) 
+
+            # Find minimum "leading" dT 
+            # Note that min dT will not always represent the vetoed dT 
+            min_dT = dT[ak.argmin(abs(dT), axis=-1, keepdims=True)]
+            min_dT_vetoed = dT_vetoed[ak.argmin(abs(dT_vetoed), axis=-1, keepdims=True)]
+            min_dT_unvetoed = dT_unvetoed[ak.argmin(abs(dT_unvetoed), axis=-1, keepdims=True)]
+
             # Store 
-            data["unvetoed_raw"] = unvetoed # unvetoed proper depends on combination
+            data = self._append_array(data, dT, "dT") 
+            data = self._append_array(data, veto_condition, "veto_condition")
+            data = self._append_array(data, vetoed, "vetoed") 
+            data = self._append_array(data, unvetoed, "unvetoed")
+            data = self._append_array(data, dT_vetoed, "dT_vetoed") 
+            data = self._append_array(data, dT_unvetoed, "dT_unvetoed") 
+            data = self._append_array(data, min_dT, "min_dT") 
+            data = self._append_array(data, min_dT_vetoed, "min_dT_vetoed") 
+            data = self._append_array(data, min_dT_unvetoed, "min_dT_unvetoed") 
             
         except Exception as e:
             self.logger.log(f"Error defining 'unvetoed': {e}", "error") 
@@ -512,7 +565,7 @@ class Analyse:
         try:
             # Get momentum magnitude 
             mom = self.vector.get_mag(data["trkfit"]["trksegs"], "mom") 
-            data["mom_mag"] = mom # store at this stage (array written to "events" before momentum cuts)
+            data["mom_mag"] = mom # store at this stage (array written to "data" before momentum cuts)
             # Track segments level definition 
             within_wide_win = (mom > self.thresholds["lo_wide_win_mevc"]) & (mom < self.thresholds["hi_wide_win_mevc"])
             # Track level definition
@@ -527,7 +580,7 @@ class Analyse:
                 group="Momentum"
             )
             # Append 
-            data["within_wide_win"] = within_wide_win
+            data = self._append_array(data, within_wide_win, "within_wide_win") 
         except Exception as e:
             self.logger.log(f"Error defining 'within_wide_win': {e}", "error") 
             raise e
@@ -552,7 +605,7 @@ class Analyse:
                 group="Momentum"
             )
             # Append 
-            data["within_ext_win"] = within_ext_win
+            data = self._append_array(data, within_ext_win, "within_ext_win")
         except Exception as e:
             self.logger.log(f"Error defining 'within_ext_win': {e}", "error") 
             raise e
@@ -577,13 +630,15 @@ class Analyse:
                 group="Momentum"
             )
             # Append 
-            data["within_sig_win"] = within_sig_win
+            data = self._append_array(data, within_sig_win, "within_sig_win")
         except Exception as e:
             self.logger.log(f"Error defining 'within_sig_win': {e}", "error") 
             raise e
 
         # Done 
         self.logger.log("All cuts defined", "success")
+
+        return data # to pick up new fields
         
     def apply_cuts(self, data, cut_manager, group=None, active_only=True):
 
@@ -616,6 +671,11 @@ class Analyse:
             data_cut["trk"] = data_cut["trk"][trk_mask]
             data_cut["trkfit"] = data_cut["trkfit"][trk_mask]
             data_cut["trkmc"] = data_cut["trkmc"][trk_mask]
+
+            # ##########
+            # this would be nice, but too complicated
+            # data_cut["dev"] = data_cut["dev"][trk_mask]
+            # ##########
             
             # Then clean up events with no tracks after cuts
             self.logger.log(f"Cleaning up events with no tracks after cuts", "max") 
@@ -662,7 +722,7 @@ class Analyse:
             
             # Define cuts
             self.logger.log(f"Defining cuts", "max")
-            self.define_cuts(data, cut_manager)
+            data = self.define_cuts(data, cut_manager)
 
             # Toggle cuts
             if cuts_to_toggle: 
@@ -693,7 +753,11 @@ class Analyse:
                 "Momentum": False
             })  
             # cut_manager.save_state("preselect")
-            data["preselect"] = cut_manager.combine_cuts(active_only=True) # only for debugging
+            data = self._append_array(
+                data, 
+                cut_manager.combine_cuts(active_only=True), 
+                "preselect"
+            )
             data_preselect = self.apply_cuts(data, cut_manager)
 
             # Apply selection cuts (without veto & momentum windows)
@@ -709,7 +773,11 @@ class Analyse:
             # Print active cuts
             cut_manager.list_groups()
             # Save Select selection
-            data["select"] = cut_manager.combine_cuts(active_only=True)
+            data = self._append_array(
+                data, 
+                cut_manager.combine_cuts(active_only=True), 
+                "select"
+            )
             data_CE = self.apply_cuts(data, cut_manager)
 
             # Apply CRV cuts
