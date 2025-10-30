@@ -262,9 +262,9 @@ class PostProcess():
                 if len(data) == 0:
                     continue
     
-                # Get tracker entrance times
-                trk_front = self.selector.select_surface(data["trkfit"], surface_name="TT_Front")
-                track_time = data["trkfit"]["trksegs"]["time"][trk_front]
+                # Get tracker middle times
+                trk_mid = self.selector.select_surface(data["trkfit"], surface_name="TT_Mid")
+                track_time = data["trkfit"]["trksegs"]["time"][trk_mid]
                 # Get coinc entrance times
                 coinc_time = data["crv"]["crvcoincs.time"]
                 
