@@ -44,7 +44,8 @@ class CosmicProcessor(Skeleton):
         max_workers = 50,
         use_processes = True,
         verbosity = 1,
-        worker_verbosity = 0
+        worker_verbosity = 0,
+        event_subrun = None
         
     ):
         """Initialise your processor with specific configuration
@@ -83,7 +84,7 @@ class CosmicProcessor(Skeleton):
         # EventNtuple branches
         self.branches = { 
             "evt" : ["run", "subrun", "event"],
-            "crv" : ["crvcoincs.time", "crvcoincs.nHits", "crvcoincs.pos.fCoordinates.fZ"],
+            "crv" : ["crvcoincs.time", "crvcoincs.timeStart", "crvcoincs.timeEnd", "crvcoincs.nHits", "crvcoincs.pos.fCoordinates.fZ"],
             "trk" : ["trk.nactive", "trk.pdg", "trkqual.valid", "trkqual.result"],
             "trkfit" : ["trksegs", "trksegpars_lh"],
             "trkmc" : ["trkmcsim"]
@@ -102,7 +103,8 @@ class CosmicProcessor(Skeleton):
         self.analyse = Analyse(
             cutset_name=cutset_name,
             on_spill=self.on_spill,
-            verbosity=self.worker_verbosity # Reduce verbosity for workers
+            verbosity=self.worker_verbosity, # Reduce verbosity for workers
+            event_subrun=event_subrun,
         )
 
         self.logger = Logger(
