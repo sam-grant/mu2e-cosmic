@@ -54,24 +54,25 @@ cutsets:
     ########################
     # Analysis cut sets
     ########################
-#     alpha:
-#         description:
-#             "baseline cutset with loop helix parameters"      
-#             
-#     beta:
-#         description:
-#             "alpha with no R_max cut"
-#         active:
-#             within_lhr_max_hi: false
-#             within_lhr_max_lo: false
-#             
-#     gamma:
-#         description:
-#             "Loose cuts (alpha with no R_max and trkqual > 0.2)"
-#         active:
-#             within_lhr_max_hi: false
-#             within_lhr_max_lo: false
-#             lo_trkqual: 0.2
+    
+    alpha:
+        description:
+            "baseline cutset with loop helix parameters"      
+            
+    beta:
+        description:
+            "alpha with no R_max cut"
+        active:
+            within_lhr_max_hi: false
+            within_lhr_max_lo: false
+            
+    gamma:
+        description:
+            "Loose cuts (alpha with no R_max and trkqual > 0.2)"
+        active:
+            within_lhr_max_hi: false
+            within_lhr_max_lo: false
+            lo_trkqual: 0.2
 
     SU2020a:
         description:
@@ -141,4 +142,13 @@ cutsets:
             within_wide_win: false
             within_ext_win: false
             within_sig_win: false
+
+    dev:
+        description:
+            "CRV developement cuts"
+        active:
+            within_lhr_max_lo: false
+        thresholds:
+            lo_trkqual: 0.2
+            lo_veto_dt_ns: -25.0
             
