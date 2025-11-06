@@ -24,7 +24,7 @@ def run(defname, tag, feature_set, run="a"):
         defname=defname,
         # file_name="/exp/mu2e/data/users/sgrant/mu2e-cosmic/files/nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_05_00.001202_00056492.root",
         feature_set=feature_set,
-        use_remote=True
+        use_remote=True # False, # False # True # False # True
     ) 
     results = process.execute()
 
@@ -40,12 +40,14 @@ def main():
         # },
         # {
         #     "defname": "nts.mu2e.CeEndpointMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root",
-        #     "tag": "CRY_onspill-LH_aw",
+        #     "tag": "sig_mix_onspill-LH_aw",
+        #     "feature_set": "crv"
         # },
-        # {
-        #     defname: "nts.mu2e.CeEndpointMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root",
-        #     tag: "sig_mix2BB_onspill-LH_aw",
-        # },
+        {
+            "defname": "nts.mu2e.CosmicCRYSignalAllOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.root",
+            "tag": "CRY_onspill-LH_aw",
+            "feature_set": "crv",
+        },
         {
             "defname": "nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root",
             "tag": "CRY_mix2BB_onspill-LH_aw",
