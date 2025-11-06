@@ -58,7 +58,7 @@ class MLProcessor(Skeleton):
         groups_to_toggle = None,
         use_remote = True,
         location = "disk",
-        max_workers = 80,
+        max_workers = 50,
         use_processes = True,
         verbosity = 1,
         worker_verbosity = 0
@@ -227,6 +227,9 @@ class MLProcessor(Skeleton):
                 processed_data["maxr"] = data_cut["trkfit"]["trksegpars_lh"]["maxr"][at_trk_front]
 
             elif self.feature_set == "crv":
+
+                # Note that you MUST have has_trk_mid switched on for this 
+                
                 # Event parameters (nice to have)
                 processed_data["event"] = data_cut["evt"]["event"]
                 processed_data["subrun"] = data_cut["evt"]["subrun"]
@@ -243,11 +246,11 @@ class MLProcessor(Skeleton):
                 processed_data["d0"] = data_cut["trkfit"]["trksegpars_lh"]["d0"][at_trk_front]
                 processed_data["tanDip"] = self.analyse.get_pitch_angle(data_cut["trkfit"][at_trk_front])
                 processed_data["maxr"] = data_cut["trkfit"]["trksegpars_lh"]["maxr"][at_trk_front]
-                
+
                 # Broadcast all features to match CRV coincidence shape [event, coincidence]
                 # Get target shape from any CRV array
                 coinc_shape = ak.ones_like(processed_data["crv_z"])
-                
+
                 # Broadcast event-level parameters: [event] -> [event, coincidence]
                 for key in ["event", "subrun"]:
                     processed_data[key] = processed_data[key][:, None] * coinc_shape
@@ -255,9 +258,12 @@ class MLProcessor(Skeleton):
                 # Broadcast track-level parameters: [event, track, segment] -> [event, coincidence]
                 # Flatten segments, broadcast to coincidences, then flatten again
                 for key in ["t0", "d0", "tanDip", "maxr"]:
-                    arr = ak.flatten(processed_data[key], axis=-1)  # [event, track, segment] -> [event, track]
+                    arr = processed_data[key]
+                    arr = ak.flatten(arr, axis=-1)  # [event, track, segment] -> [event, track]
                     arr = arr[:, None] * coinc_shape  # [event, track] -> [event, track, coincidence]
-                    processed_data[key] = ak.flatten(arr, axis=-1)  # [event, track, coincidence] -> [event, coincidence]
+                    arr = ak.flatten(arr, axis=-1)  # [event, track, coincidence] -> [event, coincidence] 
+                    # Override 
+                    processed_data[key] = arr
         
             else: 
                 self.logger.log(f"Feature set '{self.feature_set}' invalid: {e}", "error")  
@@ -345,6 +351,9 @@ class MLProcessor(Skeleton):
         
         if len(set(lengths.values())) > 1:
             self.logger.log(f"Length mismatch detected: {lengths}", "warning")
+            # Pad and retry 
+            # postprocess(results)
+            print(postprocessed["events"].type)
 
         else:
             self.logger.log(f"All field lengths match: {lengths}", "success")
