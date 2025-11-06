@@ -46,7 +46,8 @@ class MLProcessor(Skeleton):
         cutset_name = "MLPreprocess",
         branches = { 
             "evt" : ["run", "subrun", "event"],
-            "crv" : ["crvcoincs.time", "crvcoincs.PEs", "crvcoincs.nHits", "crvcoincs.pos.fCoordinates.fZ"],
+            "crv" : ["crvcoincs.time", "crvcoincs.PEs", "crvcoincs.nHits", 
+                     "crvcoincs.pos.fCoordinates.fX", "crvcoincs.pos.fCoordinates.fY", "crvcoincs.pos.fCoordinates.fZ"],
             "trk" : ["trk.nactive", "trk.pdg", "trkqual.valid", "trkqual.result"],
             "trkfit" : ["trksegs", "trksegpars_lh"],
             "trkmc" : ["trkmcsim"]
@@ -57,7 +58,7 @@ class MLProcessor(Skeleton):
         groups_to_toggle = None,
         use_remote = True,
         location = "disk",
-        max_workers = 50,
+        max_workers = 80,
         use_processes = True,
         verbosity = 1,
         worker_verbosity = 0
@@ -99,7 +100,7 @@ class MLProcessor(Skeleton):
         # EventNtuple branches
         self.branches = { 
             "evt" : ["run", "subrun", "event"],
-            "crv" : ["crvcoincs.time", "crvcoincs.nHits", "crvcoincs.pos.fCoordinates.fZ"],
+            "crv" : ["crvcoincs.time", "crvcoincs.PEs", "crvcoincs.nHits", "crvcoincs.pos.fCoordinates.fZ"],
             "trk" : ["trk.nactive", "trk.pdg", "trkqual.valid", "trkqual.result"],
             "trkfit" : ["trksegs", "trksegpars_lh"],
             "trkmc" : ["trkmcsim"]
@@ -173,7 +174,7 @@ class MLProcessor(Skeleton):
 
         # Confirm init
         self.logger.log(f"Initialised with:{init_summary}", "success")
-
+        
     def _process_array(self, data, file_id):
         """Helper to execute processing on array
 
@@ -190,7 +191,7 @@ class MLProcessor(Skeleton):
         try:
             # Define cuts
             self.logger.log(f"Defining cuts", "max")
-            self.analyse.define_cuts(data, self.cut_manager)
+            data = self.analyse.define_cuts(data, self.cut_manager)
 
             # Create main cut flow
             self.logger.log("Creating cut flow", "max")
@@ -218,22 +219,46 @@ class MLProcessor(Skeleton):
             processed_data = {}
 
             if self.feature_set == "trk":
-                # Selecting different surfaces creates some issues with mismatched lengths
                 # Tracker surfaces on trkfit level
                 at_trk_front = self.selector.select_surface(data_cut["trkfit"], surface_name="TT_Front") 
-                # at_trk_mid = self.selector.select_surface(data_cut["trkfit"], surface_name="TT_Mid") 
-
                 # Select
-                processed_data["nactive"] = data_cut["trk"]["trk.nactive"]
-                processed_data["t0err"] = data_cut["trkfit"]["trksegpars_lh"]["t0err"][at_trk_front]
                 processed_data["d0"] = data_cut["trkfit"]["trksegpars_lh"]["d0"][at_trk_front]
                 processed_data["tanDip"] = self.analyse.get_pitch_angle(data_cut["trkfit"][at_trk_front])
                 processed_data["maxr"] = data_cut["trkfit"]["trksegpars_lh"]["maxr"][at_trk_front]
 
             elif self.feature_set == "crv":
-                #TODO
-                pass
+                # Event parameters (nice to have)
+                processed_data["event"] = data_cut["evt"]["event"]
+                processed_data["subrun"] = data_cut["evt"]["subrun"]
                 
+                # CRV parameters
+                processed_data["crv_z"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fZ"]
+                processed_data["crv_PEs"] = data_cut["crv"]["crvcoincs.PEs"]
+                processed_data["dT"] = data_cut["dev"]["dT"]
+            
+                # Tracker parameters
+                at_trk_front = self.selector.select_surface(data_cut["trkfit"], surface_name="TT_Front") 
+                at_trk_mid = self.selector.select_surface(data_cut["trkfit"], surface_name="TT_Mid")
+                processed_data["t0"] = data_cut["trkfit"]["trksegs"]["time"][at_trk_mid]
+                processed_data["d0"] = data_cut["trkfit"]["trksegpars_lh"]["d0"][at_trk_front]
+                processed_data["tanDip"] = self.analyse.get_pitch_angle(data_cut["trkfit"][at_trk_front])
+                processed_data["maxr"] = data_cut["trkfit"]["trksegpars_lh"]["maxr"][at_trk_front]
+                
+                # Broadcast all features to match CRV coincidence shape [event, coincidence]
+                # Get target shape from any CRV array
+                coinc_shape = ak.ones_like(processed_data["crv_z"])
+                
+                # Broadcast event-level parameters: [event] -> [event, coincidence]
+                for key in ["event", "subrun"]:
+                    processed_data[key] = processed_data[key][:, None] * coinc_shape
+                
+                # Broadcast track-level parameters: [event, track, segment] -> [event, coincidence]
+                # Flatten segments, broadcast to coincidences, then flatten again
+                for key in ["t0", "d0", "tanDip", "maxr"]:
+                    arr = ak.flatten(processed_data[key], axis=-1)  # [event, track, segment] -> [event, track]
+                    arr = arr[:, None] * coinc_shape  # [event, track] -> [event, track, coincidence]
+                    processed_data[key] = ak.flatten(arr, axis=-1)  # [event, track, coincidence] -> [event, coincidence]
+        
             else: 
                 self.logger.log(f"Feature set '{self.feature_set}' invalid: {e}", "error")  
                 raise
@@ -321,19 +346,6 @@ class MLProcessor(Skeleton):
         if len(set(lengths.values())) > 1:
             self.logger.log(f"Length mismatch detected: {lengths}", "warning")
 
-            # yeh the problem with padding is that it screws up the indexing
-            # not really what we want to be doing
-            # for field, length in lengths.items():
-            #     if length < max_length:
-            #         diff = max_length - length
-            #         self.logger.log(f"Padding field '{field}' with {diff} NaN values", "warning")
-                    
-            #         # Pad with NaN
-            #         padding = np.full(diff, np.nan, dtype=flattened_events[field].dtype)
-            #         flattened_events[field] = np.concatenate([flattened_events[field], padding])
-            #         lengths[field] = len(flattened_events[field])
-            
-            # self.logger.log(f"After padding, all lengths: {max_length}", "success")
         else:
             self.logger.log(f"All field lengths match: {lengths}", "success")
         
