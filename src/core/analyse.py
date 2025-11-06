@@ -166,13 +166,17 @@ class Analyse:
         ###################################################
         # Tracks intersect tracker entrance
         ###################################################
-        try:
+        try: 
             # Track segments level definition
             at_trk_front = self.selector.select_surface(data["trkfit"], surface_name="TT_Front") 
             at_trk_mid = self.selector.select_surface(data["trkfit"], surface_name="TT_Mid")
             at_trk_back = self.selector.select_surface(data["trkfit"], surface_name="TT_Back")
             in_trk = (at_trk_front | at_trk_mid | at_trk_back)
+        except Exception as e:
+            self.logger.log(f"Error defining tracker surface masks: {e}", "error") 
+            raise e
             
+        try:
             # Track level definition 
             has_trk_front = ak.any(at_trk_front, axis=-1)
             
@@ -193,6 +197,27 @@ class Analyse:
             self.logger.log(f"Error defining 'has_trk_front' cut: {e}", "error") 
             raise e
 
+        try:
+            # Track level definition 
+            has_trk_mid = ak.any(at_trk_mid, axis=-1)
+            
+            # Add cut 
+            cut_manager.add_cut(
+                name="has_trk_mid", 
+                description="Tracks intersect tracker middle", 
+                mask=has_trk_mid,
+                active=self.active_cuts["has_trk_mid"],
+                group="Preselect"
+            )
+            # Append for debugging
+            data = self._append_array(data, at_trk_mid, "at_trk_front")
+            data = self._append_array(data, has_trk_mid, "has_trk_front")
+            # data["at_trk_front"] = at_trk_front
+            # data["has_trk_front"] = has_trk_front
+        except Exception as e:
+            self.logger.log(f"Error defining 'has_trk_mid' cut: {e}", "error") 
+            raise e
+            
         ###################################################
         # Select electron track fit hypothesis  
         ###################################################
@@ -327,7 +352,7 @@ class Analyse:
                 # Add cut 
                 cut_manager.add_cut( 
                     name="within_t0",
-                    description=f"t0 at tracker entrance ({self.thresholds["lo_t0_ns"]}"\
+                    description=f"t0 at tracker mid ({self.thresholds["lo_t0_ns"]}"\
                                 f" < t_0 < {self.thresholds["hi_t0_ns"]} ns)",
                     mask=within_t0,
                     active=self.active_cuts["within_t0"],
@@ -579,37 +604,6 @@ class Analyse:
             self.logger.log(f"Error defining 'unvetoed' cut: {e}", "error") 
             raise e
 
-        # try: # OLD METHOD
-        #     # Calculate time differences
-        #     dT = self.get_trk_crv_dt(data["trkfit"][at_trk_mid], data["crv"])
-        #     # dT shape: [E, T, S, C] (Event, Track, Segment, Coincidence)
-            
-        #     # 1. Calculate the minimum absolute dT over all segments (S) and coincidences (C)
-        #     # for each track (T). ak.min will return 'None' for empty lists (S=0 or C=0).
-        #     # abs_dT_min = ak.min(abs(dT), axis=[2, 3])  # Shape [E, T] - includes 'None'
-        #     abs_dT_min = ak.min(ak.min(abs(dT), axis=3), axis=2)  # [E, T] - includes 'None'
-            
-        #     # 2. Convert 'None' values (where there was no CRV data for the track) to infinity.
-        #     # This is the track-level array you want to store and analyse.
-        #     abs_dT_min = ak.fill_none(abs_dT_min, np.inf)
-            
-        #     # 3. Define the unvetoed cut mask using the filled array.
-        #     # (np.inf >= threshold) is True, correctly marking tracks with no CRV data as unvetoed.
-        #     unvetoed = (abs_dT_min >= 150) 
-
-        #     # Add cut 
-        #     cut_manager.add_cut(
-        #         name="unvetoed",
-        #         description=f"No veto: |dt| >= 150 ns",
-        #         mask=unvetoed,
-        #         active=self.active_cuts["unvetoed"],
-        #         group="CRV"
-        #     )
-
-        # except Exception as e:
-        #     self.logger.log(f"Error defining 'unvetoed': {e}", "error") 
-        #     raise e
- 
         ###################################################
         # Wide window 
         ###################################################
