@@ -34,15 +34,16 @@ def run(defname, tag, feature_set, run="a"):
 def main(): 
 
     configs = [
-        # {
-        #     defname: "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.root",
-        #     tag: "sig_onspill-LH_aw",
-        # },
-        # {
-        #     "defname": "nts.mu2e.CeEndpointMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root",
-        #     "tag": "sig_mix_onspill-LH_aw",
-        #     "feature_set": "crv"
-        # },
+        {
+            "defname" : "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.root",
+            "tag": "sig_onspill-LH_aw",
+            "feature_set": "crv"
+        },
+        {
+            "defname": "nts.mu2e.CeEndpointMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root",
+            "tag": "sig_mix_onspill-LH_aw",
+            "feature_set": "crv"
+        },
         {
             "defname": "nts.mu2e.CosmicCRYSignalAllOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.root",
             "tag": "CRY_onspill-LH_aw",
