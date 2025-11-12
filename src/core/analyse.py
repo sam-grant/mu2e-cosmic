@@ -71,7 +71,8 @@ class Analyse:
         pvec = self.vector.get_vector(trkfit["trksegs"], "mom")
         pt = np.sqrt(pvec["x"]**2 + pvec["y"]**2) 
         pz = trkfit["trksegs"]["mom"]["fCoordinates"]["fZ"]
-        return pz/pt 
+        # Avoid division by zero
+        return ak.where(pt != 0, pz/pt, 0) 
 
     def get_trk_crv_dt(self, trkfit, crv):
         """Helper to get trk/crv time difference (dT).
@@ -210,10 +211,10 @@ class Analyse:
                 group="Preselect"
             )
             # Append for debugging
-            data = self._append_array(data, at_trk_mid, "at_trk_front")
-            data = self._append_array(data, has_trk_mid, "has_trk_front")
-            # data["at_trk_front"] = at_trk_front
-            # data["has_trk_front"] = has_trk_front
+            data = self._append_array(data, at_trk_mid, "at_trk_mid")
+            data = self._append_array(data, has_trk_mid, "has_trk_mid")
+            # data["at_trk_mid"] = at_trk_mid
+            # data["has_trk_mid"] = has_trk_mid
         except Exception as e:
             self.logger.log(f"Error defining 'has_trk_mid' cut: {e}", "error") 
             raise e
@@ -276,18 +277,28 @@ class Analyse:
             # "all" method handles reflections 
             # is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1) 
             is_downstream = ak.all(~in_trk | is_downstream, axis=-1) 
+
+            # Updated definition: all downstream
+            # should mean that NO downstream tracks are reconstructed 
+            # Event-level definition
+            all_downstream_per_event = ak.all(is_downstream, axis=-1)
+            # Broadcast to track level
+            all_downstream, _ = ak.broadcast_arrays(all_downstream_per_event, is_downstream)
+
             # "any" method does not handle reflections, but may be closer to C++
             # is_downstream = ak.any(at_trk_front & is_downstream, axis=-1) 
             # Add cut 
             cut_manager.add_cut(
                 name="is_downstream",
-                description="Downstream tracks (p_z > 0 at tracker entrance)",
-                mask=is_downstream,
+                description="All downstream tracks (p_z > 0 at tracker entrance)",
+                mask=all_downstream,
                 active=self.active_cuts["is_downstream"],
                 group="Preselect"
             )
             # Append for debugging
             data = self._append_array(data, is_downstream, "is_downstream")
+            data = self._append_array(data, all_downstream, "all_downstream")
+            data = self._append_array(data, all_downstream_per_event, "all_downstream_per_event")
             # data["is_downstream"] = is_downstream
         except Exception as e:
             self.logger.log(f"Error defining 'is_downstream' cut: {e}", "error") 
@@ -610,11 +621,12 @@ class Analyse:
         try:
             # Get momentum magnitude 
             mom = self.vector.get_mag(data["trkfit"]["trksegs"], "mom") 
-            data["mom_mag"] = mom # store at this stage (array written to "data" before momentum cuts)
             # Track segments level definition 
             within_wide_win = (mom > self.thresholds["lo_wide_win_mevc"]) & (mom < self.thresholds["hi_wide_win_mevc"])
             # Track level definition
             within_wide_win = ak.all(~at_trk_front | within_wide_win, axis=-1)
+            # Store momentum magnitude at this stage (array written to "data" before momentum cuts)
+            data = self._append_array(data, mom, "mom_mag")
             # Add cut 
             cut_manager.add_cut(
                 name="within_wide_win",
@@ -843,7 +855,11 @@ class Analyse:
                 # Turn veto on
                 cut_manager.toggle_group({"CRV": True}) 
                 # cut_manager.toggle_cut({"unvetoed": True}) # same thing
-                data["unvetoed"] = cut_manager.combine_cuts(active_only=True)
+                data = self._append_array(
+                    data, 
+                    cut_manager.combine_cuts(active_only=True), 
+                    "unvetoed_combined"
+                )
                 data_CE_unvetoed = self.apply_cuts(data, cut_manager) 
             
             # Create histograms and compile results
@@ -872,4 +888,4 @@ class Analyse:
             
         except Exception as e:
             self.logger.log(f"Error during analysis execution: {e}", "error")  
-            raiseise
+            raise
