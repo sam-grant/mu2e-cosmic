@@ -130,6 +130,9 @@ class Write:
                             categories = list(axis)
                             dt = h5py.string_dtype(encoding="utf-8")
                             axis_group.create_dataset("categories", data=categories, dtype=dt)
+                        elif type(axis).__name__ == "IntCategory":
+                            categories = list(axis)
+                            axis_group.create_dataset("categories", data=categories)
                         else: # For Regular, Variable, Boolean, and Integer, just save edges
                             axis_group.create_dataset("edges", data=axis.edges)\
                 # Confirm
@@ -361,8 +364,8 @@ class Load:
                 table = pq.read_table(in_path)
                 array = ak.from_arrow(table)
                 # Confirm successful load
-                self.logger.log(f"Successfully loaded hists from {in_path}", "success")
-                return events
+                self.logger.log(f"Successfully loaded array from {in_path}", "success")
+                return array
             except Exception as e2:
                 print(f"Fallback also failed: {e2}")
                 raise
@@ -419,6 +422,11 @@ class Load:
                             
                         elif axis_type == "Boolean":
                             axis = hist.axis.Boolean(name=axis_name, label=axis_label)
+                            
+                        elif axis_type == "IntCategory":
+                            # Load categories as integers
+                            categories = axis_group["categories"][()].tolist()
+                            axis = hist.axis.IntCategory(categories, name=axis_name, label=axis_label, growth=True)
                             
                         else:
                             self.logger.log(f"Unknown axis type: {axis_type}", "error")
