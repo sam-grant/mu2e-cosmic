@@ -168,7 +168,13 @@ class HistManager:
                 "axis": hist.axis.Regular(6, -0.5, 5.5, name="trk_per_event", label=r"Track / event"),
                 "param": "trk_per_event",
                 "filter": None
-            }, 
+            },
+
+            "cosmic_parent_pdg": { # Categorical binning for particle types
+                "axis": hist.axis.IntCategory([], name="cosmic_parent_pdg", label="Cosmic parent PDG", growth=True),
+                "param": "cosmic_parent_pdg",
+                "filter": None
+            },
             # # Trkqual histograms (excluding t0err, momerr, and nactive which we already have)
             # "factive": {},
             # "fambig": {},
@@ -393,6 +399,37 @@ class HistManager:
             trk, _, _ = self._prepare_track_data(data)
             trk_event = ak.count(trk["trk.pdg"], axis=-1)
             return ak.flatten(trk_event, axis=None)
+
+        elif param == "cosmic_parent_pdg":
+            try:
+                # Get track MC data
+                trkmc = data["trkmc"]
+                
+                # Rank condition: rank == -1 identifies cosmic parents
+                rank_condition = trkmc["trkmcsim"]["rank"] == -1
+                
+                # Momentum condition: select the highest momentum cosmic parent
+                mom_mag = self.vector.get_mag(trkmc["trkmcsim"], "mom")
+                mom_condition = mom_mag == ak.max(mom_mag, axis=-1)
+                
+                # Combine conditions
+                cosmic_parent_mask = rank_condition & mom_condition
+                
+                # Apply mask and extract PDG codes
+                cosmic_parent_pdg = trkmc["trkmcsim"]["pdg"][cosmic_parent_mask]
+                
+                # Handle potential duplicates by taking first occurrence
+                # Flatten over tracks and MC particles
+                if ak.count(cosmic_parent_pdg, axis=None) > 0:
+                    # Take first match per track if there are duplicates
+                    cosmic_parent_pdg_flat = ak.flatten(cosmic_parent_pdg[:, :, 0] if ak.ndim(cosmic_parent_pdg) > 2 else cosmic_parent_pdg, axis=None)
+                    return cosmic_parent_pdg_flat
+                else:
+                    return ak.Array([])
+                
+            except Exception as e:
+                self.logger.log(f"Error extracting cosmic_parent_pdg for {selection}: {e} (returning [])", "warning")
+                return ak.Array([])
 
             # dT = self.analyse.get_trk_crv_dt(trkfit, data["crv"])
             # return ak.flatten(dT, axis=None)

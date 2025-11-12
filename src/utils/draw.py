@@ -726,3 +726,104 @@ class Draw():
             if self.analyse.active_cuts["unvetoed"]:
                 ax.axvline(self.analyse.thresholds["lo_veto_dt_ns"], **line_kwargs)
                 ax.axvline(self.analyse.thresholds["hi_veto_dt_ns"], **line_kwargs)
+
+    def plot_cosmic_parents(self, hists, selection="Select", out_path=None, percentage=False):
+        """
+        Plot cosmic parent PDG codes as a bar chart
+        
+        Args:
+            hists: Dictionary of histograms
+            selection: Which selection to plot (default: "Select")
+            out_path: Path to save figure
+            percentage: If True, show percentages instead of counts
+        """
+        import numpy as np
+        
+        # PDG to particle name mapping
+        pdg_to_label = {
+            11: r"$e^{-}$", -11: r"$e^{+}$",
+            13: r"$\mu^{-}$", -13: r"$\mu^{+}$", 
+            2112: "n", -2112: r"$\bar{n}$",
+            2212: "p", -2212: r"$\bar{p}$",
+            22: r"$\gamma$", 111: r"$\pi^{0}$",
+            211: r"$\pi^{+}$", -211: r"$\pi^{-}$"
+        }
+        
+        # Get histogram for the specified selection
+        h = hists["cosmic_parent_pdg"][{"selection": selection}]
+        
+        # Extract PDG codes and counts
+        pdg_codes = []
+        counts = []
+        for pdg_bin in h.axes["cosmic_parent_pdg"]:
+            count = h[{"cosmic_parent_pdg": pdg_bin}].value
+            if count > 0:  # Only include non-zero bins
+                pdg_codes.append(pdg_bin)
+                counts.append(count)
+        
+        # Convert to numpy arrays and sort by count (descending)
+        pdg_codes = np.array(pdg_codes)
+        counts = np.array(counts)
+        sorted_indices = np.argsort(counts)[::-1]
+        pdg_codes = pdg_codes[sorted_indices]
+        counts = counts[sorted_indices]
+        
+        # Convert PDG codes to labels
+        labels = [pdg_to_label.get(int(pdg), f"PDG={int(pdg)}") for pdg in pdg_codes]
+        
+        # Convert to percentage if requested
+        if percentage:
+            counts = (counts / np.sum(counts)) * 100
+        
+        # Create figure
+        fig, ax = plt.subplots(figsize=(8, 6))
+        
+        # Calculate bar width based on number of bars
+        n_bars = len(pdg_codes)
+        if n_bars == 0:
+            self.logger.log(f"No cosmic parent data for selection: {selection}", "warning")
+            return
+            
+        bar_width = min(0.8, 3.0 / n_bars)
+        if n_bars == 2:
+            bar_width = 0.5
+        elif n_bars == 3:
+            bar_width = 0.67
+        
+        # Plot bars
+        indices = np.arange(len(labels))
+        bars = ax.bar(
+            indices, counts, 
+            width=bar_width,
+            color="#C41E3A",
+            edgecolor="#C41E3A",
+            alpha=0.8,
+            linewidth=1
+        )
+        
+        # Set labels and formatting
+        ax.set_xticks(indices)
+        ax.set_xticklabels(labels, rotation=0)
+        ax.set_xlabel("Cosmic parent")
+        
+        ylabel = "Percentage of tracks (%)" if percentage else "Tracks"
+        ax.set_ylabel(ylabel)
+        
+        # Add title showing momentum threshold
+        title = f"Cosmic parents ({selection})"
+        if "lo_wide_win_mevc" in self.analyse.thresholds:
+            title += f" (p > {self.analyse.thresholds['lo_wide_win_mevc']} MeV/c)"
+        ax.set_title(title)
+        
+        # Format y-axis for large numbers
+        if ax.get_ylim()[1] > 999:
+            ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+            ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        
+        plt.tight_layout()
+        
+        if out_path:
+            plt.savefig(out_path, dpi=300, bbox_inches="tight")
+            self.logger.log(f"\tWrote {out_path}", "success")
+        
+        plt.show()
