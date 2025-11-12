@@ -287,14 +287,15 @@ class Analyse:
 
             # "any" method does not handle reflections, but may be closer to C++
             # is_downstream = ak.any(at_trk_front & is_downstream, axis=-1) 
-            # Add cut 
+            # Add cut - use all_downstream (all tracks must be downstream)
             cut_manager.add_cut(
-                name="is_downstream",
-                description="All downstream tracks (p_z > 0 at tracker entrance)",
+                name="all_downstream",
+                description="All tracks are downstream (all p_z > 0 in tracker)",
                 mask=all_downstream,
-                active=self.active_cuts["is_downstream"],
+                active=self.active_cuts["all_downstream"],
                 group="Preselect"
             )
+            
             # Append for debugging
             data = self._append_array(data, is_downstream, "is_downstream")
             data = self._append_array(data, all_downstream, "all_downstream")

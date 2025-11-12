@@ -32,7 +32,7 @@ defaults:
         has_trk_mid: true
         good_trkqual: true
         within_t0: true
-        is_downstream: true
+        all_downstream: true
         has_hits: true
         within_t0err: true
         within_d0: true
@@ -129,7 +129,7 @@ cutsets:
             has_trk_front: true
             has_trk_mid: true
             within_t0: true
-            is_downstream: true
+            all_downstream: true
             is_truth_electron: true
             one_reco_electron: true
             good_trkqual: true
@@ -152,7 +152,7 @@ cutsets:
     #         is_reco_electron: true
     #         has_trk_front: true
     #         within_t0: true
-    #         is_downstream: true
+    #         all_downstream: true
     #         is_truth_electron: true
     #         one_reco_electron: true
     #         good_trkqual: true
