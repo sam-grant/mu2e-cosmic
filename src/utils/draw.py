@@ -752,13 +752,17 @@ class Draw():
         # Get histogram for the specified selection
         h = hists["cosmic_parent_pdg"][{"selection": selection}]
         
-        # Extract PDG codes and counts
+        # Extract PDG codes and counts manually from IntCategory axis
         pdg_codes = []
         counts = []
-        for pdg_bin in h.axes["cosmic_parent_pdg"]:
-            count = h[{"cosmic_parent_pdg": pdg_bin}].value
+        
+        # Get the values directly from the histogram
+        values = h.values()
+        categories = list(h.axes["cosmic_parent_pdg"])
+        
+        for pdg_code, count in zip(categories, values):
             if count > 0:  # Only include non-zero bins
-                pdg_codes.append(pdg_bin)
+                pdg_codes.append(pdg_code)
                 counts.append(count)
         
         # Convert to numpy arrays and sort by count (descending)
