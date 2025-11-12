@@ -3,6 +3,8 @@ import numpy as np
 from statsmodels.stats.proportion import proportion_confint
 from scipy.stats import norm
 from scipy import stats
+import yaml
+import os
 from pyutils.pylogger import Logger
 
 class HistAnalyser():
@@ -21,6 +23,19 @@ class HistAnalyser():
             print_prefix="[HistAnalyser]",
             verbosity=self.verbosity
         )
+        
+        # Load analysis constants from config
+        config_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "config", "common", "analysis.yaml"
+        )
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+        
+        # Store constants
+        self.SECONDS_TO_DAYS = 1 / config["conversions"]["seconds_to_days"]
+        self.RUN1_LIVETIME_SECONDS = config["timing"]["run1_livetime_seconds"]
+        
         # Confirm
         self.logger.log(f"Initialised", "info")
 
@@ -232,14 +247,13 @@ class HistAnalyser():
                 scaled_livetime = self._scale_livetime_for_window(livetime, hists, mom_window_label, reference_window)
                 
                 # Get walltime in days for both batch modes
-                sec2day = 1 / (24*3600)
                 walltime_days = {}
                 for batch_mode, frac in on_spill_frac.items():
                     if on_spill: 
                         walltime = scaled_livetime / frac
                     else:
                         walltime = scaled_livetime / (1-frac)    
-                    walltime_days[batch_mode] = walltime * sec2day
+                    walltime_days[batch_mode] = walltime * self.SECONDS_TO_DAYS
                 
                 # Calculate SELECTION rates for both batch modes
                 selection_rates_dict = self.get_rates(select_count, walltime_days)
@@ -268,8 +282,7 @@ class HistAnalyser():
                 unv_rate_2b_hi = unvetoed_rates_dict["2batch"]["rate_err_hi"] - unv_rate_2b
                 
                 # Run-1 rates (based on livetime ratio)
-                run1_livetime_seconds = 3.46e6
-                run1_livetime_ratio = scaled_livetime / run1_livetime_seconds
+                run1_livetime_ratio = scaled_livetime / self.RUN1_LIVETIME_SECONDS
                 
                 if run1_livetime_ratio > 0:
                     # Selection rate for Run-1
@@ -310,7 +323,7 @@ class HistAnalyser():
                 "Veto Eff [%]": float(veto_eff * 100), 
                 "Veto Eff Err$-$ [%]": float((veto_eff_lo - veto_eff) * 100), 
                 "Veto Eff Err$+$ [%]": float((veto_eff_hi - veto_eff) * 100),
-                "Livetime [days]": float(scaled_livetime / (24*3600)),
+                "Livetime [days]": float(scaled_livetime * self.SECONDS_TO_DAYS),
                 # Selection rates - 1 batch
                 r"Selection Rate 1BB [$\text{day}^{-1}$]": float(sel_rate_1b), 
                 r"Selection Rate 1BB Err$-$ [$\text{day}^{-1}$]": float(sel_rate_1b_lo),

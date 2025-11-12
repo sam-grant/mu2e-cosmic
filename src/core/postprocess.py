@@ -1,5 +1,7 @@
 import awkward as ak
 import sys
+import yaml
+import os
 
 from pyutils.pylogger import Logger
 from pyutils.pyselect import Select
@@ -12,8 +14,8 @@ class PostProcess():
     """Class for postprocessing
     """
     def __init__(self, on_spill, write_events=False, write_event_info=False, 
-                 generated_events=4.11e10, livetime=1e7, 
-                 on_spill_frac={"1batch": 0.322, "2batch": 0.246},
+                 generated_events=None, livetime=None, 
+                 on_spill_frac=None,
                  veto=True, verbosity=1):
         """Initialise
 
@@ -21,12 +23,27 @@ class PostProcess():
                 on_spill (bool): Whether we are using on spill cuts. Propagated from Process by run.py
                 write_events (bool, opt): write filtered events. Defaults to False.
                 write_event_info (bool, opt): write filtered event info. Defaults to False.
-                generated_events (int, opt): Number of generated events. Defaults to 4.11e10.
-                livetime (float, opt): The total livetime in seconds for this dataset. Defaults to 1e7.
-                on_spill_frac (dict, opt): Fraction of walltime in single and two batch onspill. Defaults to 32.2% and 24.6%.
+                generated_events (int, opt): Number of generated events. Defaults to value from config.
+                livetime (float, opt): The total livetime in seconds for this dataset. Defaults to value from config.
+                on_spill_frac (dict, opt): Fraction of walltime in single and two batch onspill. Defaults to values from config.
                 veto (bool, opt): Whether running with CRV veto. Defaults to True.
                 verbosity (int, opt): Printout level. Defaults to 1.
         """
+        # Load defaults from config
+        config_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "config", "common", "analysis.yaml"
+        )
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+        
+        # Use config defaults if not provided
+        if generated_events is None:
+            generated_events = config["defaults"]["generated_events"]
+        if livetime is None:
+            livetime = config["defaults"]["livetime_seconds"]
+        if on_spill_frac is None:
+            on_spill_frac = config["timing"]["onspill_fractions"]
         # Member variables
         self.write_events = write_events
         self.write_event_info = write_event_info

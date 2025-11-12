@@ -1,0 +1,22 @@
+# Analysis configuration constants
+# Physics and timing parameters for histogram analysis
+
+# Default analysis parameters
+defaults:
+  generated_events: 4.11e10  # Default number of generated events in dataset
+  livetime_seconds: 1.0e7    # Default livetime in seconds
+  
+# Beam structure and timing
+timing:
+  # Fraction of walltime in onspill mode for different batch configurations
+  onspill_fractions:
+    1batch: 0.322  # Single batch onspill fraction (32.2%)
+    2batch: 0.246  # Two batch onspill fraction (24.6%)
+  
+  # Reference livetimes
+  run1_livetime_seconds: 3.46e6  # Run-1 livetime in seconds
+
+# Unit conversions
+conversions:
+  seconds_to_days: 86400  # 24 * 3600
+  days_to_seconds: 86400
