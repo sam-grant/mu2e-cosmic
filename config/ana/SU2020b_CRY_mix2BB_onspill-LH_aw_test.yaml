@@ -1,0 +1,17 @@
+# ===============================
+# SU2020b_CRY_mix2BB_offspill-LH_aw_test.yaml
+# ===============================
+
+process:
+    file_name: "/exp/mu2e/data/users/sgrant/mu2e-cosmic/files/nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_05_00.001202_00056492.root"
+    cutset_name: "SU2020b"
+    use_remote: false
+
+postprocess:
+    write_events: true
+    write_event_info: true
+    generated_events: 41100000000
+    livetime: 10680000
+
+output:
+    out_path: "../output/results/SU2020b_CRY_mix2BB_onspill-LH_aw_test"
