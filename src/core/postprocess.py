@@ -9,6 +9,7 @@ from pyutils.pyselect import Select
 sys.path.append("../utils")
 from cut_manager import CutManager
 from hist_analyser import HistAnalyser
+from io_manager import load_config_yaml
 
 class PostProcess():
     """Class for postprocessing
@@ -30,12 +31,7 @@ class PostProcess():
                 verbosity (int, opt): Printout level. Defaults to 1.
         """
         # Load defaults from config
-        config_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "config", "common", "analysis.yaml"
-        )
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
+        config = load_config_yaml("config/common/analysis.yaml", __file__)
         
         # Use config defaults if not provided
         if generated_events is None:

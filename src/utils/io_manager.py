@@ -12,6 +12,25 @@ import copy
 
 from pyutils.pylogger import Logger
 
+def load_config_yaml(relative_path, calling_file):
+    """
+    Load YAML config file with consistent path resolution
+    
+    Args:
+        relative_path (str): Path to config file relative to repo root (e.g., "config/common/analysis.yaml")
+        calling_file (str): __file__ from the calling module
+        
+    Returns:
+        dict: Loaded YAML configuration
+    """
+    script_dir = os.path.dirname(os.path.abspath(calling_file))
+    # Navigate to repo root (2 levels up from src/*/module.py)
+    repo_root = os.path.join(script_dir, "../..")
+    config_path = os.path.join(repo_root, relative_path)
+    
+    with open(config_path, 'r') as f:
+        return yaml.safe_load(f)
+
 class Write:
     def __init__(self, out_path = "test_out", verbosity=1):
         """Write analysis outputs 

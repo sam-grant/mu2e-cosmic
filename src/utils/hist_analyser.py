@@ -6,6 +6,7 @@ from scipy import stats
 import yaml
 import os
 from pyutils.pylogger import Logger
+from io_manager import load_config_yaml
 
 class HistAnalyser():
     """
@@ -25,12 +26,7 @@ class HistAnalyser():
         )
         
         # Load analysis constants from config
-        config_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "config", "common", "analysis.yaml"
-        )
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
+        config = load_config_yaml("config/common/analysis.yaml", __file__)
         
         # Store constants
         self.SECONDS_TO_DAYS = 1 / config["conversions"]["seconds_to_days"]
