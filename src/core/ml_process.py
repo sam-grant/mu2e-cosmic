@@ -3,7 +3,6 @@ Prepare cosmic data for ML work
 Sam Grant 2025
 """
 
-
 # External
 import sys
 import gc
@@ -233,12 +232,18 @@ class MLProcessor(Skeleton):
                 # Event parameters (nice to have)
                 processed_data["event"] = data_cut["evt"]["event"]
                 processed_data["subrun"] = data_cut["evt"]["subrun"]
+
+                # Work with event-level parameters
+                # Use the "best" coincidence, e.g. central dT 
+                # Can be found via dev.cent_dT_idx
                 
                 # CRV parameters
-                processed_data["crv_z"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fZ"]
-                processed_data["crv_PEs"] = data_cut["crv"]["crvcoincs.PEs"]
-                processed_data["dT"] = data_cut["dev"]["dT"]
-            
+                cent_dT_idx = data_cut["dev"]["cent_dT_idx"]
+                processed_data["crv_z"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fZ"][cent_dT_idx]
+                processed_data["crv_PEs"] = data_cut["crv"]["crvcoincs.PEs"][cent_dT_idx]
+                processed_data["dT"] = data_cut["dev"]["dT"][cent_dT_idx]
+                processed_data["nHits"] = data_cut["crv"]["crvcoincs.nHits"][cent_dT_idx]
+                
                 # Tracker parameters
                 at_trk_front = self.selector.select_surface(data_cut["trkfit"], surface_name="TT_Front") 
                 at_trk_mid = self.selector.select_surface(data_cut["trkfit"], surface_name="TT_Mid")
