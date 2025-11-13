@@ -29,8 +29,8 @@ class HistAnalyser():
         config = load_config_yaml("config/common/analysis.yaml", __file__)
         
         # Store constants
-        self.SECONDS_TO_DAYS = 1 / config["conversions"]["seconds_to_days"]
-        self.RUN1_LIVETIME_SECONDS = config["timing"]["run1_livetime_seconds"]
+        self.SECONDS_TO_DAYS = 1 / float(config["conversions"]["seconds_to_days"])
+        self.RUN1_LIVETIME_SECONDS = float(config["timing"]["run1_livetime_seconds"])
         
         # Confirm
         self.logger.log(f"Initialised", "info")
