@@ -549,6 +549,8 @@ class HistManager:
                     
                     # Skip if no data after filtering
                     if len(filtered_values) == 0:
+                        if hist_name == "cosmic_parent_pdg":
+                            self.logger.log(f"No data for {hist_name} after filtering for {selection_label}", "warning")
                         continue
                     
                     # Fill the histogram
@@ -557,6 +559,9 @@ class HistManager:
                         "selection": np.full(len(filtered_values), selection_label)
                     }
                     histograms[hist_name].fill(**fill_kwargs)
+                    
+                    if hist_name == "cosmic_parent_pdg":
+                        self.logger.log(f"Filled {hist_name} for {selection_label} with {len(filtered_values)} entries", "info")
                     
                 except Exception as e:
                     self.logger.log(f"Error filling {hist_name} for {selection_label}: {e}", "error")
