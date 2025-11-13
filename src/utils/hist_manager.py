@@ -402,8 +402,13 @@ class HistManager:
 
         elif param == "cosmic_parent_pdg":
             try:
-                # Get track MC data
-                trkmc = data["trkmc"]
+                # Use prepared track data to ensure alignment with cuts
+                _, _, trkmc = self._prepare_track_data(data)
+                
+                # Check if we have any tracks after cuts
+                if len(trkmc) == 0:
+                    self.logger.log(f"No tracks after cuts for {selection} (cosmic_parent_pdg)", "max")
+                    return ak.Array([])
                 
                 # Rank condition: rank == -1 identifies cosmic parents
                 rank_condition = trkmc["trkmcsim"]["rank"] == -1
