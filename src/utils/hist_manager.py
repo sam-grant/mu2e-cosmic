@@ -402,29 +402,20 @@ class HistManager:
 
         elif param == "cosmic_parent_pdg":
             try:
-                # For cosmic parents, we need the MC truth without electron filtering
-                # Select electron tracks and tracker surface, but keep all MC truth
-                is_reco_electron = self.selector.is_electron(data["trk"])
-                at_trk_front = self.selector.select_surface(data["trkfit"], surface_name="TT_Front")
-                has_trk_front = ak.any(at_trk_front, axis=-1)
+                # For cosmic parents, we use the data as-is (already has cuts applied)
+                # The issue is that cuts filter trkmc to only passing tracks
+                # We need to work with whatever MC info is left after cuts
                 
-                # Construct trk-level mask (reco only)
-                trk_mask = is_reco_electron & has_trk_front
-                has_trks = ak.any(trk_mask, axis=-1)
+                # Check if trkmc exists and has data
+                if "trkmc" not in data or len(data["trkmc"]) == 0:
+                    self.logger.log(f"No trkmc data for {selection} (cosmic_parent_pdg)", "max")
+                    return ak.Array([])
                 
-                # Apply track-level selection but keep full MC truth
-                data_cut = ak.copy(data)
-                data_cut["trkfit"] = data_cut["trkfit"][at_trk_front]
-                data_cut["trk"] = data_cut["trk"][trk_mask]
-                data_cut["trkfit"] = data_cut["trkfit"][trk_mask]
-                data_cut["trkmc"] = data_cut["trkmc"][trk_mask]  # Apply same mask but keep all MC particles
-                data_cut = data_cut[has_trks]
+                trkmc = data["trkmc"]
                 
-                trkmc = data_cut["trkmc"]
-                
-                # Check if we have any tracks after cuts
-                if len(trkmc) == 0:
-                    self.logger.log(f"No tracks after cuts for {selection} (cosmic_parent_pdg)", "max")
+                # Check structure
+                if "trkmcsim" not in trkmc or len(trkmc["trkmcsim"]) == 0:
+                    self.logger.log(f"No trkmcsim data for {selection} (cosmic_parent_pdg)", "max")
                     return ak.Array([])
                 
                 # Rank condition: rank == -1 identifies cosmic parents
