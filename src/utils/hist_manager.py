@@ -402,8 +402,25 @@ class HistManager:
 
         elif param == "cosmic_parent_pdg":
             try:
-                # Use prepared track data to ensure alignment with cuts
-                _, _, trkmc = self._prepare_track_data(data)
+                # For cosmic parents, we need the MC truth without electron filtering
+                # Select electron tracks and tracker surface, but keep all MC truth
+                is_reco_electron = self.selector.is_electron(data["trk"])
+                at_trk_front = self.selector.select_surface(data["trkfit"], surface_name="TT_Front")
+                has_trk_front = ak.any(at_trk_front, axis=-1)
+                
+                # Construct trk-level mask (reco only)
+                trk_mask = is_reco_electron & has_trk_front
+                has_trks = ak.any(trk_mask, axis=-1)
+                
+                # Apply track-level selection but keep full MC truth
+                data_cut = ak.copy(data)
+                data_cut["trkfit"] = data_cut["trkfit"][at_trk_front]
+                data_cut["trk"] = data_cut["trk"][trk_mask]
+                data_cut["trkfit"] = data_cut["trkfit"][trk_mask]
+                data_cut["trkmc"] = data_cut["trkmc"][trk_mask]  # Apply same mask but keep all MC particles
+                data_cut = data_cut[has_trks]
+                
+                trkmc = data_cut["trkmc"]
                 
                 # Check if we have any tracks after cuts
                 if len(trkmc) == 0:

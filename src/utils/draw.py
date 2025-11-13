@@ -760,6 +760,11 @@ class Draw():
         values = h.values()
         categories = list(h.axes["cosmic_parent_pdg"])
         
+        # Check if histogram has any data
+        if len(categories) == 0 or len(values) == 0:
+            self.logger.log(f"No cosmic parent data for selection: {selection}", "warning")
+            return
+        
         for pdg_code, count in zip(categories, values):
             if count > 0:  # Only include non-zero bins
                 pdg_codes.append(pdg_code)
