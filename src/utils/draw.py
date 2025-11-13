@@ -727,17 +727,18 @@ class Draw():
                 ax.axvline(self.analyse.thresholds["lo_veto_dt_ns"], **line_kwargs)
                 ax.axvline(self.analyse.thresholds["hi_veto_dt_ns"], **line_kwargs)
 
-    def plot_cosmic_parents(self, hists, selection="Select", out_path=None, percentage=False):
+    def draw_cosmic_parents_from_array(self, events, out_path=None, percentage=False, p_threshold=None):
         """
-        Plot cosmic parent PDG codes as a bar chart
+        Plot cosmic parent PDG codes directly from events array (simpler approach)
         
         Args:
-            hists: Dictionary of histograms
-            selection: Which selection to plot (default: "Select")
+            events: Events array containing trkmc information
             out_path: Path to save figure
             percentage: If True, show percentages instead of counts
+            p_threshold: Momentum threshold label (for plot title)
         """
         import numpy as np
+        import awkward as ak
         
         # PDG to particle name mapping
         pdg_to_label = {
@@ -749,32 +750,47 @@ class Draw():
             211: r"$\pi^{+}$", -211: r"$\pi^{-}$"
         }
         
-        # Get histogram for the specified selection
-        h = hists["cosmic_parent_pdg"][{"selection": selection}]
-        
-        # Extract PDG codes and counts manually from IntCategory axis
-        pdg_codes = []
-        counts = []
-        
-        # Get the values directly from the histogram
-        values = h.values()
-        categories = list(h.axes["cosmic_parent_pdg"])
-        
-        # Check if histogram has any data
-        if len(categories) == 0 or len(values) == 0:
-            self.logger.log(f"No cosmic parent data for selection: {selection}", "warning")
+        # Extract cosmic parent PDG codes from events
+        try:
+            trkmc = events["trkmc"]
+            trkmcsim = trkmc["trkmcsim"]
+            
+            # Find cosmic parents (rank == -1)
+            rank_mask = trkmcsim["rank"] == -1
+            
+            # For each track, get the highest momentum cosmic parent
+            mom_x = trkmcsim["mom"]["fCoordinates"]["fX"]
+            mom_y = trkmcsim["mom"]["fCoordinates"]["fY"]
+            mom_z = trkmcsim["mom"]["fCoordinates"]["fZ"]
+            mom_mag = np.sqrt(mom_x**2 + mom_y**2 + mom_z**2)
+            
+            # Apply rank mask first
+            cosmic_parents = trkmcsim[rank_mask]
+            cosmic_mom_mag = mom_mag[rank_mask]
+            
+            # Find max momentum cosmic parent per track
+            max_mom_mask = cosmic_mom_mag == ak.max(cosmic_mom_mag, axis=-1)
+            
+            # Extract PDG codes
+            cosmic_parent_pdg = cosmic_parents["pdg"][max_mom_mask]
+            
+            # Flatten to 1D array
+            pdg_flat = ak.flatten(cosmic_parent_pdg, axis=None)
+            
+            # Count occurrences
+            unique_pdg, counts = np.unique(ak.to_numpy(pdg_flat), return_counts=True)
+            
+        except Exception as e:
+            self.logger.log(f"Error extracting cosmic parents: {e}", "error")
             return
         
-        for pdg_code, count in zip(categories, values):
-            if count > 0:  # Only include non-zero bins
-                pdg_codes.append(pdg_code)
-                counts.append(count)
+        if len(unique_pdg) == 0:
+            self.logger.log("No cosmic parent data found in events array", "warning")
+            return
         
-        # Convert to numpy arrays and sort by count (descending)
-        pdg_codes = np.array(pdg_codes)
-        counts = np.array(counts)
+        # Sort by count (descending)
         sorted_indices = np.argsort(counts)[::-1]
-        pdg_codes = pdg_codes[sorted_indices]
+        pdg_codes = unique_pdg[sorted_indices]
         counts = counts[sorted_indices]
         
         # Convert PDG codes to labels
@@ -789,10 +805,6 @@ class Draw():
         
         # Calculate bar width based on number of bars
         n_bars = len(pdg_codes)
-        if n_bars == 0:
-            self.logger.log(f"No cosmic parent data for selection: {selection}", "warning")
-            return
-            
         bar_width = min(0.8, 3.0 / n_bars)
         if n_bars == 2:
             bar_width = 0.5
@@ -819,9 +831,9 @@ class Draw():
         ax.set_ylabel(ylabel)
         
         # Add title showing momentum threshold
-        title = f"Cosmic parents ({selection})"
-        if "lo_wide_win_mevc" in self.analyse.thresholds:
-            title += f" (p > {self.analyse.thresholds['lo_wide_win_mevc']} MeV/c)"
+        title = "Cosmic parents"
+        if p_threshold:
+            title += f" (p > {p_threshold} MeV/c)"
         ax.set_title(title)
         
         # Format y-axis for large numbers
@@ -836,3 +848,6 @@ class Draw():
             self.logger.log(f"\tWrote {out_path}", "success")
         
         plt.show()
+    
+    # Deprecated - use draw_cosmic_parents_from_array() instead
+    # def plot_cosmic_parents(self, hists, selection="Select", out_path=None, percentage=False):
