@@ -136,13 +136,13 @@ cutsets:
             good_trkqual: true
             has_hits: true
             within_t0err: true
-            within_d0: false
-            within_pitch_angle_lo: false
-            within_pitch_angle_hi: false
-            within_lhr_max_lo: false
-            within_lhr_max_hi: false
+            within_d0: true
+            within_pitch_angle_lo: true
+            within_pitch_angle_hi: true
+            within_lhr_max_lo: true
+            within_lhr_max_hi: true
             unvetoed: false
-            within_wide_win: false
+            within_wide_win: true
             within_ext_win: false
             within_sig_win: false
             
