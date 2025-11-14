@@ -140,7 +140,7 @@ cutsets:
             within_d0: true
             within_pitch_angle_lo: true
             within_pitch_angle_hi: true
-            within_lhr_max_lo: true
+            within_lhr_max_lo: false
             within_lhr_max_hi: true
             unvetoed: false
             within_wide_win: true
