@@ -596,6 +596,9 @@ class Analyse:
                 active=self.active_cuts["unvetoed"],
                 group="CRV"
             )
+
+            # dT index, useful for ML
+            dT_idx = ak.local_index(dT, axis=-1)
             
             # Find minimum "leading" dT 
             # Note that min dT is a bad representation, does not always represent the vetoed dT 
@@ -615,6 +618,7 @@ class Analyse:
             data = self._append_array(data, unvetoed, "unvetoed")
             data = self._append_array(data, trk_crv_dt["trk_times"], "trk_times") 
             data = self._append_array(data, trk_crv_dt["coinc_times"], "coinc_times")             
+            data = self._append_array(data, dT_idx, "dT_idx") 
             data = self._append_array(data, dT, "dT") 
             data = self._append_array(data, min_dT, "min_dT")  
             data = self._append_array(data, min_dT_idx, "min_dT_idx") 
