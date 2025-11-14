@@ -14,6 +14,9 @@ from io_manager import load_config_yaml
 class PostProcess():
     """Class for postprocessing
     """
+    # Sentinel value to distinguish between "not provided" and "explicitly None"
+    _UNSET = object()
+    
     def __init__(self, on_spill, write_events=False, write_event_info=False, 
                  generated_events=None, livetime=None, 
                  on_spill_frac=None,
@@ -32,14 +35,21 @@ class PostProcess():
         """
         # Load defaults from config
         config = load_config_yaml("config/common/analysis.yaml", __file__)
-        
-        # Use config defaults if not provided
-        if generated_events is None:
+
+        # Use config defaults if not provided (but respect explicit None/null values)
+        if generated_events is PostProcess._UNSET:
             generated_events = config["defaults"]["generated_events"]
-        if livetime is None:
+        if livetime is PostProcess._UNSET:
             livetime = config["defaults"]["livetime_seconds"]
-        if on_spill_frac is None:
+        if on_spill_frac is PostProcess._UNSET:
             on_spill_frac = config["timing"]["onspill_fractions"]
+            
+        # Ensure numeric types (YAML might load scientific notation as strings)
+        if generated_events is not None:
+            generated_events = float(generated_events)
+        if livetime is not None:  # Only convert to float if not explicitly set to null
+            livetime = float(livetime)
+
         # Member variables
         self.write_events = write_events
         self.write_event_info = write_event_info
