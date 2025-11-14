@@ -125,6 +125,7 @@ cutsets:
             "Preselection cuts for ML"
         thresholds:
             lo_trkqual: 0.2
+            lo_veto_dt_ns: -25.0
         active:
             is_reco_electron: true
             has_trk_front: true
