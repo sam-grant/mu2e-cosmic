@@ -224,6 +224,9 @@ class MLProcessor(Skeleton):
                 processed_data["d0"] = data_cut["trkfit"]["trksegpars_lh"]["d0"][at_trk_front]
                 processed_data["tanDip"] = self.analyse.get_pitch_angle(data_cut["trkfit"][at_trk_front])
                 processed_data["maxr"] = data_cut["trkfit"]["trksegpars_lh"]["maxr"][at_trk_front]
+                # Calculate momentum magnitude
+                mom_mag = self.analyse.vector.get_mag(data_cut["trkfit"][at_trk_front]["trksegs"], "mom")
+                processed_data["mom_mag"] = mom_mag
 
             elif self.feature_set == "crv":
 
@@ -234,15 +237,99 @@ class MLProcessor(Skeleton):
                 processed_data["subrun"] = data_cut["evt"]["subrun"]
 
                 # Work with event-level parameters
-                # Use the "best" coincidence, e.g. central dT 
-                # Can be found via dev.cent_dT_idx
+                # Conditional coincidence selection to avoid dT bias:
+                # - Signal samples (CeEndpoint*): Use random coincidence (avoid bias)
+                # - Background samples (CosmicCRY*): Use central dT (physics-motivated)
                 
-                # CRV parameters
-                cent_dT_idx = data_cut["dev"]["cent_dT_idx"]
-                processed_data["crv_z"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fZ"][cent_dT_idx]
-                processed_data["crv_PEs"] = data_cut["crv"]["crvcoincs.PEs"][cent_dT_idx]
-                processed_data["dT"] = data_cut["dev"]["dT"][cent_dT_idx]
-                processed_data["nHits"] = data_cut["crv"]["crvcoincs.nHits"][cent_dT_idx]
+                # Check if we're processing a signal CE sample by looking for "CeEndpoint" in defname
+                # is_signal = self.defname and "CeEndpoint" in self.defname
+                
+                # if False: # is_signal:
+
+                    # This is really complicated as usual
+                    # For signal samples (CeEndpoint*): Select random coincidence from available dT indices
+                    # import numpy as np
+                    # dT_idx = data_cut["dev"]["dT_idx"]
+                    # print("dT_idx ",dT_idx)
+                    # n_coinc = ak.num(dT_idx, axis=-1)
+                    # print("n_coinc ",n_coinc)
+                    # random_positions = np.random.RandomState(42).randint(
+                    #     0, 
+                    #     ak.max(n_coinc, -1)-1, # n-1
+                    #     size=len(dT_idx)
+                    # )
+                    # print("random_positions ",random_positions)
+                    # random_positions = ak.Array(random_positions)[:, None] # broadcast back to coincidence level
+                    # print("random_positions ",random_positions.type, random_positions)
+                    # print("cent_dT_idx", data_cut["dev"]["cent_dT_idx"].type, data_cut["dev"]["cent_dT_idx"])
+                    # valid = ~ak.is_none(data_cut["dev"]["cent_dT_idx"], axis=-1)
+                    # # Select the actual index value from dT_idx using the random position
+                    # selected_idx = random_positions[valid]
+                
+                    
+                    # selected_idx = random_positions
+                    # print("selected_idx ",selected_idx)
+
+                    # import numpy as np
+                    
+                    # Get all valid dT indices for each event
+                    # dT_idx = data_cut["dev"]["dT_idx"]  # Shape: [event, coincidence]
+                    
+                    # # Set random seed for reproducibility
+                    # random_state = np.random.RandomState(42)
+                    
+                    # # Get number of coincidences per event
+                    # n_coinc_per_event = ak.num(dT_idx, axis=-1)
+                    
+                    # # Generate random indices for each event
+                    # # This gives an integer in [0, n_coinc-1] for each event
+                    # random_positions = random_state.randint(
+                    #     0, 
+                    #     ak.to_numpy(n_coinc_per_event),  # High is exclusive, so this gives [0, n_coinc)
+                    #     dtype=int
+                    # )
+                    
+                    # # Handle edge case: events with 0 coincidences
+                    # random_positions = np.where(
+                    #     ak.to_numpy(n_coinc_per_event) > 0, 
+                    #     random_positions, 
+                    #     0
+                    # )
+                    
+                    # # Select the random coincidence from each event
+                    # # Need to pair each event with its random position
+                    # selected_idx = dT_idx[ak.local_index(dT_idx) == random_positions]
+
+                    # Just take the first one
+                    # selected_idx = ak.firsts(data_cut["dev"]["dT_idx"], axis=-1)[:, None]
+                    
+                    # self.logger.log(f"Using random coincidence selection for signal sample (CeEndpoint): {self.defname}", "info")
+                # else:
+                    # For background samples (CosmicCRY): Use central dT (physics-motivated selection)
+                # selected_idx = data_cut["dev"]["cent_dT_idx"]
+                    # self.logger.log(f"Using central dT selection for background sample (CosmicCRY): {self.defname}", "info")
+
+                # One coinc / event
+                # Based on central ∆t
+                coinc_idx = data_cut["dev"]["cent_dT_idx"]
+                
+                if ak.all(data_cut["dev"]["dT"][coinc_idx]!=data_cut["dev"]["cent_dT"]):
+                    self.logger.log(f"Central ∆T mismatch", "error")
+                    raise ValueError()
+
+                
+                # CRV parameters using selected index
+                processed_data["crv_z"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fZ"][coinc_idx]
+                processed_data["PEs"] = data_cut["crv"]["crvcoincs.PEs"][coinc_idx]
+                processed_data["dT"] = data_cut["dev"]["dT"][coinc_idx]
+                processed_data["nHits"] = data_cut["crv"]["crvcoincs.nHits"][coinc_idx]
+                
+                # Calculate PEs/nHits ratio (avoid division by zero)
+                processed_data["PEs_per_hit"] = ak.where(
+                    processed_data["nHits"] > 0, 
+                    processed_data["PEs"] / processed_data["nHits"], 
+                    0
+                )
                 
                 # Tracker parameters
                 at_trk_front = self.selector.select_surface(data_cut["trkfit"], surface_name="TT_Front") 
@@ -251,6 +338,9 @@ class MLProcessor(Skeleton):
                 processed_data["d0"] = data_cut["trkfit"]["trksegpars_lh"]["d0"][at_trk_front]
                 processed_data["tanDip"] = self.analyse.get_pitch_angle(data_cut["trkfit"][at_trk_front])
                 processed_data["maxr"] = data_cut["trkfit"]["trksegpars_lh"]["maxr"][at_trk_front]
+                # Calculate momentum magnitude
+                mom_mag = self.analyse.vector.get_mag(data_cut["trkfit"][at_trk_front]["trksegs"], "mom")
+                processed_data["mom_mag"] = mom_mag
 
                 # Broadcast all features to match CRV coincidence shape [event, coincidence]
                 # Get target shape from any CRV array
@@ -262,7 +352,7 @@ class MLProcessor(Skeleton):
                 
                 # Broadcast track-level parameters: [event, track, segment] -> [event, coincidence]
                 # Flatten segments, broadcast to coincidences, then flatten again
-                for key in ["t0", "d0", "tanDip", "maxr"]:
+                for key in ["t0", "d0", "tanDip", "maxr", "mom_mag"]:
                     arr = processed_data[key]
                     arr = ak.flatten(arr, axis=-1)  # [event, track, segment] -> [event, track]
                     arr = arr[:, None] * coinc_shape  # [event, track] -> [event, track, coincidence]
