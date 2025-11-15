@@ -45,7 +45,7 @@ class MLProcessor(Skeleton):
         cutset_name = "MLPreprocess",
         branches = { 
             "evt" : ["run", "subrun", "event"],
-            "crv" : ["crvcoincs.time", "crvcoincs.PEs", "crvcoincs.nHits", 
+            "crv" : ["crvcoincs.time", "crvcoincs.PEs", "crvcoincs.nHits", "crvcoincs.angle", "crvcoincs.nLayers", 
                      "crvcoincs.pos.fCoordinates.fX", "crvcoincs.pos.fCoordinates.fY", "crvcoincs.pos.fCoordinates.fZ"],
             "trk" : ["trk.nactive", "trk.pdg", "trkqual.valid", "trkqual.result"],
             "trkfit" : ["trksegs", "trksegpars_lh"],
@@ -97,13 +97,15 @@ class MLProcessor(Skeleton):
         self.file_name = file_name 
 
         # EventNtuple branches
-        self.branches = { 
-            "evt" : ["run", "subrun", "event"],
-            "crv" : ["crvcoincs.time", "crvcoincs.PEs", "crvcoincs.nHits", "crvcoincs.pos.fCoordinates.fZ"],
-            "trk" : ["trk.nactive", "trk.pdg", "trkqual.valid", "trkqual.result"],
-            "trkfit" : ["trksegs", "trksegpars_lh"],
-            "trkmc" : ["trkmcsim"]
-        }
+        # self.branches = { 
+        #     "evt" : ["run", "subrun", "event"],
+        #     "crv" : ["crvcoincs.time", "crvcoincs.PEs", "crvcoincs.nHits", "crvcoincs.pos.fCoordinates.fZ"],
+        #     "trk" : ["trk.nactive", "trk.pdg", "trkqual.valid", "trkqual.result"],
+        #     "trkfit" : ["trksegs", "trksegpars_lh"],
+        #     "trkmc" : ["trkmcsim"]
+        # }
+        self.branches = branches
+        
 
         # Process parameters
         self.on_spill = on_spill                    # Apply t0 cut for onspill
@@ -245,13 +247,16 @@ class MLProcessor(Skeleton):
                 if ak.all(data_cut["dev"]["dT"][coinc_idx]!=data_cut["dev"]["cent_dT"]):
                     self.logger.log(f"Central ∆T mismatch", "error")
                     raise ValueError()
-
                 
                 # CRV parameters using selected index
+                processed_data["crv_x"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fX"][coinc_idx]
+                processed_data["crv_y"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fY"][coinc_idx]
                 processed_data["crv_z"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fZ"][coinc_idx]
                 processed_data["PEs"] = data_cut["crv"]["crvcoincs.PEs"][coinc_idx]
                 processed_data["dT"] = data_cut["dev"]["dT"][coinc_idx]
                 processed_data["nHits"] = data_cut["crv"]["crvcoincs.nHits"][coinc_idx]
+                processed_data["nLayers"] = data_cut["crv"]["crvcoincs.nLayers"][coinc_idx]
+                processed_data["angle"] = data_cut["crv"]["crvcoincs.angle"][coinc_idx]
                 
                 # Calculate PEs/nHits ratio (avoid division by zero)
                 processed_data["PEs_per_hit"] = ak.where(
