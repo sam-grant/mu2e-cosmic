@@ -8,6 +8,7 @@ import sys
 import gc
 import os
 import awkward as ak
+import numpy as np
 
 # pyutils 
 from pyutils.pyprocess import Processor, Skeleton
@@ -293,6 +294,23 @@ class MLProcessor(Skeleton):
                     arr = ak.flatten(arr, axis=-1)  # [event, track, coincidence] -> [event, coincidence] 
                     # Override 
                     processed_data[key] = arr
+
+                # def _test(events):
+
+                #     PEs = events["PEs"]
+                #     n_tot = len(PEs) #  ak.sum(is_none, axis=None
+                #     is_none = ak.is_none(events["PEs"], axis=-1)
+                #     n_is_none = ak.sum(is_none, axis=None)
+    
+                #     print("\n",50*"*")
+                #     print("PEs", PEs)
+                #     print("n_tot", n_tot)
+                #     print("is_none", is_none)
+                #     print("n_is_none", n_is_none)
+                #     print("diff", n_tot - n_is_none)
+                #     print(50*"*","\n")
+
+                # _test(processed_data)
         
             else: 
                 self.logger.log(f"Feature set '{self.feature_set}' invalid: {e}", "error")  
@@ -375,13 +393,30 @@ class MLProcessor(Skeleton):
         flattened_events = {}
         lengths = {}
         for field in postprocessed["events"].fields: 
-            flattened_events[field] = ak.flatten(postprocessed["events"][field], axis=None)
+
+            # First fill None values with nan
+            filled_none = ak.fill_none(postprocessed["events"][field], np.nan)
+            
+            # Then pad empty arrays with a nan 
+            padded_array = ak.where(
+                ak.num(postprocessed["events"][field]) == 0,
+                [[np.nan]], 
+                filled_none
+            )
+
+            # Then flatten
+            flattened_events[field] = ak.flatten(padded_array, axis=None)
+
+            # Record lengths
             lengths[field] = len(flattened_events[field])
+
+        # # Original method that does not preserve None
+        # for field in postprocessed["events"].fields: 
+        #     flattened_events[field] = ak.flatten(postprocessed["events"][field], axis=None)
+        #     lengths[field] = len(flattened_events[field])
         
         if len(set(lengths.values())) > 1:
             self.logger.log(f"Length mismatch detected: {lengths}", "warning")
-            # Pad and retry 
-            # postprocess(results)
             print(postprocessed["events"].type)
 
         else:
