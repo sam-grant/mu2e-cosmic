@@ -146,29 +146,6 @@ cutsets:
             within_wide_win: true
             within_ext_win: false
             within_sig_win: false
-            
-    # MLPreprocessVeto:
-    #     description:
-    #         "Preselection cuts for ML (veto optimisation)"
-    #     active:
-    #         is_reco_electron: true
-    #         has_trk_front: true
-    #         within_t0: true
-    #         is_downstream: true
-    #         is_truth_electron: true
-    #         one_reco_electron: true
-    #         good_trkqual: true
-    #         has_hits: true
-    #         within_t0err: true
-    #         within_d0: false
-    #         within_pitch_angle_lo: false
-    #         within_pitch_angle_hi: false
-    #         within_lhr_max_lo: false
-    #         within_lhr_max_hi: false
-    #         unvetoed: false
-    #         within_wide_win: false
-    #         within_ext_win: false
-    #         within_sig_win: false
 
     dev:
         description:
