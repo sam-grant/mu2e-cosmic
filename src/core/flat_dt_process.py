@@ -46,7 +46,8 @@ class dTProcessor(Skeleton):
         cutset_name = "MLPreprocess",
         branches = { 
             "evt" : ["run", "subrun", "event"],
-            "crv" : ["crvcoincs.time", "crvcoincs.PEs", "crvcoincs.nHits", "crvcoincs.angle", "crvcoincs.nLayers",  "crvcoincs.timeStart", "crvcoincs.timeEnd",
+            "crv" : ["crvcoincs.time", "crvcoincs.PEs", "crvcoincs.nHits", "crvcoincs.sectorType",
+                     "crvcoincs.angle", "crvcoincs.nLayers",  "crvcoincs.timeStart", "crvcoincs.timeEnd",
                      "crvcoincs.pos.fCoordinates.fX", "crvcoincs.pos.fCoordinates.fY", "crvcoincs.pos.fCoordinates.fZ"],
             "trk" : ["trk.nactive", "trk.pdg", "trkqual.valid", "trkqual.result"],
             "trkfit" : ["trksegs", "trksegpars_lh"],
@@ -241,6 +242,7 @@ class dTProcessor(Skeleton):
             processed_data["timeStart"] = data_cut["crv"]["crvcoincs.timeStart"][dT_idx]
             processed_data["timeEnd"] = data_cut["crv"]["crvcoincs.timeEnd"][dT_idx]
             processed_data["crv_time"] = data_cut["crv"]["crvcoincs.time"][dT_idx]
+            processed_data["sector"] = data_cut["crv"]["crvcoincs.sectorType"][dT_idx] 
             
             # Calculate PEs/nHits ratio (avoid division by zero)
             processed_data["PEs_per_hit"] = ak.where(
