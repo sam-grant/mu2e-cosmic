@@ -7,17 +7,19 @@
 defaults:
     description: "Baseline defaults"
     thresholds:
-        track_pdg: 11 
-        lo_nactive: 20 
+        track_pdg: 11
+        lo_nactive: 20
         lo_trkqual: 0.8
         lo_t0_ns: 640
         hi_t0_ns: 1650
         lo_maxr_mm: 450
         hi_maxr_mm: 680
         hi_d0_mm: 100
-        hi_t0err: 0.9 
+        hi_t0err: 0.9
         lo_pitch_angle: 0.5
-        hi_pitch_angle: 1.0 
+        hi_pitch_angle: 1.0
+        lo_crv_start_ns: 420.0
+        hi_crv_end_ns: 1700.0
         lo_veto_dt_ns: -150.0
         hi_veto_dt_ns: 150.0
         lo_wide_win_mevc: 85

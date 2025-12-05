@@ -81,7 +81,7 @@ class Analyse:
         every CRV coincidence in crv for the same event.
 
         Args:
-            trkfit (ak.Array): Contains track fit information per segment. 
+            trkfit (ak.Array): Contains track fit information per segment.
             crv (ak.Array): Contains CRV coincidence information.
 
         Returns:
@@ -90,19 +90,18 @@ class Analyse:
         """
         # Find dT
         # Extract track segment times. Shape is [E, T, S] (Event, Track, Segment).
-        trk_times = trkfit["trksegs"]["time"] 
-        
-        # Apply start/end time mask to coincidences 
-        # TODO: formalise this as a proper cut 
-        # start_time_cond = ((crv["crvcoincs.timeStart"] > 450) & (crv["crvcoincs.timeStart"] < 1550))
-        # end_time_cond = (crv["crvcoincs.timeEnd"] < 1690)
-        # start_end_time_cond = (start_time_cond & end_time_cond)
+        trk_times = trkfit["trksegs"]["time"]
 
-        # this produces a lot of Nones which cause the event to veto, need to be 
-        # an event level cut somehow. 
-        
+        # Apply start/end time cut to coincidences
+        # Based on MDC2020aw optimization: timeStart > 420 ns & timeEnd < 1700 ns
+        # This reduces deadtime while maintaining high CRY efficiency
+        start_end_time_cond = (
+            (crv["crvcoincs.timeStart"] > self.thresholds["lo_crv_start_ns"]) &
+            (crv["crvcoincs.timeEnd"] < self.thresholds["hi_crv_end_ns"])
+        )
+
         # Extract CRV coincidence times. Shape is [E, C] (Event, Coincidence).
-        coinc_times = crv["crvcoincs.time"] # [start_end_time_cond]
+        coinc_times = crv["crvcoincs.time"][start_end_time_cond]
 
         # Broadcast CRV times to match track structure so we can element-wise subtract.
 
@@ -586,7 +585,7 @@ class Analyse:
             
             # Add cut
             description = (
-                f"No veto: {self.thresholds['lo_veto_dt_ns']} < "
+                f"Veto: {self.thresholds['lo_veto_dt_ns']} < "
                 f"dT < {self.thresholds['hi_veto_dt_ns']} ns"
             )
             cut_manager.add_cut(
