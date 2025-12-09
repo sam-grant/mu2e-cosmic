@@ -95,13 +95,13 @@ class Analyse:
         # Apply start/end time cut to coincidences
         # Based on MDC2020aw optimization: timeStart > 420 ns & timeEnd < 1700 ns
         # This reduces deadtime while maintaining high CRY efficiency
-        start_end_time_cond = (
-            (crv["crvcoincs.timeStart"] > self.thresholds["lo_crv_start_ns"]) &
-            (crv["crvcoincs.timeEnd"] < self.thresholds["hi_crv_end_ns"])
-        )
+        # start_end_time_cond = (
+        #     (crv["crvcoincs.timeStart"] > self.thresholds["lo_crv_start_ns"]) &
+        #     (crv["crvcoincs.timeEnd"] < self.thresholds["hi_crv_end_ns"])
+        # )
 
         # Extract CRV coincidence times. Shape is [E, C] (Event, Coincidence).
-        coinc_times = crv["crvcoincs.time"][start_end_time_cond]
+        coinc_times = crv["crvcoincs.time"] # [start_end_time_cond]
 
         # Broadcast CRV times to match track structure so we can element-wise subtract.
 
