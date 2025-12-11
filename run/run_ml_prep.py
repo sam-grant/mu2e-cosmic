@@ -52,7 +52,7 @@ def main():
             },
             {
                 "file_name": "/exp/mu2e/data/users/sgrant/mu2e-cosmic/files/nts.mu2e.CeEndpointMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.001210_00000245.root",
-                "tag": "test_sig_mix2BB", 
+                "tag": "test_CE_mix2BB", 
                 "feature_set": "crv",
                 "run": "test"
             }
@@ -64,18 +64,12 @@ def main():
             run(file_name=config["file_name"], tag=config["tag"], feature_set=config["feature_set"], run_str=config["run"])
         return
 
-    run_str = "e"
+    run_str = "g"
 
     configs = [
-        # {
-        #     "defname" : "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.root",
-        #     "tag": "sig_onspill-LH_aw",
-        #     "feature_set": "crv",
-        #     "run": run_str
-        # },
         {
             "defname": "nts.mu2e.CeEndpointMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root",
-            "tag": "CE_mix_onspill-LH_aw",
+            "tag": "CE_mix2BB_onspill-LH_aw",
             "feature_set": "crv",
             "run": run_str
         },
@@ -85,12 +79,12 @@ def main():
             "feature_set": "crv",
             "run": run_str
         },
-        # {
-        #     "defname": "nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root",
-        #     "tag": "CRY_mix2BB_onspill-LH_aw",
-        #     "feature_set": "crv",
-        #     "run": run_str
-        # },
+        {
+            "defname": "nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root",
+            "tag": "CRY_mix2BB_onspill-LH_aw",
+            "feature_set": "crv",
+            "run": run_str
+        },
     ]
 
     for config in configs:

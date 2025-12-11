@@ -59,7 +59,7 @@ class MLProcessor(Skeleton):
         groups_to_toggle = None,
         use_remote = True,
         location = "disk",
-        max_workers = 50,
+        max_workers = 75,
         use_processes = True,
         verbosity = 1,
         worker_verbosity = 0
@@ -245,8 +245,13 @@ class MLProcessor(Skeleton):
                 # One coinc / event
                 # Based on central ∆t
                 coinc_idx = data_cut["dev"]["cent_dT_idx"]
-                
-                if ak.all(data_cut["dev"]["dT"][coinc_idx]!=data_cut["dev"]["cent_dT"]):
+
+                # Validate indexing (only if we have data with content)
+                # Check both that arrays exist and contain actual values
+                has_data = (len(coinc_idx) > 0 and
+                           ak.any(ak.num(data_cut["dev"]["dT"], axis=-1) > 0))
+
+                if has_data and ak.all(data_cut["dev"]["dT"][coinc_idx]!=data_cut["dev"]["cent_dT"]):
                     self.logger.log(f"Central ∆T mismatch", "error")
                     raise ValueError()
                 
