@@ -99,11 +99,11 @@ ana_labels=(
     # "SU2020f_mix2bb_onspill-LH_aw"
     # "SU2020f_signal_onspill-LH_aw"
     # "SU2020b_CRY_onspill-LH_aw"
-    "SU2020b_CRY_mix2BB_onspill-LH_aw"
-    "SU2020b_CRY_onspill-LH_aw_noCRV"
-    "SU2020b_CRY_mix2BB_onspill-LH_aw_noCRV"
-    "SU2020b_signal_mix2BB_onspill-LH_aw"
-    "SU2020b_signal_onspill-LH_aw"
+
+    # "dev_CRY_onspill-LH_aw"
+    "dev_CRY_mix2BB_onspill-LH_aw"
+    "dev_signal_mix2BB_onspill-LH_aw"
+    "dev_signal_onspill-LH_aw"
 )
 
 

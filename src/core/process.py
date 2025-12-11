@@ -31,7 +31,7 @@ class CosmicProcessor(Skeleton):
         cutset_name = "alpha",
         branches = { 
             "evt" : ["run", "subrun", "event"],
-            "crv" : ["crvcoincs.time", "crvcoincs.nHits", "crvcoincs.pos.fCoordinates.fZ"],
+            "crv" : ["crvcoincs.time", "crvcoincs.nHits", "crvcoincs.pos.fCoordinates.fZ", "crvcoincs.timeStart", "crvcoincs.timeEnd"],
             "trk" : ["trk.nactive", "trk.pdg", "trkqual.valid", "trkqual.result"],
             "trkfit" : ["trksegs", "trksegpars_lh"],
             "trkmc" : ["trkmcsim"]
