@@ -3,10 +3,7 @@
 # ===============================
 
 process:
-    # defname: "nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_05_00.root"
     defname: "nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root"
-    
-    # file_name: "/exp/mu2e/data/users/sgrant/mu2e-cosmic/files/nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.001202_00005005.root"
     cutset_name: "dev"
     max_workers: 80
     verbosity: 1

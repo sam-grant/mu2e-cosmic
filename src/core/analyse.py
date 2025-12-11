@@ -95,13 +95,13 @@ class Analyse:
         # Apply start/end time cut to coincidences
         # Based on MDC2020aw optimization: timeStart > 420 ns & timeEnd < 1700 ns
         # This reduces deadtime while maintaining high CRY efficiency
-        start_end_time_cond = (
-            (crv["crvcoincs.timeStart"] > self.thresholds["lo_crv_start_ns"]) &
-            (crv["crvcoincs.timeEnd"] < self.thresholds["hi_crv_end_ns"])
-        )
+        # start_end_time_cond = (
+        #     (crv["crvcoincs.timeStart"] > self.thresholds["lo_crv_start_ns"]) &
+        #     (crv["crvcoincs.timeEnd"] < self.thresholds["hi_crv_end_ns"])
+        # )
 
         # Extract CRV coincidence times. Shape is [E, C] (Event, Coincidence).
-        coinc_times = crv["crvcoincs.time"][start_end_time_cond]
+        coinc_times = crv["crvcoincs.time"] # [start_end_time_cond]
 
         # Broadcast CRV times to match track structure so we can element-wise subtract.
 
@@ -535,7 +535,7 @@ class Analyse:
             raise e
 
         ###################################################
-        # Loop helix maximimum radius upper bound (main)
+        # Loop helix maximimum radius upper bound 
         ###################################################
         try:
             # Track segmentslevel definition 
@@ -557,6 +557,69 @@ class Analyse:
             self.logger.log(f"Error defining 'within_lhr_max_hi' cut: {e}", "error") 
             raise e
 
+        ###################################################
+        # Coincidence start timing window
+        # Cut out the beam flash at the start of the spill
+        # All coincidences must fall inside the window
+        ###################################################
+
+        try:
+            # This reduces pileup in mix datasets
+            within_coinc_start_time = (
+                (data["crv"]["crvcoincs.timeStart"] > self.thresholds["lo_crv_start_ns"])
+            )
+
+            # Event-level
+            within_coinc_start_time = ak.all(within_coinc_start_time, axis=-1)
+
+            # Add cut 
+            cut_manager.add_cut(
+                name="within_coinc_start_time",
+                description=f"Coincidence start time (t_start > {self.thresholds["lo_crv_start_ns"]} ns)",
+                mask=within_coinc_start_time,
+                active=self.active_cuts["within_coinc_start_time"],
+                group="CRV"
+            )
+
+            # Append for debugging
+            data = self._append_array(data, within_coinc_start_time, "within_coinc_start_time")
+            
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_coinc_start_time' cut: {e}", "error") 
+            raise e
+
+        ###################################################
+        # Coincidence end timing window
+        # Cut out the beam flash at the end of the spill
+        # All coincidences must fall inside the window
+        ###################################################
+
+        try:
+            # Apply start/end time cut to coincidences
+            # This reduces pileup in mix datasets
+            within_coinc_end_time = (
+                (data["crv"]["crvcoincs.timeEnd"] < self.thresholds["hi_crv_end_ns"])
+            )
+
+            # Event level
+            within_coinc_end_time = ak.all(within_coinc_end_time, axis=-1)
+
+            # Add cut 
+            cut_manager.add_cut(
+                name="within_coinc_end_time",
+                description=f"Coincidence end time (t_end < {self.thresholds["hi_crv_end_ns"]} ns)",
+                mask=within_coinc_end_time,
+                active=self.active_cuts["within_coinc_end_time"],
+                group="CRV"
+            )
+
+            # Append for debugging
+            data = self._append_array(data, within_coinc_end_time, "within_coinc_end_time")
+            
+        except Exception as e:
+            self.logger.log(f"Error defining 'within_coinc_end_time' cut: {e}", "error") 
+            raise e
+            
         ###################################################
         # CRV veto: trk/crv time window cut  
         # Check if ANY track has mid segment within time of ANY coincidence 
@@ -593,7 +656,7 @@ class Analyse:
                 description=description, 
                 mask=unvetoed, # _trk,
                 active=self.active_cuts["unvetoed"],
-                group="CRV"
+                group="Veto"
             )
 
             # dT index, useful for ML
@@ -743,8 +806,7 @@ class Analyse:
             data_cut["trkmc"] = data_cut["trkmc"][trk_mask]
 
             # ##########
-            # this would be nice, but too complicated
-            # data_cut["dev"] = data_cut["dev"][trk_mask]
+            # data = self._append_array(data, trk_mask, "combined") 
             # ##########
             
             # Then clean up events with no tracks after cuts
@@ -800,11 +862,6 @@ class Analyse:
             self.logger.log(f"Defining cuts", "max")
             data = self.define_cuts(data, cut_manager)
 
-            # self.logger.log(20*"*" + " START DEBUG " + 20*"*" , "test")
-            # from pyutils.pyprint import Print
-            # Print().print_n_events(data["dev"])
-            # self.logger.log(20*"*" + " END DEBUG " + 20*"*", "test")
-
             # Toggle cuts
             if cuts_to_toggle: 
                 self.logger.log(f"Toggling cuts", "max")
@@ -848,8 +905,8 @@ class Analyse:
             # cutsets that we may not want
             cut_manager.restore_state("original")
             cut_manager.toggle_group({
-                "CRV": False,       # Keep CRV off (this turns off "unvetoed")
-                "Momentum": False   # Keep Momentum off (this turns off both momentum windows)
+                "Momentum": False,   # Keep Momentum off (this turns off both momentum windows)
+                "Veto": False, # Keep veto off
             })
             # Print active cuts
             cut_manager.list_groups()
@@ -866,7 +923,7 @@ class Analyse:
             if veto:  
                 self.logger.log("Applying veto cuts", "max")  
                 # Turn veto on
-                cut_manager.toggle_group({"CRV": True}) 
+                cut_manager.toggle_group({"Veto": True}) 
                 # cut_manager.toggle_cut({"unvetoed": True}) # same thing
                 data = self._append_array(
                     data, 

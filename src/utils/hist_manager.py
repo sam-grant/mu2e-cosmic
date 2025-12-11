@@ -170,6 +170,18 @@ class HistManager:
                 "filter": None
             },
 
+            "coinc_start_time": { 
+                "axis": hist.axis.Regular(100, 0, 2000, name="coinc_start_time", label=r"Coincidence start time [ns]"),
+                "param": "coinc_start_time",
+                "filter": None
+            }, 
+
+            "coinc_end_time": { 
+                "axis": hist.axis.Regular(100, 0, 2000, name="coinc_end_time", label=r"Coincidence end time [ns]"),
+                "param": "coinc_end_time",
+                "filter": None
+            }, 
+            
             # Commented out - too complicated with cut data structure
             # Use draw_cosmic_parents_from_array() instead with events array
             # "cosmic_parent_pdg": { # Categorical binning for particle types
@@ -207,7 +219,7 @@ class HistManager:
             # "calo_Ep": {
             # }
         }
-    
+
     def _prepare_track_data(self, data, surface_name="TT_Front", debug=False):
         """
         Loose cuts
@@ -391,7 +403,7 @@ class HistManager:
             # Get time differences
             try:
                 # mom_res = mom_reco - mom_truth
-                dT = self.analyse.get_trk_crv_dt(trkfit, data["crv"])
+                dT = self.analyse.get_trk_crv_dt(trkfit, data["crv"])["dT"]
                 return ak.flatten(dT, axis=None)
             except:
                 self.logger.log(f"Misalignment in dT calculation for {selection} (returning dT=[])", "warning")
@@ -402,76 +414,15 @@ class HistManager:
             trk_event = ak.count(trk["trk.pdg"], axis=-1)
             return ak.flatten(trk_event, axis=None)
 
-        # Commented out - too complicated with cut data structure
-        # Use draw_cosmic_parents_from_array() instead with events array
-        # elif param == "cosmic_parent_pdg":
-        #     try:
-        #         # For cosmic parents, we use the data as-is (already has cuts applied)
-        #         # The issue is that cuts filter trkmc to only passing tracks
-        #         # We need to work with whatever MC info is left after cuts
-        #         
-        #         # Check if trkmc exists and has data
-        #         if "trkmc" not in data or len(data["trkmc"]) == 0:
-        #             self.logger.log(f"No trkmc data for {selection} (cosmic_parent_pdg)", "max")
-        #             return ak.Array([])
-        #         
-        #         trkmc = data["trkmc"]
-        #         
-        #         # Check structure
-        #         if "trkmcsim" not in trkmc or len(trkmc["trkmcsim"]) == 0:
-        #             self.logger.log(f"No trkmcsim data for {selection} (cosmic_parent_pdg)", "max")
-        #             return ak.Array([])
-        #         
-        #         # Rank condition: rank == -1 identifies cosmic parents
-        #         rank_condition = trkmc["trkmcsim"]["rank"] == -1
-        #         
-        #         # Momentum condition: select the highest momentum cosmic parent
-        #         mom_mag = self.vector.get_mag(trkmc["trkmcsim"], "mom")
-        #         mom_condition = mom_mag == ak.max(mom_mag, axis=-1)
-        #         
-        #         # Combine conditions
-        #         cosmic_parent_mask = rank_condition & mom_condition
-        #         
-        #         # Apply mask and extract PDG codes
-        #         cosmic_parent_pdg = trkmc["trkmcsim"]["pdg"][cosmic_parent_mask]
-        #         
-        #         # Handle potential duplicates by taking first occurrence
-        #         # Flatten over tracks and MC particles
-        #         if ak.count(cosmic_parent_pdg, axis=None) > 0:
-        #             # Take first match per track if there are duplicates
-        #             cosmic_parent_pdg_flat = ak.flatten(cosmic_parent_pdg[:, :, 0] if ak.ndim(cosmic_parent_pdg) > 2 else cosmic_parent_pdg, axis=None)
-        #             return cosmic_parent_pdg_flat
-        #         else:
-        #             return ak.Array([])
-        #         
-        #     except Exception as e:
-        #         self.logger.log(f"Error extracting cosmic_parent_pdg for {selection}: {e} (returning [])", "warning")
-        #         return ak.Array([])
-        
-            
-            # "mom_z": { # 1 MeV/c binning
-            #     "axis": hist.axis.Regular(125, -25, 100, name="mom_z", label=r"$p_{z}$ [MeV/c]"),
-            #     "param": "mom_z",
-            #     "filter": None
-            # }
+        elif param == "coinc_start_time":
+            crv = data["crv"]
+            start_time = crv["crvcoincs.timeStart"]
+            return ak.flatten(start_time, axis=None)
 
-            # "mom_T": { # 1 MeV/c binning
-            #     "axis": hist.axis.Regular(200, -100, 100, name="mom_T", label=r"$p_{T}$ [MeV/c]"),
-            #     "param": "mom_T",
-            #     "filter": None
-            # },
-
-            # "mom_err": { # 1 MeV/c binning
-            #     "axis": hist.axis.Regular(200, 0, 200, name="mom_err", label=r"$p_{T}$ [MeV/c]"),
-            #     "param": "mom_err",
-            #     "filter": None
-            # }, 
-
-            # "mom_res": { # 1 MeV/c binning
-            #     "axis": hist.axis.Regular(200, -100, 100, name="mom_res", label=r"$p_{T}$ [MeV/c]"),
-            #     "param": "mom_res",
-            #     "filter": None
-            # }, 
+        elif param == "coinc_end_time":
+            crv = data["crv"]
+            end_time = crv["crvcoincs.timeEnd"]
+            return ak.flatten(end_time, axis=None)
             
         else:
             error_message = f"Unknown parameter: {param}"
