@@ -244,29 +244,29 @@ class MLProcessor(Skeleton):
                 
                 # One coinc / event
                 # Based on central ∆t
-                coinc_idx = data_cut["dev"]["cent_dT_idx"]
+                # coinc_idx = data_cut["dev"]["cent_dT_idx"]
 
                 # Validate indexing (only if we have data with content)
                 # Check both that arrays exist and contain actual values
-                has_data = (len(coinc_idx) > 0 and
-                           ak.any(ak.num(data_cut["dev"]["dT"], axis=-1) > 0))
+                # has_data = (len(coinc_idx) > 0 and
+                #            ak.any(ak.num(data_cut["dev"]["dT"], axis=-1) > 0))
 
-                if has_data and ak.all(data_cut["dev"]["dT"][coinc_idx]!=data_cut["dev"]["cent_dT"]):
-                    self.logger.log(f"Central ∆T mismatch", "error")
-                    raise ValueError()
+                # if has_data and ak.all(data_cut["dev"]["dT"][coinc_idx]!=data_cut["dev"]["cent_dT"]):
+                #     self.logger.log(f"Central ∆T mismatch", "error")
+                #     raise ValueError()
                 
                 # CRV parameters using selected index
-                processed_data["crv_x"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fX"][coinc_idx]
-                processed_data["crv_y"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fY"][coinc_idx]
-                processed_data["crv_z"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fZ"][coinc_idx]
-                processed_data["PEs"] = data_cut["crv"]["crvcoincs.PEs"][coinc_idx]
-                processed_data["dT"] = data_cut["dev"]["dT"][coinc_idx]
-                processed_data["nHits"] = data_cut["crv"]["crvcoincs.nHits"][coinc_idx]
-                processed_data["nLayers"] = data_cut["crv"]["crvcoincs.nLayers"][coinc_idx]
-                processed_data["angle"] = data_cut["crv"]["crvcoincs.angle"][coinc_idx]
-                processed_data["timeStart"] = data_cut["crv"]["crvcoincs.timeStart"][coinc_idx]
-                processed_data["timeEnd"] = data_cut["crv"]["crvcoincs.timeEnd"][coinc_idx]    
-                processed_data["sector"] = data_cut["crv"]["crvcoincs.sectorType"][coinc_idx] 
+                processed_data["crv_x"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fX"] # [coinc_idx]
+                processed_data["crv_y"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fY"] # [coinc_idx]
+                processed_data["crv_z"] = data_cut["crv"]["crvcoincs.pos.fCoordinates.fZ"] # [coinc_idx]
+                processed_data["PEs"] = data_cut["crv"]["crvcoincs.PEs"] # [coinc_idx]
+                processed_data["dT"] = data_cut["dev"]["dT"] # [coinc_idx]
+                processed_data["nHits"] = data_cut["crv"]["crvcoincs.nHits"] # [coinc_idx]
+                processed_data["nLayers"] = data_cut["crv"]["crvcoincs.nLayers"] # [coinc_idx]
+                processed_data["angle"] = data_cut["crv"]["crvcoincs.angle"] # [coinc_idx]
+                processed_data["timeStart"] = data_cut["crv"]["crvcoincs.timeStart"] # [coinc_idx]
+                processed_data["timeEnd"] = data_cut["crv"]["crvcoincs.timeEnd"] # [coinc_idx]    
+                processed_data["sector"] = data_cut["crv"]["crvcoincs.sectorType"] # [coinc_idx] 
                 
                 # Calculate PEs/nHits ratio (avoid division by zero)
                 processed_data["PEs_per_hit"] = ak.where(
@@ -274,6 +274,12 @@ class MLProcessor(Skeleton):
                     processed_data["PEs"] / processed_data["nHits"], 
                     0
                 )
+
+                # Pad empty coincidences here
+                has_coinc = ak.num(processed_data["crv_z"]) > 0
+                for key in ["crv_x", "crv_y", "crv_z", "PEs", "dT", "nHits", "nLayers",
+                            "angle", "timeStart", "timeEnd", "sector", "PEs_per_hit"]:
+                    processed_data[key] = ak.where(has_coinc, processed_data[key], [[np.nan]])
                 
                 # Tracker parameters
                 at_trk_front = self.selector.select_surface(data_cut["trkfit"], surface_name="TT_Front") 
@@ -289,6 +295,8 @@ class MLProcessor(Skeleton):
                 # Broadcast all features to match CRV coincidence shape [event, coincidence]
                 # Get target shape from any CRV array
                 coinc_shape = ak.ones_like(processed_data["crv_z"])
+                # Pad empty events with no coincidences with at least one slot
+                # coinc_shape = ak.where(ak.num(coinc_shape) == 0, [[1]], coinc_shape)
 
                 # Broadcast event-level parameters: [event] -> [event, coincidence]
                 for key in ["event", "subrun"]:
@@ -405,16 +413,16 @@ class MLProcessor(Skeleton):
 
             # First fill None values with nan
             filled_none = ak.fill_none(postprocessed["events"][field], np.nan)
-            
-            # Then pad empty arrays with a nan 
-            padded_array = ak.where(
-                ak.num(postprocessed["events"][field]) == 0,
-                [[np.nan]], 
-                filled_none
-            )
 
+            # # For other fields: pad with NaN
+            # padded_array = ak.where(
+            #     ak.num(postprocessed["events"][field]) == 0,
+            #     [[np.nan]],
+            #     filled_none
+            # )
+                
             # Then flatten
-            flattened_events[field] = ak.flatten(padded_array, axis=None)
+            flattened_events[field] = ak.flatten(filled_none, axis=None)
 
             # Record lengths
             lengths[field] = len(flattened_events[field])
