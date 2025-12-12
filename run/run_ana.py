@@ -74,7 +74,7 @@ def main():
         
         # Copy config file to output directory for reproducibility
         shutil.copy2(actual_config_path, out_path / Path(args.config).name)
-        
+      
         # Copy log file to output directory
         if os.path.exists(log_file_path):
             log_filename = Path(log_file_path).name

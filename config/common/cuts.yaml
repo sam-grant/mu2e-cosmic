@@ -45,6 +45,10 @@ defaults:
         within_lhr_max_hi: true
         is_truth_electron: true
         one_reco_electron: true
+        # Dev 
+        within_coinc_start_time: false
+        within_coinc_end_time: false
+        # 
         unvetoed: true
         within_wide_win: true
         within_ext_win: true
@@ -127,7 +131,6 @@ cutsets:
             "Preselection cuts for ML"
         thresholds:
             lo_trkqual: 0.2
-            lo_veto_dt_ns: -25.0
         active:
             is_reco_electron: true
             has_trk_front: true
@@ -144,6 +147,8 @@ cutsets:
             within_pitch_angle_hi: true
             within_lhr_max_lo: false
             within_lhr_max_hi: true
+            within_coinc_start_time: true
+            within_coinc_end_time: true
             unvetoed: false
             within_wide_win: true
             within_ext_win: false
@@ -151,9 +156,11 @@ cutsets:
 
     dev:
         description:
-            "CRV developement cuts"
+            "CRV development cuts"
         active:
             within_lhr_max_lo: false
+            within_coinc_start_time: true
+            within_coinc_end_time: true
         thresholds:
             lo_trkqual: 0.2
             lo_veto_dt_ns: -25.0

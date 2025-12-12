@@ -16,68 +16,6 @@ class Draw():
     """
     Class to draw standard "hist" histograms produced by Analyse().create_histograms()
     """
-    
-    # Style constants 
-
-    # # v1 - step histograms
-    # STEP_STYLES = {
-    #     "All": {
-    #         "color": "#2E74B5",      # Professional blue
-    #         "linewidth": 2.0,
-    #         "alpha": 1.0,
-    #         "linestyle": "-"
-    #     },
-    #     "Preselect": {
-    #         "color": "#CC8400",      # Amber/gold
-    #         "linewidth": 2.0,
-    #         "alpha": 1.0,
-    #         "linestyle": "-"
-    #     },
-    #     "Select": {
-    #         "color": "#228B22",      # Forest green (signal)
-    #         "linewidth": 2.0,        # Thicker for importance
-    #         "alpha": 1.0,
-    #         "linestyle": "-"
-    #     },
-    #     "Unvetoed": {
-    #         "color": "#C41E3A",      # Cardinal red
-    #         "linewidth": 2.0,
-    #         "alpha": 1.0,
-    #         "linestyle": "-"
-    #     }
-    # }
-
-    # # v2
-    # STEP_STYLES = {
-    #     "All": {
-    #         "color": "#C41E3A",  
-    #         "linewidth": 1.5,
-    #         "alpha": 0.4,
-    #         "linestyle": ":"
-    #     },
-    #     "Preselect": {
-    #         "color": "#C41E3A",  
-    #         "linewidth": 2.0,
-    #         "alpha": 0.6,
-    #         "linestyle": "--"
-    #     },
-    #     "Select": {
-    #         "color": "#C41E3A",  
-    #         "linewidth": 2.5,
-    #         "alpha": 0.8,
-    #         "linestyle": "-"
-    #     },
-    #     "Unvetoed": {
-    #         "color": "#C41E3A", 
-    #         "linewidth": 3.0,
-    #         "alpha": 1.0,
-    #         "linestyle": "-"
-    #     }
-    # }
-
-    # v3
-
-
     def __init__(self, cutset_name="SU2020b", on_spill=False, hist_styles=None, line_styles=None, colourblind=True, verbosity=1): 
         """
         Initialise 
@@ -213,8 +151,6 @@ class Draw():
         # Confirm
         self.logger.log(f"Initialised", "info")
 
-
-
     def _count_events(self, hists, selection, label):
         """Utility to count events from hist selections"""
         h = hists[selection] 
@@ -277,88 +213,8 @@ class Draw():
                 linestyle=linestyle  
             )
 
-            
-    
-            
-        # h_sel = hist_obj[{"selection": selection}]
-        # h_sel.plot1d(
-        #     overlay="selection", 
-        #     ax=ax, 
-        #     histtype=histtype, 
-        #     yerr=False,
-        #     density=density,
-        #     color=colors,
-        #     flow="none",
-        #     linewidth=linewidths[0] if len(set(linewidths)) == 1 else linewidths,
-        #     alpha=alphas[0] if len(set(alphas)) == 1 else alphas
-        # )
-        
         return labels
     
-    # def plot_mom_windows(self, hists, out_path=None):
-    #     """Plot 1x3 momentum window histograms"""
-    #     fig, ax = plt.subplots(1, 3, figsize=(6.4*3, 4.8))
-        
-    #     # Wide range 
-    #     name = "mom_full"
-    #     h1o_mom_wide = hists[name]
-    #     labels = self._plot_histogram(h1o_mom_wide, ax[0], 
-    #                                  list(h1o_mom_wide.axes["selection"]))
-        
-    #     # Add event counts to labels
-    #     for i, label in enumerate(labels):
-    #         labels[i] = f"{label}: {self._count_events(hists, name, label):,}"
-        
-    #     self._format_axis(ax[0], labels, 
-    #                      xlabel="Momentum [MeV/c]",
-    #                      ylabel="Tracks",
-    #                      title="Wide range: 50-200 MeV/c")
-    
-    #     # Extended window 
-    #     name = "mom_ext"
-    #     h1o_mom_ext = hists[name]
-    #     labels = self._plot_histogram(h1o_mom_ext, ax[1],
-    #                                  list(h1o_mom_ext.axes["selection"]))
-        
-    #     for i, label in enumerate(labels):
-    #         labels[i] = f"{label}: {self._count_events(hists, name, label):,}"
-        
-    #     title = f"Extended window: {self.analyse.thresholds['lo_ext_win_mevc']}" \
-    #             f"-{self.analyse.thresholds['hi_ext_win_mevc']} MeV/c"
-    #     self._format_axis(ax[1], labels, 
-    #         xlabel="Momentum [MeV/c]",
-    #         title=title,
-    #         ncols=2,
-    #         y_ext_factor=40,
-    #         loc="upper center"
-    #     ) 
-        
-    #     # Signal window 
-    #     name = "mom_sig"
-    #     h1o_mom_sig = hists[name]
-    #     labels = self._plot_histogram(h1o_mom_sig, ax[2],
-    #                                  list(h1o_mom_sig.axes["selection"]))
-        
-    #     for i, label in enumerate(labels):
-    #         labels[i] = f"{label}: {self._count_events(hists, name, label):,}"
-        
-    #     title = f"Signal window: {self.analyse.thresholds['lo_sig_win_mevc']}" \
-    #             f"-{self.analyse.thresholds['hi_sig_win_mevc']} MeV/c"
-
-    #     self._format_axis(ax[2], labels, 
-    #         xlabel="Momentum [MeV/c]",
-    #         title=title,
-    #         ncols=2,
-    #         y_ext_factor=40,
-    #         loc="upper center"
-    #     ) 
-        
-    #     plt.tight_layout()
-    #     if out_path:
-    #         plt.savefig(out_path, dpi=300)
-    #         self.logger.log(f"\tWrote {out_path}", "success")
-    #     plt.show()
-
     def plot_mom_windows(self, hists, out_path=None):
         """Plot 2x2 momentum window histograms"""
         fig, ax = plt.subplots(2, 2, figsize=(2*6.4, 2*4.8))
@@ -508,19 +364,14 @@ class Draw():
         plt.show()
 
     def plot_summary(self, hists, out_path=None, toggle_lines=None):
-        """Plot 3x3 summary plot"""
-        fig, ax = plt.subplots(3, 3, figsize=(3*6.4, 3*4.8))
+        """Plot 4x3 summary plot"""
+        fig, ax = plt.subplots(4, 3, figsize=(3*6.4, 4*4.8))
         fig.subplots_adjust(hspace=0.3, wspace=0.25)
         
         # selection = ["All", "Preselect", "Select", "Unvetoed"]
         
         # Set default toggle_lines if not provided
         if toggle_lines is None:
-            # toggle_lines = {
-            #     "mom_full": True, "pz": True, "t0": True,
-            #     "trkqual": True, "nactive": True, "t0err": True,
-            #     "d0": True, "maxr": True, "pitch_angle": True
-            # }
             toggle_lines = {
                 "pz": True, "t0": True, "trkqual": True,
                 "nactive": True, "t0err": True, "d0": True, 
@@ -529,30 +380,31 @@ class Draw():
         
         # Variable info for axis labels
         var_info = {
-            # "mom_full": ("Momentum [MeV/c]", "", "upper right", 1.0, 1), # xlabel, title, loc, y_ext_factor, ncols
+            # 
+            "mom_full": (r"Momentum [MeV/c]", "", "upper right", 20, 2), 
             "mom_z": (r"$p_{z}$ [MeV/c]", "", "upper right", 20, 2), 
             "t0": ("Track fit time [ns]", "", "upper center", 20, 2), 
+            # 
             "trkqual": ("Track quality", "", "upper right", 5, 2), 
             "nactive": ("Active tracker hits", "", "upper right", 20, 2), 
             "t0err": (r"$\sigma_{t_{0}}$ [ns]", "", "upper right", 1, 2), 
+            #
             "d0": (r"$d_{0}$ [mm]", "", "upper right", 20, 2), 
             "maxr": (r"$R_{\text{max}}$ [mm]", "", "upper left", 12, 1), 
             "pitch_angle": (r"$p_{z}/p_{T}$", "", "upper right", 20, 1), 
+            #
             "dT": (r"$\Delta t$ [ns]", "", "upper left", 5, 1), 
+            "coinc_start_time": (r"Start time [ns]", "", "upper right", 5, 1), 
+            "coinc_end_time": (r"End time [ns]", "", "upper right", 5, 1),
         }
-        
-        # Plot all 9 histograms
-        # plot_positions = [
-        #     ("mom_full", (0, 0)), ("mom_z", (0, 1)), ("t0", (0, 2)),
-        #     ("trkqual", (1, 0)), ("nactive", (1, 1)), ("t0err", (1, 2)),
-        #     ("d0", (2, 0)), ("maxr", (2, 1)), ("pitch_angle", (2, 2))
-        # ]
-        
+
         plot_positions = [
-            ("mom_z", (0, 0)), ("t0", (0, 1)), ("trkqual", (0, 2)),
-            ("nactive", (1, 0)), ("t0err", (1, 1)), ("d0", (1, 2)),
-            ("maxr", (2, 0)), ("pitch_angle", (2, 1)), ("dT", (2, 2))
+            ("mom_full", (0, 0)), ("mom_z", (0, 1)), ("t0", (0, 2)),
+            ("trkqual", (1, 0)), ("nactive", (1, 1)), ("t0err", (1, 2)),
+            ("d0", (2, 0)), ("maxr", (2, 1)), ("pitch_angle", (2, 2)),
+            ("dT", (3, 0)), ("coinc_start_time", (3, 1)), ("coinc_end_time", (3, 2))
         ]
+        
         for var_name, (row, col) in plot_positions:
             # Plot histograms
             labels = self._plot_histogram(hists[var_name], ax[row, col], list(hists[var_name].axes["selection"])) # , selection)
@@ -562,7 +414,7 @@ class Draw():
             ylabel = "Tracks" if col==0 else ""
             
             # Only show legend on first subplot
-            show_legend = True # (row == 0 and col == 0)
+            show_legend = True
             
             # Apply formatting
             self._format_axis(
@@ -749,6 +601,19 @@ class Draw():
             if self.analyse.active_cuts["within_pitch_angle_hi"]:
                 ax.axvline(self.analyse.thresholds["hi_pitch_angle"], **line_kwargs)
 
+        elif var_name == "dT":
+            if self.analyse.active_cuts["unvetoed"]:
+                ax.axvline(self.analyse.thresholds["lo_veto_dt_ns"], **line_kwargs)
+                ax.axvline(self.analyse.thresholds["hi_veto_dt_ns"], **line_kwargs)
+
+        elif var_name == "coinc_start_time":
+            if self.analyse.active_cuts["within_coinc_start_time"]:
+                ax.axvline(self.analyse.thresholds["lo_crv_start_ns"], **line_kwargs)
+
+        elif var_name == "coinc_end_time":
+            if self.analyse.active_cuts["within_coinc_end_time"]:
+                ax.axvline(self.analyse.thresholds["hi_crv_end_ns"], **line_kwargs)
+                
         elif var_name == "dT":
             if self.analyse.active_cuts["unvetoed"]:
                 ax.axvline(self.analyse.thresholds["lo_veto_dt_ns"], **line_kwargs)
