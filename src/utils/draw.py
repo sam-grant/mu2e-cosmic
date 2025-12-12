@@ -183,7 +183,7 @@ class Draw():
                 "histtype": "step"
             },
             "After cuts": {
-                "color": "#228B22", # forest green 
+                "color": "#0173B2",  # blue 
                 "linewidth": 2.0,
                 "alpha": 0.6,
                 "linestyle": "-", 
