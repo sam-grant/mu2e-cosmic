@@ -674,6 +674,16 @@ class Analyse:
             cent_dT_idx = ak.argmin(abs(dT - mid_value), axis=-1, keepdims=True)
             cent_dT = dT[cent_dT_idx]
 
+            # Most probable dT, the one closest to the peak of the distribution 
+            # at 42.4 ns. We could get this from:
+            # - Hardcoded value 
+            # - YAML 
+            # - Calculate directly (but then you have to apply all the cuts first?)
+
+            # FIXME: put in magic numbers YAML
+            peak_dT_idx = ak.argmin(abs(dT - 42.2), axis=-1, keepdims=True)
+            peak_dT = dT[peak_dT_idx]
+
             # Store 
             data = self._append_array(data, veto_condition, "veto_condition")
             data = self._append_array(data, vetoed, "vetoed") 
@@ -686,7 +696,9 @@ class Analyse:
             data = self._append_array(data, min_dT_idx, "min_dT_idx") 
             data = self._append_array(data, cent_dT, "cent_dT") 
             data = self._append_array(data, cent_dT_idx, "cent_dT_idx") 
-
+            data = self._append_array(data, peak_dT, "peak_dT") 
+            data = self._append_array(data, peak_dT_idx, "peak_dT_idx") 
+            
         except Exception as e:
             self.logger.log(f"Error defining 'unvetoed' cut: {e}", "error") 
             raise e
