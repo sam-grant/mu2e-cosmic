@@ -394,8 +394,8 @@ class Draw():
             "pitch_angle": (r"$p_{z}/p_{T}$", "", "upper right", 20, 1), 
             #
             "dT": (r"$\Delta t$ [ns]", "", "upper left", 5, 1), 
-            "coinc_start_time": (r"Start time [ns]", "", "upper right", 5, 1), 
-            "coinc_end_time": (r"End time [ns]", "", "upper right", 5, 1),
+            "coinc_start_time": (r"Start time [ns]", "", "upper right", 5, 2), 
+            "coinc_end_time": (r"End time [ns]", "", "upper left", 5, 2),
         }
 
         plot_positions = [
