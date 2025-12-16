@@ -16,8 +16,9 @@ from load import LoadML
 
 class ProcessValidation():
     """ Load up ML dataset """
-    def __init__(self, run="h"):
+    def __init__(self, run="h", cutset_name="dev"):
         self.run = run
+        self.cutset_name = cutset_name
         self.base_in_path = Path(f"../../output/ml/{self.run}/data/")
         # A bit hacky but...
         # this is defined from the notebook/ml location
@@ -25,7 +26,7 @@ class ProcessValidation():
         self.cry_data, self.ce_mix_data = LoadML(run=self.run).get_full_results()
 
     def draw_hists(self):
-        draw = Draw()
+        draw = Draw(cutset_name=self.cutset_name)
         draw.plot_summary(self.cry_data["hists"], out_path = self.img_out_path / "h1o_3x3_cuts_CRY.png")
         draw.plot_summary(self.ce_mix_data["hists"], out_path = self.img_out_path / "h1o_3x3_cuts_CE_mix.png")
         
