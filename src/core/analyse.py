@@ -367,6 +367,38 @@ class Analyse:
         except Exception as e:
             self.logger.log(f"Error defining 'good_trkqual' cut: {e}", "error") 
             raise e
+
+
+        ###################################################
+        # Exclude events with good upstream tracks 
+        # Not sure where to put this 
+        ###################################################
+        try: 
+            # Track level mask
+            # is_downstream: [True, False, True, False]
+            # good_trkqual: [True, False, False, True]
+            # if any ~is_downstream & good_trkqual -> False (exclude event) 
+            good_upstream = ~is_downstream & good_trkqual
+            has_good_upstream = ak.any(good_upstream, axis=-1) 
+            has_no_upstream = ~has_good_upstream
+    
+            # Add cut 
+            cut_manager.add_cut(
+                name="has_no_upstream",
+                description=f"No good upstream tracks",
+                mask=has_no_upstream,
+                active=self.active_cuts["has_no_upstream"],
+                group="Tracker"
+            )
+            
+            # Append for debugging
+            data = self._append_array(data, good_upstream, "good_upstream")
+            data = self._append_array(data, has_good_upstream, "has_good_upstream")
+            data = self._append_array(data, has_no_upstream, "has_no_upstream")
+        
+        except Exception as e:
+            self.logger.log(f"Error defining 'good_trkqual' cut: {e}", "error") 
+            raise e
             
         ###################################################
         # Time at tracker entrance (t0)
