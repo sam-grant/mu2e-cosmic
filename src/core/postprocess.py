@@ -18,8 +18,7 @@ class PostProcess():
     _UNSET = object()
     
     def __init__(self, on_spill, write_events=False, write_event_info=False, 
-                 generated_events=None, livetime=None, 
-                 on_spill_frac=None,
+                 generated_events=_UNSET, livetime=_UNSET, on_spill_frac=_UNSET,
                  veto=True, verbosity=1):
         """Initialise
 
@@ -72,7 +71,25 @@ class PostProcess():
             verbosity=self.verbosity
         )
 
-        self.logger.log(f"Initialised", "info")
+        init_summary = f"""
+        \ton_spill          = {self.on_spill}
+        \twrite_events      = {self.write_events}
+        \twrite_event_info  = {self.write_event_info}
+        \tgenerated_events  = {self.generated_events}
+        \tlivetime          = {self.livetime}
+        \ton_spill_frac     = {self.on_spill_frac}
+        \tveto              = {self.veto}
+        \tverbosity         = {self.verbosity}"""
+        
+        self.logger.log(f"Initialised with:{init_summary}", "info")
+        
+        # Warn about None values
+        if self.generated_events is None:
+            self.logger.log("generated_events is None - efficiency calculations will be skipped", "warning")
+        if self.livetime is None:
+            self.logger.log("livetime is None - rate calculations will be skipped", "warning")
+        if self.on_spill_frac is None:
+            self.logger.log("on_spill_frac is None - walltime calculations will be skipped", "warning")
 
     def combine_cut_flows(self, results, format_as_df=True):
         """
@@ -357,7 +374,7 @@ class PostProcess():
     
             cut_flow = self.combine_cut_flows(results)
             hists = self.combine_hists(results)
-            analysis = self.get_combined_analysis(hists)
+            analysis = self.get_combined_analysis(hists) if hists else None
             events = self.combine_arrays(results) if self.write_events else None 
             event_info = self.get_event_info(results) if self.write_event_info else None 
     
