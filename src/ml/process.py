@@ -16,7 +16,10 @@ from pyutils.pylogger import Logger
 from pyutils.pyselect import Select
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(script_dir, "..", "utils"))
+sys.path.extend([
+    os.path.join(script_dir, "..", "utils"),
+    os.path.join(script_dir, "..", "core")
+])
 
 from analyse import Analyse
 from postprocess import PostProcess
@@ -415,7 +418,7 @@ class MLProcessor(Skeleton):
             filled_none = ak.fill_none(postprocessed["events"][field], np.nan)
 
             # # For other fields: pad with NaN
-            # padded_array = ak.where(
+            # padded_array = ak.where
             #     ak.num(postprocessed["events"][field]) == 0,
             #     [[np.nan]],
             #     filled_none

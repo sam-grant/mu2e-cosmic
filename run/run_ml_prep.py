@@ -8,10 +8,9 @@ import sys
 import argparse
 from pathlib import Path
 
-sys.path.extend(["../src/core", "../src/utils"])
+sys.path.extend(["../src/utils", "../src/ml"])
 
-from ml_process import MLProcessor
-from draw import Draw
+from process import MLProcessor
 from io_manager import Write
 
 def run(defname=None, file_name=None, feature_set="crv", tag="test", run_str="test"):
