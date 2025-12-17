@@ -234,6 +234,7 @@ class Analyse:
             )
             # Append mask for debugging
             data = self._append_array(data, is_reco_electron, "is_reco_electron")
+            # data = self._append_array(data, data["trk"]["trk.pdg"], "trk_pdg")
             # data["is_reco_electron"] = is_reco_electron
         except Exception as e:
             self.logger.log(f"Error defining 'is_reco_electron' cut: {e}", "error") 
@@ -242,13 +243,14 @@ class Analyse:
         ###################################################
         # One electron track fit / event 
         # This deals with split reflected tracks
-        # TODO: make this dependent on a deltaT
         ###################################################
         try: 
             # Event-level definition
-            one_reco_electron_per_event = ak.sum(is_reco_electron, axis=-1) == 1
+            # one_reco_electron_per_event = ak.sum(is_reco_electron, axis=-1) == 1
+            one_reco_electron = ak.sum(is_reco_electron, axis=-1) == 1
             # Broadcast to track level
-            one_reco_electron, _ = ak.broadcast_arrays(one_reco_electron_per_event, is_reco_electron) # this returns a tuple
+            # Is this even needed? Aren't event level cuts just fine? 
+            # one_reco_electron, _ = ak.broadcast_arrays(one_reco_electron_per_event, is_reco_electron) # this returns a tuple
             # Add cut 
             cut_manager.add_cut(
                 name="one_reco_electron",
@@ -259,19 +261,18 @@ class Analyse:
             )
             # Append for debugging 
             data = self._append_array(data, one_reco_electron, "one_reco_electron")
-            data = self._append_array(data, one_reco_electron_per_event, "one_reco_electron_per_event")
-            # data["one_reco_electron"] = one_reco_electron
-            # data["one_reco_electron_per_event"] = one_reco_electron_per_event
+            # data = self._append_array(data, one_reco_electron_per_event, "one_reco_electron_per_event")
         except Exception as e:
             self.logger.log(f"Error defining 'one_reco_electron' cut: {e}", "error") 
             raise e
 
         ###################################################
-        # Downstream tracks at the tracker entrance 
+        # Downstream electron tracks through tracker
         ###################################################
         try:
             # Track segments level mask
             is_downstream = self.selector.is_downstream(data["trkfit"]) 
+            
             # Track level mask
             # "all" method handles reflections 
             # is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1) 
@@ -279,8 +280,12 @@ class Analyse:
 
             # Updated definition: all downstream
             # should mean that NO downstream tracks are reconstructed 
+            # Need to somehow exclue events that have upstream 
+            # tracks, since this gets killed by the "is_reco_electron" cut
+            # which only conc
             # Event-level definition
             all_downstream_per_event = ak.all(is_downstream, axis=-1)
+            
             # Broadcast to track level
             all_downstream, _ = ak.broadcast_arrays(all_downstream_per_event, is_downstream)
 
@@ -331,6 +336,7 @@ class Analyse:
                 group="Preselect"
             )
             # Append for debugging
+            # data = self._append_array(data, has_trk_parent_electron, "has_trk_parent_electron")
             data = self._append_array(data, has_trk_parent_electron, "has_trk_parent_electron")
             # data["has_trk_parent_electron"] = has_trk_parent_electron
         except Exception as e:
@@ -339,6 +345,8 @@ class Analyse:
 
         ###################################################
         # Track fit hypothesis quality
+        # Require good downstream tracks hypotheses 
+        # Exclude events with good upstream tracks hypotheses
         ###################################################
         try: 
             # Track level mask
@@ -346,13 +354,15 @@ class Analyse:
             # Add cut 
             cut_manager.add_cut(
                 name="good_trkqual",
-                description=f"Track fit quality > {self.thresholds["lo_trkqual"]}",
+                description=f"One track with quality > {self.thresholds["lo_trkqual"]}",
                 mask=good_trkqual,
                 active=self.active_cuts["good_trkqual"],
                 group="Tracker"
             )
             # Append for debugging
             data = self._append_array(data, good_trkqual, "good_trkqual")
+            # data = self._append_array(data, good_trkqual_sum, "good_trkqual_sum")
+            # data = self._append_array(data, one_good_trkqual, "one_good_trkqual")
             # data["good_trkqual"] = good_trkqual
         except Exception as e:
             self.logger.log(f"Error defining 'good_trkqual' cut: {e}", "error") 
