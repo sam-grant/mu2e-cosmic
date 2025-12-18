@@ -267,6 +267,33 @@ class Analyse:
             raise e
             
         # ###################################################
+        # # Downstream tracks through tracker
+        # ###################################################
+        try:
+            # Segments
+            is_downstream_seg = self.selector.is_downstream(data["trkfit"])  
+            # Tracks 
+            is_downstream_trk = ak.all(~in_trk | is_downstream_seg, axis=-1)
+            
+            # Add cut 
+            cut_manager.add_cut(
+                name="is_downstream_in_trk",
+                description="Downstream tracks (p_z > 0 through tracker)",
+                mask=is_downstream_trk,
+                active=self.active_cuts["is_downstream_in_trk"],
+                group="Preselect"
+            )
+        
+            # Append for debugging
+            data = self._append_array(data, is_downstream_seg, "is_downstream_seg")
+            data = self._append_array(data, is_downstream_trk, "is_downstream_trk")
+            
+        except Exception as e:
+            self.logger.log(f"Error defining 'is_downstream_in_trk' cut: {e}", "error") 
+            raise e
+
+
+        # ###################################################
         # # Downstream track
         # ###################################################
         try:
@@ -308,7 +335,7 @@ class Analyse:
             # Add cut 
             cut_manager.add_cut(
                 name="all_downstream",
-                description="All quality tracks downstream everywhere (p_z > 0)",
+                description="Quality tracks are downstream (p_z > 0)",
                 mask=all_good_downstream_segs,
                 active=self.active_cuts["all_downstream"],
                 group="Preselect"

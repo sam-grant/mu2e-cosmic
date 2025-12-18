@@ -35,6 +35,7 @@ defaults:
         good_trkqual: true
         within_t0: true
         is_downstream: false
+        is_downstream_in_trk: false
         all_downstream: true
         has_hits: true
         within_t0err: true
