@@ -265,58 +265,115 @@ class Analyse:
         except Exception as e:
             self.logger.log(f"Error defining 'one_reco_electron' cut: {e}", "error") 
             raise e
-
-        ###################################################
-        # Downstream electron tracks through tracker
-        ###################################################
+            
+        # ###################################################
+        # # Downstream track
+        # ###################################################
         try:
-            # Track segments level mask
-            is_downstream = self.selector.is_downstream(data["trkfit"]) 
+            # Segments
+            is_downstream_seg = self.selector.is_downstream(data["trkfit"])  
+            # Tracks 
+            is_downstream_trk = ak.all(is_downstream_seg, axis=-1)
             
-            # Track level mask
-            # "all" method handles reflections 
-            # is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1) 
-            is_downstream = ak.all(~in_trk | is_downstream, axis=-1) 
-
-            # Updated definition: all downstream
-            # should mean that NO downstream tracks are reconstructed 
-            # Need to somehow exclue events that have upstream 
-            # tracks, since this gets killed by the "is_reco_electron" cut
-            # which only conc
-            # Event-level definition
-            all_downstream_per_event = ak.all(is_downstream, axis=-1)
-            
-            # Broadcast to track level
-            all_downstream, _ = ak.broadcast_arrays(all_downstream_per_event, is_downstream)
-
-            # "any" method does not handle reflections, but may be closer to C++
-            # is_downstream = ak.any(at_trk_front & is_downstream, axis=-1) 
-            # Add cut - use is_downstream (has any downstream track)
+            # Add cut 
             cut_manager.add_cut(
                 name="is_downstream",
-                description="Has downstream track (p_z > 0 in tracker)",
-                mask=is_downstream,
+                description="Downstream tracks (p_z > 0)",
+                mask=is_downstream_trk,
                 active=self.active_cuts["is_downstream"],
                 group="Preselect"
             )
-            
-            # Commented out: all_downstream is too restrictive
-            # cut_manager.add_cut(
-            #     name="all_downstream",
-            #     description="All tracks are downstream (all p_z > 0 in tracker)",
-            #     mask=all_downstream,
-            #     active=self.active_cuts["all_downstream"],
-            #     group="Preselect"
-            # )
-            
+        
             # Append for debugging
-            data = self._append_array(data, is_downstream, "is_downstream")
-            data = self._append_array(data, all_downstream, "all_downstream")
-            data = self._append_array(data, all_downstream_per_event, "all_downstream_per_event")
-            # data["is_downstream"] = is_downstream
+            data = self._append_array(data, is_downstream_seg, "is_downstream_seg")
+            data = self._append_array(data, is_downstream_trk, "is_downstream_trk")
+            
         except Exception as e:
             self.logger.log(f"Error defining 'is_downstream' cut: {e}", "error") 
             raise e
+
+        # ###################################################
+        # # Downstream quality tracks everywhere 
+        # ###################################################
+        try:
+            # Good track quality (duplicated in trkqual cut, but that's OK)
+            good_trkqual = self.selector.select_trkqual(data["trk"], quality=self.thresholds["lo_trkqual"])
+            # Segments
+            is_downstream_seg = self.selector.is_downstream(data["trkfit"])  
+            # Tracks 
+            all_downstream_segs = ak.all(is_downstream_seg, axis=-1)
+            # Good tracks
+            all_good_downstream_segs = all_downstream_segs & good_trkqual
+            
+            # Add cut 
+            cut_manager.add_cut(
+                name="all_downstream",
+                description="All quality tracks downstream everywhere (p_z > 0)",
+                mask=all_good_downstream_segs,
+                active=self.active_cuts["all_downstream"],
+                group="Preselect"
+            )
+        
+            # Append for debugging
+            data = self._append_array(data, is_downstream_seg, "is_downstream_seg")
+            data = self._append_array(data, all_downstream_segs, "all_downstream_segs")
+            data = self._append_array(data, all_good_downstream_segs, "all_good_downstream_segs")
+            
+        except Exception as e:
+            self.logger.log(f"Error defining 'all_downstream' cut: {e}", "error") 
+            raise e
+        
+        # ###################################################
+        # # Downstream electron tracks through tracker
+        # ###################################################
+        # try:
+        #     # Track segments level mask
+        #     is_downstream = self.selector.is_downstream(data["trkfit"]) 
+            
+        #     # Track level mask
+        #     # "all" method handles reflections 
+        #     # is_downstream = ak.all(~at_trk_front | is_downstream, axis=-1) 
+        #     is_downstream = ak.all(~in_trk | is_downstream, axis=-1) 
+
+        #     # Updated definition: all downstream
+        #     # should mean that NO downstream tracks are reconstructed 
+        #     # Need to somehow exclue events that have upstream 
+        #     # tracks, since this gets killed by the "is_reco_electron" cut
+        #     # which only conc
+        #     # Event-level definition
+        #     all_downstream_per_event = ak.all(is_downstream, axis=-1)
+            
+        #     # Broadcast to track level
+        #     all_downstream, _ = ak.broadcast_arrays(all_downstream_per_event, is_downstream)
+
+        #     # "any" method does not handle reflections, but may be closer to C++
+        #     # is_downstream = ak.any(at_trk_front & is_downstream, axis=-1) 
+        #     # Add cut - use is_downstream (has any downstream track)
+        #     cut_manager.add_cut(
+        #         name="is_downstream",
+        #         description="Has downstream track (p_z > 0 in tracker)",
+        #         mask=is_downstream,
+        #         active=self.active_cuts["is_downstream"],
+        #         group="Preselect"
+        #     )
+            
+        #     # Commented out: all_downstream is too restrictive
+        #     # cut_manager.add_cut(
+        #     #     name="all_downstream",
+        #     #     description="All tracks are downstream (all p_z > 0 in tracker)",
+        #     #     mask=all_downstream,
+        #     #     active=self.active_cuts["all_downstream"],
+        #     #     group="Preselect"
+        #     # )
+            
+        #     # Append for debugging
+        #     data = self._append_array(data, is_downstream, "is_downstream")
+        #     data = self._append_array(data, all_downstream, "all_downstream")
+        #     data = self._append_array(data, all_downstream_per_event, "all_downstream_per_event")
+        #     # data["is_downstream"] = is_downstream
+        # except Exception as e:
+        #     self.logger.log(f"Error defining 'is_downstream' cut: {e}", "error") 
+        #     raise e
 
         ###################################################
         # Track "PID" from truth track parents 
@@ -354,52 +411,17 @@ class Analyse:
             # Add cut 
             cut_manager.add_cut(
                 name="good_trkqual",
-                description=f"One track with quality > {self.thresholds["lo_trkqual"]}",
+                description=f"Track quality > {self.thresholds["lo_trkqual"]}",
                 mask=good_trkqual,
                 active=self.active_cuts["good_trkqual"],
                 group="Tracker"
             )
             # Append for debugging
             data = self._append_array(data, good_trkqual, "good_trkqual")
-            # data = self._append_array(data, good_trkqual_sum, "good_trkqual_sum")
-            # data = self._append_array(data, one_good_trkqual, "one_good_trkqual")
-            # data["good_trkqual"] = good_trkqual
         except Exception as e:
             self.logger.log(f"Error defining 'good_trkqual' cut: {e}", "error") 
             raise e
 
-
-        ###################################################
-        # Exclude events with good upstream tracks 
-        # Not sure where to put this 
-        ###################################################
-        try: 
-            # Track level mask
-            # is_downstream: [True, False, True, False]
-            # good_trkqual: [True, False, False, True]
-            # if any ~is_downstream & good_trkqual -> False (exclude event) 
-            good_upstream = ~is_downstream & good_trkqual
-            has_good_upstream = ak.any(good_upstream, axis=-1) 
-            has_no_upstream = ~has_good_upstream
-    
-            # Add cut 
-            cut_manager.add_cut(
-                name="has_no_upstream",
-                description=f"No good upstream tracks",
-                mask=has_no_upstream,
-                active=self.active_cuts["has_no_upstream"],
-                group="Tracker"
-            )
-            
-            # Append for debugging
-            data = self._append_array(data, good_upstream, "good_upstream")
-            data = self._append_array(data, has_good_upstream, "has_good_upstream")
-            data = self._append_array(data, has_no_upstream, "has_no_upstream")
-        
-        except Exception as e:
-            self.logger.log(f"Error defining 'good_trkqual' cut: {e}", "error") 
-            raise e
-            
         ###################################################
         # Time at tracker entrance (t0)
         ###################################################
@@ -422,7 +444,6 @@ class Analyse:
                 )
                 # Append for debugging
                 data = self._append_array(data, within_t0, "within_t0")
-                # data["within_t0"] = within_t0
         except Exception as e:
             self.logger.log(f"Error defining 'within_t0' cut: {e}", "error") 
             raise e
@@ -435,7 +456,6 @@ class Analyse:
             within_t0err = (data["trkfit"]["trksegpars_lh"]["t0err"] < self.thresholds["hi_t0err"])
 
             # Track level definition
-            # within_t0err = ak.all(~at_trk_front | within_t0err, axis=-1)
             within_t0err = ak.all(~at_trk_mid | within_t0err, axis=-1) 
 
             # Add cut 
@@ -446,10 +466,8 @@ class Analyse:
                 active=self.active_cuts["within_t0err"],
                 group="Tracker"
             )
-            # Append for debugging
-            data = self._append_array(data, within_t0err, "within_t0err")
-            # data["within_t0err"] = within_t0err
         except Exception as e:
+            # Append for debugging
             self.logger.log(f"Error defining 'within_t0err' cut: {e}", "error") 
             raise e
             
@@ -458,12 +476,10 @@ class Analyse:
         ###################################################
         try:
             # Track level definition 
-            # has_hits = self.selector.has_n_hits(data["trk"], n_hits=self.thresholds["lo_nactive"])
             has_hits = data["trk"]["trk.nactive"] > self.thresholds["lo_nactive"]
             # Add cut
             cut_manager.add_cut(
                 name="has_hits",
-                # description=f">{self.thresholds["lo_nactive"]-1} active tracker hits",
                 description=f">{self.thresholds["lo_nactive"]} active tracker hits",
                 mask=has_hits,
                 active=self.active_cuts["has_hits"],
@@ -471,7 +487,6 @@ class Analyse:
             )
             # Append for debugging
             data = self._append_array(data, has_hits, "has_hits")
-            # data["has_hits"] = has_hits
         except Exception as e:
             self.logger.log(f"Error defining 'has_hits' cut: {e}", "error") 
             raise e
@@ -496,7 +511,6 @@ class Analyse:
             )
             # Append for debugging
             data = self._append_array(data, within_d0, "within_d0")
-            # data["within_d0"] = within_d0
         except Exception as e:
             self.logger.log(f"Error defining 'within_d0' cut: {e}", "error") 
             raise e
@@ -522,8 +536,6 @@ class Analyse:
             # Append 
             data = self._append_array(data, pitch_angle, "pitch_angle")
             data = self._append_array(data, within_pitch_angle_lo, "within_pitch_angle_lo")
-            # data["pitch_angle"] = pitch_angle
-            # data["within_pitch_angle_lo"] = within_pitch_angle_lo
         except Exception as e:
             self.logger.log(f"Error defining 'within_pitch_angle_lo' cut: {e}", "error") 
             raise e
@@ -548,7 +560,6 @@ class Analyse:
             )
             # Append 
             data = self._append_array(data, within_pitch_angle_hi, "within_pitch_angle_hi")
-            # data["within_pitch_angle_hi"] = within_pitch_angle_hi
         except Exception as e:
             self.logger.log(f"Error defining 'within_pitch_angle_hi' cut: {e}", "error") 
             raise e
@@ -557,7 +568,7 @@ class Analyse:
         # Loop helix maximimum radius lower bound 
         ###################################################
         try:
-            # Track segmentslevel definition 
+            # Track segment level definition 
             within_lhr_max_lo = (self.thresholds["lo_maxr_mm"] < data["trkfit"]["trksegpars_lh"]["maxr"]) 
             # Track level definition 
             within_lhr_max_lo = ak.all(~at_trk_front | within_lhr_max_lo, axis=-1)
@@ -571,7 +582,6 @@ class Analyse:
             )
             # Append for debugging
             data = self._append_array(data, within_lhr_max_lo, "within_lhr_max_lo")
-            # data["within_lhr_max_lo"] = within_lhr_max_lo
         except Exception as e:
             self.logger.log(f"Error defining 'within_lhr_max_lo' cut: {e}", "error") 
             raise e
@@ -594,7 +604,6 @@ class Analyse:
             )
             # Append for debugging
             data = self._append_array(data, within_lhr_max_hi, "within_lhr_max_hi")
-            # data["within_lhr_max_hi"] = within_lhr_max_hi
         except Exception as e:
             self.logger.log(f"Error defining 'within_lhr_max_hi' cut: {e}", "error") 
             raise e
