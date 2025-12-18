@@ -31,9 +31,13 @@ def main():
     
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config", required=True, help="Configuration YAML file")
+    parser.add_argument("-c", "--config", required=False, help="Configuration YAML file")
     args = parser.parse_args()
-    
+
+    if args.config is None: 
+        print("Running in test mode")
+        args.config = "dev_CRY_onspill-LH_aw_test.yaml"
+
     # Generate log filename from config filename
     config_stem = Path(args.config).stem  # Remove .yaml extension
     log_file_path = f"{config_stem}.log"
