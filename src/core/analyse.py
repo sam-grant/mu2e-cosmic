@@ -272,7 +272,7 @@ class Analyse:
         try:
             # Segments
             is_downstream_seg = self.selector.is_downstream(data["trkfit"])  
-            # Tracks 
+            # Tracks (the cut)
             is_downstream_trk = ak.all(~in_trk | is_downstream_seg, axis=-1)
             
             # Add cut 
@@ -320,37 +320,38 @@ class Analyse:
             raise e
 
         # ###################################################
-        # # Downstream quality tracks everywhere 
+        # # Quality tracks thro' tracker are downstream / event
         # ###################################################
         try:
+            # All segments 
+            is_downstream_seg = self.selector.is_downstream(data["trkfit"])
+            # Tracks with downstream segments through tracker
+            all_downstream_trk = ak.all(~in_trk | is_downstream_seg, axis=-1)
             # Good track quality (duplicated in trkqual cut, but that's OK)
             good_trkqual = self.selector.select_trkqual(data["trk"], quality=self.thresholds["lo_trkqual"])
-            # Segments
-            is_downstream_seg = self.selector.is_downstream(data["trkfit"])  
-            # Tracks 
-            all_downstream_segs = ak.all(is_downstream_seg, axis=-1)
-            # Good tracks
-            all_good_downstream_segs = all_downstream_segs & good_trkqual
-            
+            # Events containing good downstream tracks      
+            # Tracks are not good are have tracker segments downstream
+            is_downstream_evt = ak.all(~good_trkqual | all_downstream_trk, axis=-1)
+            print("DEBUG: is_downstream_evt =", ak.to_list(is_downstream_evt))            
             # Add cut 
             cut_manager.add_cut(
-                name="all_downstream",
-                description="Quality tracks are downstream (p_z > 0)",
-                mask=all_good_downstream_segs,
-                active=self.active_cuts["all_downstream"],
+                name="is_downstream_evt",
+                description="Quality tracks are downstream (p_z > 0 thro' tracker)",
+                mask=is_downstream_evt,
+                active=self.active_cuts["is_downstream_evt"],
                 group="Preselect"
             )
         
             # Append for debugging
             data = self._append_array(data, is_downstream_seg, "is_downstream_seg")
-            data = self._append_array(data, all_downstream_segs, "all_downstream_segs")
-            data = self._append_array(data, all_good_downstream_segs, "all_good_downstream_segs")
+            data = self._append_array(data, all_downstream_trk, "all_downstream_trk") 
+            # data = self._append_array(data, all_good_downstream_trk, "all_good_downstream_trk")
+            data = self._append_array(data, is_downstream_evt, "is_downstream_evt")
             
         except Exception as e:
-            self.logger.log(f"Error defining 'all_downstream' cut: {e}", "error") 
+            self.logger.log(f"Error defining 'is_downstream_evt' cut: {e}", "error") 
             raise e
         
-        # ###################################################
         # # Downstream electron tracks through tracker
         # ###################################################
         # try:

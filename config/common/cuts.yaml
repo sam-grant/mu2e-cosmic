@@ -36,7 +36,7 @@ defaults:
         within_t0: true
         is_downstream: false
         is_downstream_in_trk: false
-        all_downstream: true
+        is_downstream_evt: true
         has_hits: true
         within_t0err: true
         within_d0: true
