@@ -29,14 +29,15 @@ defaults:
         lo_sig_win_mevc: 103.6
         hi_sig_win_mevc: 104.9
     active:
+        one_track_per_event: true
+        one_reco_electron: false # redundant with one_track_per_event 
         is_reco_electron: true
         has_trk_front: true
         has_trk_mid: true
         good_trkqual: true
         within_t0: true
-        is_downstream: false
-        is_downstream_in_trk: false
-        is_downstream_evt: true
+        is_downstream: true 
+        # is_downstream_evt: true
         has_hits: true
         within_t0err: true
         within_d0: true
@@ -45,7 +46,6 @@ defaults:
         within_lhr_max_lo: true
         within_lhr_max_hi: true
         is_truth_electron: true
-        one_reco_electron: true
         # Dev 
         within_coinc_start_time: false
         within_coinc_end_time: false

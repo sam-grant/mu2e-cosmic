@@ -217,7 +217,42 @@ class Analyse:
         except Exception as e:
             self.logger.log(f"Error defining 'has_trk_mid' cut: {e}", "error") 
             raise e
-            
+           
+        ###################################################
+        # One track / event
+        ###################################################
+        try:
+            # Check that all track PDGs are unique
+            trk_pdgs = data["trk"]["trk.pdg"]
+            # Is there a better way?
+            has_single_e_minus = ak.sum(trk_pdgs == 11, axis=-1) <= 1
+            has_single_e_plus = ak.sum(trk_pdgs == -11, axis=-1) <= 1
+            has_single_mu_plus = ak.sum(trk_pdgs == 13, axis=-1) <= 1
+            has_single_mu_minus = ak.sum(trk_pdgs == -13, axis=-1) <= 1
+
+            # Event-level definition 
+            single_track = has_single_e_minus & has_single_e_plus & has_single_mu_plus & has_single_mu_minus
+
+            # Add cut 
+            cut_manager.add_cut(
+                name="one_track_per_event",
+                description="One track / event", 
+                mask=single_track,
+                active=self.active_cuts["one_track_per_event"],
+                group="Preselect"
+            )
+
+            # Append for debugging
+            data = self._append_array(data, single_track, "one_track_per_event")
+            data = self._append_array(data, has_single_e_minus, "has_single_e_minus")
+            data = self._append_array(data, has_single_e_plus, "has_single_e_plus")
+            data = self._append_array(data, has_single_mu_minus, "has_single_mu_minus")
+            data = self._append_array(data, has_single_mu_plus, "has_single_mu_plus")
+
+        except Exception as e:
+            self.logger.log(f"Error defining 'one_track_per_event' cut: {e}", "error") 
+            raise e
+
         ###################################################
         # Select electron track fit hypothesis  
         ###################################################
@@ -265,92 +300,65 @@ class Analyse:
         except Exception as e:
             self.logger.log(f"Error defining 'one_reco_electron' cut: {e}", "error") 
             raise e
-            
+
+
         # ###################################################
-        # # Downstream tracks through tracker
+        # # Downstream track thro' tracker
         # ###################################################
         try:
             # Segments
             is_downstream_seg = self.selector.is_downstream(data["trkfit"])  
-            # Tracks (the cut)
-            is_downstream_trk = ak.all(~in_trk | is_downstream_seg, axis=-1)
-            
-            # Add cut 
-            cut_manager.add_cut(
-                name="is_downstream_in_trk",
-                description="Downstream tracks (p_z > 0 through tracker)",
-                mask=is_downstream_trk,
-                active=self.active_cuts["is_downstream_in_trk"],
-                group="Preselect"
-            )
-        
-            # Append for debugging
-            data = self._append_array(data, is_downstream_seg, "is_downstream_seg")
-            data = self._append_array(data, is_downstream_trk, "is_downstream_trk")
-            
-        except Exception as e:
-            self.logger.log(f"Error defining 'is_downstream_in_trk' cut: {e}", "error") 
-            raise e
-
-
-        # ###################################################
-        # # Downstream track
-        # ###################################################
-        try:
-            # Segments
-            is_downstream_seg = self.selector.is_downstream(data["trkfit"])  
-            # Tracks 
-            is_downstream_trk = ak.all(is_downstream_seg, axis=-1)
+            # Tracks (the cut) 
+            is_downstream = ak.all(~in_trk | is_downstream_seg, axis=-1)
             
             # Add cut 
             cut_manager.add_cut(
                 name="is_downstream",
-                description="Downstream tracks (p_z > 0)",
-                mask=is_downstream_trk,
+                description="Downstream tracks (p_z > 0 through tracker)",
+                mask=is_downstream,
                 active=self.active_cuts["is_downstream"],
                 group="Preselect"
             )
         
             # Append for debugging
             data = self._append_array(data, is_downstream_seg, "is_downstream_seg")
-            data = self._append_array(data, is_downstream_trk, "is_downstream_trk")
+            data = self._append_array(data, is_downstream, "is_downstream")
             
         except Exception as e:
             self.logger.log(f"Error defining 'is_downstream' cut: {e}", "error") 
             raise e
 
-        # ###################################################
-        # # Quality tracks thro' tracker are downstream / event
-        # ###################################################
-        try:
-            # All segments 
-            is_downstream_seg = self.selector.is_downstream(data["trkfit"])
-            # Tracks with downstream segments through tracker
-            all_downstream_trk = ak.all(~in_trk | is_downstream_seg, axis=-1)
-            # Good track quality (duplicated in trkqual cut, but that's OK)
-            good_trkqual = self.selector.select_trkqual(data["trk"], quality=self.thresholds["lo_trkqual"])
-            # Events containing good downstream tracks      
-            # Tracks are not good are have tracker segments downstream
-            is_downstream_evt = ak.all(~good_trkqual | all_downstream_trk, axis=-1)
-            print("DEBUG: is_downstream_evt =", ak.to_list(is_downstream_evt))            
-            # Add cut 
-            cut_manager.add_cut(
-                name="is_downstream_evt",
-                description="Quality tracks are downstream (p_z > 0 thro' tracker)",
-                mask=is_downstream_evt,
-                active=self.active_cuts["is_downstream_evt"],
-                group="Preselect"
-            )
-        
-            # Append for debugging
-            data = self._append_array(data, is_downstream_seg, "is_downstream_seg")
-            data = self._append_array(data, all_downstream_trk, "all_downstream_trk") 
-            # data = self._append_array(data, all_good_downstream_trk, "all_good_downstream_trk")
-            data = self._append_array(data, is_downstream_evt, "is_downstream_evt")
-            
-        except Exception as e:
-            self.logger.log(f"Error defining 'is_downstream_evt' cut: {e}", "error") 
-            raise e
+#        # ###################################################
+#        # # Quality tracks thro' tracker are downstream / event
+#        # ###################################################
+#        try:
+#            # All segments 
+#            is_downstream_seg = self.selector.is_downstream(data["trkfit"])
+#            # Tracks with downstream segments through tracker
+#            all_downstream_trk = ak.all(~in_trk | is_downstream_seg, axis=-1)
+#            # Good track quality (duplicated in trkqual cut, but that's OK)
+#            good_trkqual = self.selector.select_trkqual(data["trk"], quality=self.thresholds["lo_trkqual"])
+#            # Events containing good downstream tracks      
+#            # Tracks are not good are have tracker segments downstream
+#            is_downstream_evt = ak.all(~good_trkqual | all_downstream_trk, axis=-1)
+#            # print("DEBUG: is_downstream_evt =", ak.to_list(is_downstream_evt))            
+#            # Add cut 
+#            cut_manager.add_cut(
+#                name="is_downstream_evt",
+#                description="Quality tracks are downstream (p_z > 0 thro' tracker)",
+#                mask=is_downstream_evt,
+#                active=self.active_cuts["is_downstream_evt"],
+#                group="Preselect"
+#            )
+#        
+#            # Append for debugging
+#            data = self._append_array(data, is_downstream_seg, "is_downstream_seg")
+#            data = self._append_array(data, all_downstream_trk, "all_downstream_trk") 
+#            data = self._append_array(data, is_downstream_evt, "is_downstream_evt")
+#            
+#        except Exception as e:
+#            self.logger.log(f"Error defining 'is_downstream_evt' cut: {e}", "error") 
+#            raise e
         
         # # Downstream electron tracks through tracker
         # ###################################################

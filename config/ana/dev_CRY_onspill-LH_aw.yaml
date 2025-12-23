@@ -9,10 +9,7 @@ process:
   verbosity: 1
   worker_verbosity: 0
   use_remote: true
-  cuts_to_toggle:
-    is_downstream_in_trk: true
-    is_downstream: false 
-    all_downstream: false 
+  location: "disk"
 
 postprocess:
   write_events: true
@@ -21,4 +18,4 @@ postprocess:
   livetime: 10680000
 
 output:
-  out_path: "../output/results/dev_CRY_onspill-LH_aw_is_downstream_in_trk"
+  out_path: "../output/results/dev_CRY_onspill-LH_aw"
