@@ -1,0 +1,25 @@
+# ===============================
+# dev_CRY_onspill-LH_aw_test.yaml
+# ===============================
+
+process:
+    # ffile_name: "/exp/mu2e/data/users/sgrant/mu2e-cosmic/files/nts.mu2e.CosmicCRYSignalAllOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.001202_00010066.root"
+    file_name: "nts.mu2e.CosmicCRYSignalAllOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.001202_00010066.root"
+    cutset_name: "dev"
+    use_remote: true # false
+    verbosity: 2
+    worker_verbosity: 2
+    cuts_to_toggle: 
+        is_downstream: false
+        is_downstream_evt: true
+        unvetoed : false
+    groups_to_toggle:
+        Momentum: false
+postprocess:
+    write_events: true
+    write_event_info: true
+    generated_events: 500000000 # 50000000
+    livetime: 130194.0 # 13019.4
+
+output:
+    out_path: "../output/results/dev_CRY_onspill-LH_aw_test"
