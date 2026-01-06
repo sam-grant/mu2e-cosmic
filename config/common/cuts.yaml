@@ -30,7 +30,7 @@ defaults:
         hi_sig_win_mevc: 104.9
     active:
         one_track_per_event: true
-        one_reco_electron: false # redundant with one_track_per_event 
+        # one_reco_electron: false # redundant with one_track_per_event 
         is_reco_electron: true
         has_trk_front: true
         has_trk_mid: true
@@ -164,5 +164,5 @@ cutsets:
             within_coinc_end_time: true
         thresholds:
             lo_trkqual: 0.2
-            lo_veto_dt_ns: -25.0
+            lo_veto_dt_ns: 0.0
             

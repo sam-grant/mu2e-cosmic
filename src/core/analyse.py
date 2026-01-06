@@ -172,6 +172,7 @@ class Analyse:
             at_trk_mid = self.selector.select_surface(data["trkfit"], surface_name="TT_Mid")
             at_trk_back = self.selector.select_surface(data["trkfit"], surface_name="TT_Back")
             in_trk = (at_trk_front | at_trk_mid | at_trk_back)
+            
         except Exception as e:
             self.logger.log(f"Error defining tracker surface masks: {e}", "error") 
             raise e
@@ -191,8 +192,7 @@ class Analyse:
             # Append for debugging
             data = self._append_array(data, at_trk_front, "at_trk_front")
             data = self._append_array(data, has_trk_front, "has_trk_front")
-            # data["at_trk_front"] = at_trk_front
-            # data["has_trk_front"] = has_trk_front
+            
         except Exception as e:
             self.logger.log(f"Error defining 'has_trk_front' cut: {e}", "error") 
             raise e
@@ -212,8 +212,7 @@ class Analyse:
             # Append for debugging
             data = self._append_array(data, at_trk_mid, "at_trk_mid")
             data = self._append_array(data, has_trk_mid, "has_trk_mid")
-            # data["at_trk_mid"] = at_trk_mid
-            # data["has_trk_mid"] = has_trk_mid
+            
         except Exception as e:
             self.logger.log(f"Error defining 'has_trk_mid' cut: {e}", "error") 
             raise e
@@ -222,16 +221,15 @@ class Analyse:
         # One track / event
         ###################################################
         try:
-            # Check that all track PDGs are unique
-            trk_pdgs = data["trk"]["trk.pdg"]
-            # Is there a better way?
-            has_single_e_minus = ak.sum(trk_pdgs == 11, axis=-1) <= 1
-            has_single_e_plus = ak.sum(trk_pdgs == -11, axis=-1) <= 1
-            has_single_mu_plus = ak.sum(trk_pdgs == 13, axis=-1) <= 1
-            has_single_mu_minus = ak.sum(trk_pdgs == -13, axis=-1) <= 1
+
+            # Count unique pdgs
+            pdgs = data["trk"]["trk.pdg"]
+            n_unique_pdgs = ak.num(ak.run_lengths(ak.sort(pdgs)), axis=-1)
+            n_total_pdgs = ak.num(pdgs, axis=-1)
+            has_duplicate_pdgs = n_unique_pdgs < n_total_pdgs  # duplicates exist
 
             # Event-level definition 
-            single_track = has_single_e_minus & has_single_e_plus & has_single_mu_plus & has_single_mu_minus
+            single_track = ~has_duplicate_pdgs 
 
             # Add cut 
             cut_manager.add_cut(
@@ -244,10 +242,8 @@ class Analyse:
 
             # Append for debugging
             data = self._append_array(data, single_track, "one_track_per_event")
-            data = self._append_array(data, has_single_e_minus, "has_single_e_minus")
-            data = self._append_array(data, has_single_e_plus, "has_single_e_plus")
-            data = self._append_array(data, has_single_mu_minus, "has_single_mu_minus")
-            data = self._append_array(data, has_single_mu_plus, "has_single_mu_plus")
+            data = self._append_array(data, has_duplicate_pdgs, "has_duplicate_pdgs")
+            data = self._append_array(data, n_unique_pdgs, "n_unique_pdgs")
 
         except Exception as e:
             self.logger.log(f"Error defining 'one_track_per_event' cut: {e}", "error") 
@@ -262,45 +258,44 @@ class Analyse:
             # Add cut 
             cut_manager.add_cut(
                 name="is_reco_electron", 
-                description="Electron track fits", 
+                description="Select electron track hypothesis", 
                 mask=is_reco_electron,
                 active=self.active_cuts["is_reco_electron"],
                 group="Preselect"
             )
             # Append mask for debugging
             data = self._append_array(data, is_reco_electron, "is_reco_electron")
-            # data = self._append_array(data, data["trk"]["trk.pdg"], "trk_pdg")
-            # data["is_reco_electron"] = is_reco_electron
+
         except Exception as e:
             self.logger.log(f"Error defining 'is_reco_electron' cut: {e}", "error") 
             raise e
 
-        ###################################################
-        # One electron track fit / event 
-        # This deals with split reflected tracks
-        ###################################################
-        try: 
-            # Event-level definition
-            # one_reco_electron_per_event = ak.sum(is_reco_electron, axis=-1) == 1
-            one_reco_electron = ak.sum(is_reco_electron, axis=-1) == 1
-            # Broadcast to track level
-            # Is this even needed? Aren't event level cuts just fine? 
-            # one_reco_electron, _ = ak.broadcast_arrays(one_reco_electron_per_event, is_reco_electron) # this returns a tuple
-            # Add cut 
-            cut_manager.add_cut(
-                name="one_reco_electron",
-                description="One reco electron / event",
-                mask=one_reco_electron,
-                active=self.active_cuts["one_reco_electron"],
-                group="Preselect"
-            )
-            # Append for debugging 
-            data = self._append_array(data, one_reco_electron, "one_reco_electron")
-            # data = self._append_array(data, one_reco_electron_per_event, "one_reco_electron_per_event")
-        except Exception as e:
-            self.logger.log(f"Error defining 'one_reco_electron' cut: {e}", "error") 
-            raise e
-
+        # ###################################################
+        # # One electron track fit / event 
+        # # This deals with split reflected tracks
+        # # This is redundant 
+        # ###################################################
+        # try: 
+        #     # Event-level definition
+        #     # one_reco_electron_per_event = ak.sum(is_reco_electron, axis=-1) == 1
+        #     one_reco_electron = ak.sum(is_reco_electron, axis=-1) == 1
+        #     # Broadcast to track level
+        #     # Is this even needed? Aren't event level cuts just fine? 
+        #     # one_reco_electron, _ = ak.broadcast_arrays(one_reco_electron_per_event, is_reco_electron) # this returns a tuple
+        #     # Add cut 
+        #     cut_manager.add_cut(
+        #         name="one_reco_electron",
+        #         description="One reco electron / event",
+        #         mask=one_reco_electron,
+        #         active=self.active_cuts["one_reco_electron"],
+        #         group="Preselect"
+        #     )
+        #     # Append for debugging 
+        #     data = self._append_array(data, one_reco_electron, "one_reco_electron")
+        #     # data = self._append_array(data, one_reco_electron_per_event, "one_reco_electron_per_event")
+        # except Exception as e:
+        #     self.logger.log(f"Error defining 'one_reco_electron' cut: {e}", "error") 
+        #     raise e
 
         # ###################################################
         # # Downstream track thro' tracker
@@ -429,9 +424,8 @@ class Analyse:
                 group="Preselect"
             )
             # Append for debugging
-            # data = self._append_array(data, has_trk_parent_electron, "has_trk_parent_electron")
             data = self._append_array(data, has_trk_parent_electron, "has_trk_parent_electron")
-            # data["has_trk_parent_electron"] = has_trk_parent_electron
+
         except Exception as e:
             self.logger.log(f"Error defining 'is_truth_electron' cut: {e}", "error") 
             raise e 
