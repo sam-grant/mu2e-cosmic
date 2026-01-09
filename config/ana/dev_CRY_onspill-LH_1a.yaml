@@ -5,7 +5,7 @@
 process:
   defname: "nts.mu2e.CosmicSignalOnSpillTriggered.MDC2025-000.root"
   cutset_name: "dev"
-  max_workers: 44 
+  max_workers: 6 
   verbosity: 1
   worker_verbosity: 0
   use_remote: true
@@ -14,8 +14,8 @@ process:
 postprocess:
   write_events: true
   write_event_info: true
-  generated_events: 25000000000
-  livetime: 10680000
+  generated_events: 103532900005 # Check with Natalie
+  livetime: 4.44e6 # 10680000 # Assume same as Run-1
 
 output:
   out_path: "../output/results/dev_CRY_onspill-LH_1a"

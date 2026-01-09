@@ -1,5 +1,10 @@
 #!/bin/bash
-
+#
+# Simple version is:
+#    mu2einit
+#    muse setup SimJob
+#    samDatasetsSummary.sh defname
+#    
 # Calculate number of generated events in dataset
 # IMPORTANT: Run setup first: source setup_mu2e_env.sh && muse setup SimJob
 

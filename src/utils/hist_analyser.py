@@ -320,6 +320,8 @@ class HistAnalyser():
                 "Veto Eff Err$-$ [%]": float((veto_eff_lo - veto_eff) * 100), 
                 "Veto Eff Err$+$ [%]": float((veto_eff_hi - veto_eff) * 100),
                 "Livetime [days]": float(scaled_livetime * self.SECONDS_TO_DAYS),
+                "Walltime 1BB [days]": float(walltime_days["1batch"]),
+                "Walltime 2BB [days]": float(walltime_days["2batch"]),
                 # Selection rates - 1 batch
                 r"Selection Rate 1BB [$\text{day}^{-1}$]": float(sel_rate_1b), 
                 r"Selection Rate 1BB Err$-$ [$\text{day}^{-1}$]": float(sel_rate_1b_lo),

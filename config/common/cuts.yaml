@@ -29,11 +29,11 @@ defaults:
         lo_sig_win_mevc: 103.6
         hi_sig_win_mevc: 104.9
     active:
-        one_track_per_event: true
-        # one_reco_electron: false # redundant with one_track_per_event 
+        # one_track_per_event: true
+        one_reco_electron: true # false # redundant with one_track_per_event 
         is_reco_electron: true
-        has_trk_front: true
-        has_trk_mid: true
+        # has_trk_front: true
+        thru_trk: true
         good_trkqual: true
         within_t0: true
         is_downstream: true 

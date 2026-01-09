@@ -5,13 +5,10 @@
 process:
   defname: "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.root"
   cutset_name: "dev"
-  max_workers: 75
+  max_workers: 48
   verbosity: 1
   worker_verbosity: 0
   use_remote: true  
-  cuts_to_toggle: 
-    one_track_per_event: false
-    one_reco_electron: true
 
 postprocess:
   write_events: false
@@ -20,4 +17,4 @@ postprocess:
   livetime: null
 
 output:
-  out_path: "../output/results/dev_signal_onspill-LH_aw_one_reco_electron"
+  out_path: "../output/results/dev_signal_onspill-LH_aw"
