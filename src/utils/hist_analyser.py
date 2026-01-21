@@ -96,7 +96,7 @@ class HistAnalyser():
         try:
             h = hists[momentum_window]
             # Use the "all" election category for livetime scaling
-            h_all = h[{"selection": "All"}]
+            h_all = h[{"selection": "Select"}]
             return int(h_all.sum())
         except KeyError:
             self.logger.log(f"Momentum window {momentum_window} not found in histograms", "error")
