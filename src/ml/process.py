@@ -121,12 +121,12 @@ class MLProcessor(Skeleton):
         self.verbosity = verbosity                  # Set verbosity 
         self.worker_verbosity = worker_verbosity    # Set worker verbosity 
         self.feature_set = feature_set              # Feature set (tracker or CRV)
-        
+    
         # Analysis methods
         self.analyse = Analyse(
             cutset_name=cutset_name,
             on_spill=self.on_spill,
-            verbosity=self.worker_verbosity # Reduce verbosity for workers
+            verbosity=self.worker_verbosity, # Reduce verbosity for workers
         )
         
         # Cut manager
@@ -198,6 +198,14 @@ class MLProcessor(Skeleton):
             # Define cuts
             self.logger.log(f"Defining cuts", "max")
             data = self.analyse.define_cuts(data, self.cut_manager)
+            
+            # Toggle cuts
+            if self.cuts_to_toggle: 
+                self.logger.log(f"Toggling cuts", "max")
+                self.cut_manager.toggle_cut(self.cuts_to_toggle) 
+            if self.groups_to_toggle: 
+                self.logger.log(f"Toggling cut groups", "max")
+                self.cut_manager.toggle_group(self.groups_to_toggle) 
 
             # Create main cut flow
             self.logger.log("Creating cut flow", "max")
@@ -389,7 +397,7 @@ class MLProcessor(Skeleton):
             # Clean up memory
             gc.collect()
 
-            return results 
+            return results # this returns a list somehow?
         
         except Exception as e:
             # Report any errors that occur during processing
@@ -400,6 +408,7 @@ class MLProcessor(Skeleton):
         """ Combine histograms and arrays 
             Borrow some methods from postprocess
         """
+
         # Ensure results is always a list
         if not isinstance(results, list):
             results = [results]

@@ -333,43 +333,6 @@ class CosmicAna:
     # Class attribute
     IMG_PATH = Path("../output/images/shielding_ana/")
 
-    # @classmethod
-    # def plot_particle_composition(cls, results):
-    #     print("Plotting particle composition")
-    #     for dataset_name, windows in results.items():
-    #         fig, ax = plt.subplots(2, 2, figsize=(2*6.4, 2*4.8))
-    #         ax = ax.flatten() 
-       
-    #         for i_window, (window_name, data) in enumerate(windows.items()):
-    #             print(f"Window {window_name}: {i_window}")
-
-    #             composition = data["composition"] 
-
-    #             labels, counts = [], []
-    #             tot = sum(composition.values())
-    #             for l, c in composition.items():
-    #                 if c == 0:
-    #                     continue
-    #                 labels.append(l)
-    #                 counts.append(100 * c / tot)
-                
-    #             # Sort by count (descending)
-    #             sorted_items = sorted(zip(labels, counts), key=lambda x: x[1], reverse=True)
-    #             labels, counts = zip(*sorted_items) if sorted_items else ([], [])
-                
-    #             ax[i_window].barh(labels, counts, alpha=0.75, color='black', 
-    #                               facecolor='white', hatch='///', edgecolor='black', linewidth=1.5)
-    #             ax[i_window].set_title(window_name.capitalize())
-    #             ax[i_window].set_xlabel("Cosmic parents of selected tracks [%]")
-    #             ax[i_window].invert_yaxis()  # Labels read top-to-bottom
-    #             ax[i_window].tick_params(which="both", left=False, bottom=False) 
-                
-    #         plt.tight_layout()
-    #         out_name = cls.IMG_PATH / f"bar_{dataset_name}_particle_composition.png"
-    #         plt.savefig(out_name)
-    #         print(f"\tWrote {out_name}")
-            # plt.show()
-
     @classmethod
     def plot_particle_composition(cls, results):
         print("Plotting particle composition")
@@ -433,189 +396,6 @@ class CosmicAna:
     @classmethod 
     def _format_label(cls, label):
         return label.replace("_", " ").capitalize()
-    
-    # @classmethod
-    # def plot_mom_overlays(cls, results, name="cosmic_parent", nbins=160, xrange=(0, 40), unit="GeV/c"): 
-    #     """
-    #     Plot 2x2 grid of momentum overlays for all windows
-    #     """
-    #     plotter = Plot()
-    #     fig, ax = plt.subplots(2, 2, figsize=(2*1.25*6.4, 2*1.25*4.8)) 
-    #     ax = ax.flatten() 
-
-    #     # This is stupid, it will be identical per DS
-    #     print(f"Plotting momentum for {name}")
-        
-    #     for i_window, window_name in enumerate(cls.WINDOWS.keys()):
-
-    #         print(f"Window {window_name}: {i_window}")
-
-    #         mom_1a = results["1a"][window_name][name]["mom"]
-    #         mom_aw = results["aw"][window_name][name]["mom"]
-            
-    #         xmin, xmax = xrange
-
-    #         stats_aw = plotter.get_stats(mom_aw, xmin, xmax)
-    #         stats_1a = plotter.get_stats(mom_1a, xmin, xmax)
-
-    #         plotter.plot_1D_overlay(
-    #             { 
-    #                 r"$\mathbf{Run\text{-}1\ (MDC2020aw)}$" + f"\nEntries: {stats_aw[0]}\nMean: {stats_aw[1]:.1f}" + r"$\pm$" + f"{stats_aw[2]:.1f} {unit}": #{stats_aw[1]:.1f}" #\nStd Dev: {stats_aw[3]:.1f}": 
-    #                     mom_aw,
-                    
-    #                 r"$\mathbf{Run\text{-}1a\ (MDC2025)}$" + f"\nEntries: {stats_1a[0]}\nMean: {stats_1a[1]:.1f}" + r"$\pm$" + f"{stats_1a[2]:.1f} {unit}":  # \nStd Dev: {stats_1a[3]:.1f}": 
-    #                     mom_1a,
-    #             },
-    #             nbins=nbins,
-    #             xmin=xmin, 
-    #             xmax=xmax,
-    #             xlabel=f"{cls._format_label(name)} momentum [{unit}]",
-    #             ylabel=f"Selected tracks (normalized)",
-    #             title=f"{window_name.capitalize()} window",
-    #             log_y=True,
-    #             show=False,
-    #             norm_by_area=True,
-    #             ax=ax[i_window]
-    #         )
-
-    #         title = f"{window_name.capitalize()} window"
-    #         ax[i_window].set_title(title, fontsize=18)
-
-    #         plt.tight_layout() 
-    #         out_name = cls.IMG_PATH / f"h10_{name}_momentum.png"
-    #         plt.savefig(out_name)
-    #         print(f"\tWrote {out_name}")
-    #         plt.show()
-
-    # @clasmethod
-    # def plot_and_fit_mom_ratios(cls, results, name="cosmic_parent", nbins=40, xrange=(0, 40), unit="GeV/c", show=False):
-    #     """
-    #     Normalised momentum distributions with fitted ratio 
-    #     """
-    #     fig, axes = plt.subplots(5, 2, figsize=(2.25*6.4, 2.25*4.8),  
-    #                         gridspec_kw={
-    #                             'height_ratios': [2, 1, 1, 2, 1],
-    #                             'hspace': 0.0,  # No gap between overlay and ratio
-    #                             'wspace': 0.25, 
-    #                             'left': 0.10, 'right': 0.98, 
-    #                             'top': 0.97, 'bottom': 0.05
-    #                         })
-
-    #     xmin, xmax = xrange
-
-    #     # Hide the spacer row axes
-    #     axes[2, 0].axis('off')
-    #     axes[2, 1].axis('off')
-
-    #     for i, window_name in enumerate(cls.WINDOWS.keys()):
-    #         # Map to axes array
-    #         col = i % 2
-    #         if i < 2:  # Top row windows
-    #             row_overlay = 0
-    #             row_ratio = 1 
-    #         else:  # Skip spacer
-    #             row_overlay = 3
-    #             row_ratio = 4  
-
-    #         ax_overlay = axes[row_overlay, col]
-    #         ax_ratio = axes[row_ratio, col]
-            
-    #         # Share x-axis between overlay and ratio
-    #         ax_ratio.sharex(ax_overlay)
-
-    #         # --- Data Extraction ---
-    #         mom_1a = results["1a"][window_name][name]["mom"]
-    #         mom_aw = results["aw"][window_name][name]["mom"]
-
-    #         # --- Histogram FIRST, then normalize ---
-    #         hist_aw, bins = np.histogram(mom_aw, bins=nbins, range=xrange) 
-    #         hist_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange) 
-    #         bin_centers = (bins[:-1] + bins[1:]) / 2
-
-    #         # Normalize histograms (so they sum to 1)
-    #         n_aw = len(mom_aw)
-    #         n_1a = len(mom_1a)
-    #         hist_aw_norm = hist_aw / np.sum(hist_aw)  # or hist_aw / n_aw
-    #         hist_1a_norm = hist_1a / np.sum(hist_1a)  # or hist_1a / n_1a
-
-    #         # Error propagation for normalized histograms
-    #         # For Poisson counting: err = sqrt(N), normalized: err_norm = sqrt(N) / sum
-    #         err_aw = np.sqrt(hist_aw) / np.sum(hist_aw)
-    #         err_1a = np.sqrt(hist_1a) / np.sum(hist_1a)
-
-    #         # --- Ratio and error propagation ---
-    #         with np.errstate(divide='ignore', invalid='ignore'):
-    #             ratio = hist_1a_norm / hist_aw_norm
-    #             ratio_err = ratio * np.sqrt(
-    #                 (err_1a / np.where(hist_1a_norm > 0, hist_1a_norm, 1))**2 +
-    #                 (err_aw / np.where(hist_aw_norm > 0, hist_aw_norm, 1))**2
-    #             )
-
-    #         # Overlay plot
-    #         ax_overlay.step(bin_centers, hist_aw_norm, where='mid', color='blue', 
-    #                         label=f'Run-1 (N={n_aw})')
-    #         ax_overlay.step(bin_centers, hist_1a_norm, where='mid', color='red', 
-    #                         label=f'Run-1a (N={n_1a})')
-
-    #         # Error bands
-    #         ax_overlay.fill_between(bin_centers, hist_aw_norm - err_aw, hist_aw_norm + err_aw, 
-    #                                 color='blue', alpha=0.2, step='mid')
-    #         ax_overlay.fill_between(bin_centers, hist_1a_norm - err_1a, hist_1a_norm + err_1a, 
-    #                                 color='red', alpha=0.2, step='mid')
-
-    #         # 
-    #         # 
-    #         # ax_overlay.set_yscale('log')
-    #         ax_overlay.set_ylabel("Tracks [normalized]")
-    #         ax_overlay.set_xlabel("CosmicSelected tracks [normalized]")
-    #         ax_overlay.set_title(f"{window_name.capitalize()} window", fontsize=18)
-    #         ax_overlay.legend()
-    #         ax_overlay.tick_params(labelbottom=False, direction='in', which='both', 
-    #                             right=True, top=True)
-
-    #         # --- Fitting ---
-    #         mask = np.isfinite(ratio) & (ratio_err > 0) & (hist_aw_norm > 0)
-    #         xf, rf, erf = bin_centers[mask], ratio[mask], ratio_err[mask]
-
-    #         if len(xf) > 2:
-    #             def line(x, m, b): return m * x + b
-    #             try:
-    #                 popt, pcov = optimize.curve_fit(line, xf, rf, sigma=erf, absolute_sigma=True)
-    #                 m, b = popt
-    #                 m_err = np.sqrt(pcov[0, 0])
-    #                 red_chi2 = np.sum(((rf - line(xf, *popt)) / erf)**2) / (len(xf) - 2)
-
-    #                 ax_ratio.plot(xf, line(xf, *popt), 'r-', lw=2)
-
-    #                 stats_str = f"Slope: ${m:.4f} \\pm {m_err:.4f}$\n$\\chi^2$/ndf: ${red_chi2:.2f}$"
-    #                 ax_ratio.text(0.05, 0.9, stats_str, transform=ax_ratio.transAxes,
-    #                             verticalalignment='top', 
-    #                             bbox=dict(facecolor='white', alpha=.7, edgecolor='none'))
-    #             except:
-    #                 pass
-
-    #         # --- Ratio plot formatting ---
-    #         ax_ratio.errorbar(xf, rf, yerr=erf, fmt='k.', markersize=2)
-    #         ax_ratio.axhline(y=1, color='gray', linestyle='--', linewidth=1)
-    #         ax_ratio.set_ylabel("1a / aw", loc="center")
-            
-    #         # Only show x-label on bottom row
-    #         ax_ratio.set_xlabel(f"{cls._format_label(name)} momentum [{unit}]")
-                
-    #         ax_ratio.set_xlim(xmin, xmax)
-    #         ax_ratio.set_ylim(0, 4)  # Adjusted for normalized distributions
-    #         ax_ratio.tick_params(direction='in', which='both', right=True, top=True)
-            
-    #     # Align y-labels (skip spacer row)
-    #     fig.align_ylabels([axes[0, 0], axes[1, 0], axes[3, 0], axes[4, 0]])
-    #     fig.align_ylabels([axes[0, 1], axes[1, 1], axes[3, 1], axes[4, 1]])
-
-    #     out_name = cls.IMG_PATH / f"hratios_{name}_mom.png"
-    #     plt.savefig(out_name, dpi=150, bbox_inches='tight')
-    #     print(f"Wrote {out_name}")
-    #     if show: 
-    #         plt.show()
-    #     plt.close(fig)
 
     @classmethod
     def plot_ratios(cls, results, name="cosmic_parent", nbins=40, xrange=(0, 40), 
@@ -761,152 +541,6 @@ class CosmicAna:
         if show: 
             plt.show()
         plt.close(fig)
-
-    # @classmethod
-    # def plot_and_fit_ratios(cls, results, name="cosmic_parent", nbins=40, xrange=(0, 40), 
-    #                         ylabel=None, xlabel=None, rate=False, norm=True, show=False):
-    #     """
-    #     Plots rate histograms using weights, calculates propagated errors,
-    #     and performs a weighted linear fit on the ratio.
-    #     """
-    #     fig, axes = plt.subplots(5, 2, figsize=(2*6.4, 2*4.8),  # Taller figure for better spacing
-    #                         gridspec_kw={
-    #                             'height_ratios': [2, 1, 1, 2, 1],
-    #                             'hspace': 0.0,  # No gap between overlay and ratio
-    #                             'wspace': 0.3, 
-    #                             'left': 0.10, 'right': 0.98, 
-    #                             'top': 0.97, 'bottom': 0.05
-    #                         })
-
-    #     xmin, xmax = xrange
-
-    #     # Hide the spacer row axes
-    #     axes[2, 0].axis('off')
-    #     axes[2, 1].axis('off')
-
-    #     for i, window_name in enumerate(cls.WINDOWS.keys()):
-    #         # Map to axes array
-    #         col = i % 2
-    #         if i < 2:  # Top row windows
-    #             row_overlay = 0
-    #             row_ratio = 1 
-    #         else:  # Skip spacer
-    #             row_overlay = 3
-    #             row_ratio = 4  
-
-    #         ax_overlay = axes[row_overlay, col]
-    #         ax_ratio = axes[row_ratio, col]
-            
-    #         # Share x-axis between overlay and ratio
-    #         ax_ratio.sharex(ax_overlay)
-
-    #         # --- Data extraction ---
-    #         mom_1a = results["1a"][window_name][name]["mom"]
-    #         mom_aw = results["aw"][window_name][name]["mom"]
-
-    #         if rate:
-    #             weights_1a = results["1a"][window_name][name]["weights"]
-    #             weights_aw = results["aw"][window_name][name]["weights"]
-    #         else:
-    #             weights_1a = np.ones_like(mom_1a)
-    #             weights_aw = np.ones_like(mom_aw)
-
-    #         # --- Weighted histogramming ---
-    #         hist_aw, bins = np.histogram(mom_aw, bins=nbins, range=xrange, weights=weights_aw)
-    #         hist_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange, weights=weights_1a)
-    #         bin_centers = (bins[:-1] + bins[1:]) / 2
-
-    #         # Error = sqrt(sum of weights^2)
-    #         err_sq_aw, _ = np.histogram(mom_aw, bins=nbins, range=xrange, weights=weights_aw**2)
-    #         err_sq_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange, weights=weights_1a**2)
-    #         err_aw, err_1a = np.sqrt(err_sq_aw), np.sqrt(err_sq_1a)
-
-    #         if norm:
-    #             # normalise histograms AND errors
-    #             n_aw = np.sum(hist_aw)
-    #             n_1a = np.sum(hist_1a)
-    #             hist_aw = hist_aw / n_aw
-    #             hist_1a = hist_1a / n_1a
-    #             err_aw = err_aw / n_aw
-    #             err_1a = err_1a / n_1a
-
-    #         # --- Ratio and error propagation ---
-    #         with np.errstate(divide='ignore', invalid='ignore'):
-    #             ratio = hist_1a / hist_aw
-    #             ratio_err = ratio * np.sqrt((err_1a / np.where(hist_1a > 0, hist_1a, 1))**2 +
-    #                                         (err_aw / np.where(hist_aw > 0, hist_aw, 1))**2)
-
-    #         if rate:
-    #             label_1a = f"Run-1a: {np.sum(weights_1a):.3f}/day"
-    #             label_aw = f"Run-1: {np.sum(weights_aw):.3f}/day"
-    #         else:
-    #             label_1a = f"Run-1a" # : {np.sum(weights_1a):.3f}/day"
-    #             label_aw = f"Run-1" # : {np.sum(weights_aw):.3f}/day"
-                
-    #         # --- Overlay plot ---
-    #         ax_overlay.step(bin_centers, hist_aw, where='mid', color='blue', 
-    #                         label=label_aw)
-    #         ax_overlay.step(bin_centers, hist_1a, where='mid', color='red', 
-    #                         label=label_1a) # f'Run-1a: {np.sum(weights_1a):.3f}/day')
-            
-    #         # Error bands
-    #         ax_overlay.fill_between(bin_centers, hist_aw - err_aw, hist_aw + err_aw, 
-    #                                 color='blue', alpha=0.2, step='mid')
-    #         ax_overlay.fill_between(bin_centers, hist_1a - err_1a, hist_1a + err_1a, 
-    #                                 color='red', alpha=0.2, step='mid')
-
-    #         # ax_overlay.set_yscale('log')
-    #         ax_overlay.set_ylabel(ylabel) # f"Rate [tracks/day]") # / {unit}")
-    #         ax_overlay.set_title(f"{window_name.capitalize()} window", fontsize=18)
-    #         ax_overlay.legend(fontsize=18)
-    #         ax_overlay.tick_params(labelbottom=False, direction='in', which='both', right=True, top=True)
-
-    #         # --- Fitting ---
-    #         mask = np.isfinite(ratio) & (ratio_err > 0) & (hist_aw > 0)
-    #         xf, rf, erf = bin_centers[mask], ratio[mask], ratio_err[mask]
-
-    #         if len(xf) > 2:
-    #             def line(x, m, b): return m * x + b
-    #             try:
-    #                 popt, pcov = optimize.curve_fit(line, xf, rf, sigma=erf, absolute_sigma=True)
-    #                 m, b = popt
-    #                 m_err = np.sqrt(pcov[0, 0])
-    #                 c_err = np.sqrt(pcov[1, 1])
-                    
-    #                 red_chi2 = np.sum(((rf - line(xf, *popt)) / erf)**2) / (len(xf) - 2)
-
-    #                 ax_ratio.plot(xf, line(xf, *popt), 'r-', lw=2)
-
-    #                 stats_str = f"Gradient: {m:.4f}"+r" $\pm$ "+f"{m_err:.4f}" 
-    #                 # stats_str += "\nIntercept: {c:.4f}"+r" $\pm$ "+f"{c_err:.4f}"
-    #                 # stats_str += r"$\chi^2/\text{ndf}$"+f": {red_chi2:.2f}"
-
-    #                 ax_ratio.text(0.95, 0.9, stats_str, transform=ax_ratio.transAxes,
-    #                             verticalalignment='top',horizontalalignment='right', 
-    #                             bbox=dict(facecolor='white', alpha=.7, edgecolor='none'))
-    #             except:
-    #                 pass
-
-    #         # --- Ratio plot formatting ---
-    #         ax_ratio.errorbar(xf, rf, yerr=erf, fmt='ko', markersize=5)
-    #         ax_ratio.axhline(y=1, color='gray', linestyle='--', linewidth=1)
-    #         ax_ratio.set_ylabel("1a / aw", loc="center")
-    #         ax_ratio.set_xlabel(f"{cls._format_label(name)} momentum [GeV/c]")
-    #         ax_ratio.set_xlim(xmin, xmax)
-    #         ax_ratio.set_ylim(0, 4)
-    #         ax_ratio.tick_params(direction='in', which='both', right=True, top=True)
-
-    #     # Align y-labels (skip spacer row)
-    #     fig.align_ylabels([axes[0, 0], axes[1, 0], axes[3, 0], axes[4, 0]])
-    #     fig.align_ylabels([axes[0, 1], axes[1, 1], axes[3, 1], axes[4, 1]])
-
-    #     suffix = "rate" if rate else ("norm" if norm else "count")
-    #     out_name = cls.IMG_PATH / f"hratios_{name}_{suffix}.png"
-    #     plt.savefig(out_name, dpi=300, bbox_inches='tight')  # bbox_inches helps with spacing
-    #     print(f"Wrote {out_name}")
-    #     if show: 
-    #         plt.show()
-    #     plt.close(fig)
 
     @classmethod
     def plot_and_fit_ratios(cls, results, name="cosmic_parent", nbins=40, xrange=(0, 40), show=False):
@@ -1068,156 +702,108 @@ class CosmicAna:
         if show: 
             plt.show()
         plt.close(fig)
-
-    # @classmethod
-    # def plot_sig_ratio(cls, results, name="cosmic_parent", nbins=21, xrange=(-0.5, 20.5), 
-    #                 unit="GeV/c", show=False):
-    #     """
-    #     Plot overlay histogram and ratio for the Signal window without fitting.
-    #     """
-    #     fig, (ax_overlay, ax_ratio) = plt.subplots(2, 1, figsize=(6.4, 4.8*(1+1/3)),
-    #                                                 gridspec_kw={'height_ratios': [3, 1],
-    #                                                             'hspace': 0.})
-        
-    #     window_name = "signal"
-    #     xmin, xmax = xrange
-        
-    #     # --- Data extraction ---
-    #     mom_1a = results["1a"][window_name][name]["mom"]
-    #     mom_aw = results["aw"][window_name][name]["mom"]
-    #     weights_1a = results["1a"][window_name][name]["weights"]
-    #     weights_aw = results["aw"][window_name][name]["weights"]
-        
-    #     # --- Weighted histogramming ---
-    #     hist_aw, bins = np.histogram(mom_aw, bins=nbins, range=xrange, weights=weights_aw)
-    #     hist_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange, weights=weights_1a)
-    #     bin_centers = (bins[:-1] + bins[1:]) / 2
-        
-    #     # Error = sqrt(sum of weights^2)
-    #     err_sq_aw, _ = np.histogram(mom_aw, bins=nbins, range=xrange, weights=weights_aw**2)
-    #     err_sq_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange, weights=weights_1a**2)
-    #     err_aw, err_1a = np.sqrt(err_sq_aw), np.sqrt(err_sq_1a)
-        
-    #     # --- Overlay plot ---
-    #     ax_overlay.step(bin_centers, hist_aw, where='mid', color='blue', linewidth=1.5,
-    #                     label=f'Run-1: {np.sum(weights_aw):.3f}/day')
-    #     ax_overlay.step(bin_centers, hist_1a, where='mid', color='red', linewidth=1.5,
-    #                     label=f'Run-1a: {np.sum(weights_1a):.3f}/day')
-        
-    #     # Error bands
-    #     ax_overlay.fill_between(bin_centers, hist_aw - err_aw, hist_aw + err_aw, 
-    #                             color='blue', alpha=0.2, step='mid')
-    #     ax_overlay.fill_between(bin_centers, hist_1a - err_1a, hist_1a + err_1a, 
-    #                             color='red', alpha=0.2, step='mid')
-        
-    #     ax_overlay.set_ylabel("Rate [tracks/day]")
-    #     ax_overlay.set_title("Signal window")
-    #     ax_overlay.legend() 
-    #     ax_overlay.tick_params(labelbottom=False, direction='in', which='both', 
-    #                         right=True, top=True)
-    #     ax_overlay.set_xlim(xmin, xmax)
-        
-    #     # --- Ratio and error propagation ---
-    #     with np.errstate(divide='ignore', invalid='ignore'):
-    #         ratio = hist_1a / hist_aw
-    #         ratio_err = ratio * np.sqrt(
-    #             (err_1a / np.where(hist_1a > 0, hist_1a, 1))**2 +
-    #             (err_aw / np.where(hist_aw > 0, hist_aw, 1))**2
-    #         )
-        
-    #     # --- Ratio plot ---
-    #     mask = np.isfinite(ratio) & (ratio_err > 0)
-    #     xf, rf, erf = bin_centers[mask], ratio[mask], ratio_err[mask]
-        
-    #     ax_ratio.errorbar(xf, rf, yerr=erf, fmt='ko', markersize=5, capsize=3,
-    #                     linewidth=1, elinewidth=1)
-    #     ax_ratio.axhline(y=1, color='gray', linestyle='--', linewidth=1.5, alpha=0.7)
-
-    #     # 1-sigma band around ratio=1
-    #     # ax_ratio.axhspan(0, 2, color='yellow', alpha=0.2, label=r'$1\sigma$ band')
-    #     # ax_ratio.axhline(y=1, color='gray', linestyle='--', linewidth=1.5, alpha=0.7)
-
-    #     ax_ratio.set_ylabel("Run-1a / Run-1")
-    #     ax_ratio.set_xlabel(f"{cls._format_label(name)} momentum [{unit}]")
-    #     ax_ratio.set_xlim(xmin, xmax)
-    #     ax_ratio.set_ylim(0, 4)
-    #     ax_ratio.tick_params(direction='in', which='both', right=True, top=True)
-        
-    #     # Share x-axis
-    #     ax_ratio.sharex(ax_overlay)
-        
-    #     out_name = cls.IMG_PATH / f"ratio_{name}_signal.png"
-    #     plt.savefig(out_name, dpi=200, bbox_inches='tight')
-    #     print(f"Wrote {out_name}")
-    #     if show:
-    #         plt.show()
-    #     plt.close(fig)
-        
-    # @classmethod
-    # def plot_sig_ratio_pred(cls, results, name="cosmic_parent", nbins=21, xrange=(-0.5, 20.5), 
-    #                 unit="GeV/c", energy_loss=0.42, show=False):
-    #     """
-    #     Plot overlay histogram and ratio for the Signal window without fitting.
-    #     Optionally show predicted ratio from energy loss.
-        
-    #     Args:
-    #         energy_loss: Energy loss in GeV through concrete (default 0.42 GeV for 3ft)
-    #     """
-    #     fig, (ax_overlay, ax_ratio) = plt.subplots(2, 1, figsize=(8, 8),
-    #                                                 gridspec_kw={'height_ratios': [3, 1],
-    #                                                             'hspace': 0.05})
-        
-    #     window_name = "signal"
-    #     xmin, xmax = xrange
-        
-    #     # --- Data extraction ---
-    #     mom_1a = results["1a"][window_name][name]["mom"]
-    #     mom_aw = results["aw"][window_name][name]["mom"]
-    #     weights_1a = results["1a"][window_name][name]["weights"]
-    #     weights_aw = results["aw"][window_name][name]["weights"]
-        
-    #     # --- Weighted histogramming ---
-    #     hist_aw, bins = np.histogram(mom_aw, bins=nbins, range=xrange, weights=weights_aw)
-    #     hist_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange, weights=weights_1a)
-    #     bin_centers = (bins[:-1] + bins[1:]) / 2
-        
-    #     # Error = sqrt(sum of weights^2)
-    #     err_sq_aw, _ = np.histogram(mom_aw, bins=nbins, range=xrange, weights=weights_aw**2)
-    #     err_sq_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange, weights=weights_1a**2)
-    #     err_aw, err_1a = np.sqrt(err_sq_aw), np.sqrt(err_sq_1a)
-        
-    #     # --- Overlay plot ---
-    #     ax_overlay.step(bin_centers, hist_aw, where='mid', color='blue', linewidth=1.5,
-    #                     label=f'Run-1: {np.sum(weights_aw):.3f}/day')
-    #     ax_overlay.step(bin_centers, hist_1a, where='mid', color='red', linewidth=1.5,
-    #                     label=f'Run-1a: {np.sum(weights_1a):.3f}/day')
-        
-    #     # Error bands
-    #     ax_overlay.fill_between(bin_centers, hist_aw - err_aw, hist_aw + err_aw, 
-    #                             color='blue', alpha=0.2, step='mid')
-    #     ax_overlay.fill_between(bin_centers, hist_1a - err_1a, hist_1a + err_1a, 
-    #                             color='red', alpha=0.2, step='mid')
-        
-    #     ax_overlay.set_ylabel("Rate [tracks/day]")
-    #     ax_overlay.set_title("Signal window")
-    #     ax_overlay.legend() 
-    #     ax_overlay.tick_params(labelbottom=False, direction='in', which='both', 
-    #                         right=True, top=True)
-    #     ax_overlay.set_xlim(xmin, xmax)
-        
-    #     # --- Ratio and error propagation ---
-    #     with np.errstate(divide='ignore', invalid='ignore'):
-    #         ratio = hist_1a / hist_aw
-    #         ratio_err = ratio * np.sqrt(
-    #             (err_1a / np.where(hist_1a > 0, hist_1a, 1))**2 +
-    #             (err_aw / np.where(hist_aw > 0, hist_aw, 1))**2
-    #         )
-        
-    #     # --- Predicted ratio from energy loss ---
-    #     # For cosmic with momentum p, after losing energy_loss it becomes p - energy_loss
-    #     # Ratio = Rate(no concrete) / Rate(with concrete)
-    #     # Cosmics with p < energy_loss are stopped -> infinite ratio
     
+    @classmethod
+    def histogram_ratios(cls, results, window_name="extended", name="cosmic_parent", 
+                        nbins=60, xrange=(-0.5, 5.5), show=False):
+        """
+        Create histograms of rate ratios for a single window
+        Shows all momentum, p < 5 GeV/c, and p > 5 GeV/c separately
+        """
+        fig, axes = plt.subplots(1, 3, figsize=(6.4, 3*4.8))
+        
+        # --- Data extraction ---
+        mom_1a = results["1a"][window_name][name]["mom"]
+        mom_aw = results["aw"][window_name][name]["mom"]
+        
+        weights_1a = results["1a"][window_name][name]["weights"]
+        weights_aw = results["aw"][window_name][name]["weights"]
+        
+        # --- Weighted histogramming ---
+        hist_aw, bins = np.histogram(mom_aw, bins=nbins, range=xrange, weights=weights_aw)
+        hist_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange, weights=weights_1a)
+        bin_centers = (bins[:-1] + bins[1:]) / 2
+        
+        # Error = sqrt(sum of weights^2)
+        err_sq_aw, _ = np.histogram(mom_aw, bins=nbins, range=xrange, weights=weights_aw**2)
+        err_sq_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange, weights=weights_1a**2)
+        err_aw, err_1a = np.sqrt(err_sq_aw), np.sqrt(err_sq_1a)
+        
+        # --- Ratio and error propagation ---
+        with np.errstate(divide='ignore', invalid='ignore'):
+            ratio = hist_1a / hist_aw
+            ratio_err = ratio * np.sqrt((err_1a / np.where(hist_1a > 0, hist_1a, 1))**2 +
+                                        (err_aw / np.where(hist_aw > 0, hist_aw, 1))**2)
+        
+        # Filter valid ratios
+        mask = np.isfinite(ratio) & (ratio_err > 0) & (hist_aw > 0)
+        valid_mom = bin_centers[mask]
+        valid_ratio = ratio[mask]
+        valid_ratio_err = ratio_err[mask]
+        
+        # --- Three regions ---
+        regions = [
+            ("All momentum", lambda p: np.ones_like(p, dtype=bool), 0),
+            ("p < 5 GeV/c", lambda p: p < 5.0, 1),
+            ("p > 5 GeV/c", lambda p: p >= 5.0, 2)
+        ]
+        
+        for region_name, region_mask_func, idx in regions:
+            ax = axes[idx]
+            region_mask = region_mask_func(valid_mom)
+            
+            if np.sum(region_mask) == 0:
+                ax.text(0.5, 0.5, f"No data in range", 
+                    transform=ax.transAxes, ha='center', va='center')
+                ax.set_title(f"{region_name}")
+                continue
+            
+            region_ratio = valid_ratio[region_mask]
+            region_ratio_err = valid_ratio_err[region_mask]
+            
+            # Calculate mean ratio and uncertainty
+            # Weighted mean
+            weights = 1 / (region_ratio_err**2)
+            mean_ratio = np.sum(region_ratio * weights) / np.sum(weights)
+            mean_ratio_err = 1 / np.sqrt(np.sum(weights))
+            
+            # Histogram of ratio values
+            ax.hist(region_ratio, bins=30, range=(0, 4), 
+                alpha=0.7, color='steelblue', edgecolor='black')
+            
+            # Add vertical line for mean
+            ax.axvline(mean_ratio, color='red', linestyle='--', linewidth=2,
+                    label=f'Mean: {mean_ratio:.3f} ± {mean_ratio_err:.3f}')
+            ax.axvline(1.0, color='gray', linestyle=':', linewidth=1.5,
+                    label='Unity')
+            
+            ax.set_xlabel("Rate ratio (1a / aw)")
+            ax.set_ylabel("Number of bins")
+            ax.set_title(f"{region_name}")
+            ax.legend()
+            # ax.grid(alpha=0.3)
+            
+            # Add text box with statistics
+            stats_text = (
+                f"N: {np.sum(region_mask)}\n"
+                f"Mean: {mean_ratio:.3f} ± {mean_ratio_err:.3f}\n"
+                f"Std Dev: {np.std(region_ratio):.3f}"
+            )
+            ax.text(0.95, 0.95, stats_text, transform=ax.transAxes,
+                verticalalignment='top', horizontalalignment='right',
+                bbox=dict(facecolor='white', alpha=0.8, edgecolor='black'))
+        
+        fig.suptitle(f"{window_name.capitalize()} window", 
+                    fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        
+        out_name = cls.IMG_PATH / f"hratio_dist_{window_name}_{name}.png"
+        plt.savefig(out_name, dpi=300)
+        print(f"Wrote {out_name}")
+        
+        if show:
+            plt.show()
+        plt.close(fig)
 
 ###############
 # Usage methods 
@@ -1233,22 +819,7 @@ def run_plotting(ana):
     ana.IMG_PATH.mkdir(parents=True, exist_ok=True)
     results = ana.load_results()
 
-
-
-    # Particle composition 
     ana.plot_particle_composition(results)
-
-    # Momentum
-    # ana.plot_mom_overlays(results, "cosmic_parent")
-    # ana.plot_mom_overlays(results, "track_parent", nbins=40, xrange=(0, 10))
-    # ana.plot_mom_overlays(results, "track_reco", nbins=250, xrange=(0, 250), unit="MeV/c")
-
-    # # Rate ratios
-    # ana.plot_and_fit_atios(results, xrange=(-0.5,20.5), nbins=21)
-    # ana.plot_and_fit_ratios(results, xrange=(-0.5,20.5), nbins=21,
-    #                         rate=False, norm=True, show=True,
-    #                         ylabel="Tracks [normalized]"
-    # )
 
     ana.plot_ratios(results, xrange=(-0.5,20.5), nbins=21,
                     rate=False, norm=True, show=True,
@@ -1261,7 +832,14 @@ def run_plotting(ana):
     )
     
     ana.plot_and_fit_ratios(results, xrange=(-0.5,20.5), nbins=21, show=True)
-    # ana.plot_and_fit_ratios_2(results, xrange=(-0.5,10.5), nbins=22, show=True)
+
+    # Something simpler: overlay histograms of the rate ratios for one window
+    # All momentum 
+    # Below 5 GeV/c
+    # Above 5 GeV/c
+    ana.histogram_ratios(results, window_name="extended", xrange=(-0.5, 5.5), nbins=60, show=True)
+
+    # ana.plot_and_fit_ratios_2(resiults, xrange=(-0.5,10.5), nbins=22, show=True)
 
     # ana.plot_sig_ratio(results, xrange=(-0.5,20.5), nbins=21)
       # nbins=80)
