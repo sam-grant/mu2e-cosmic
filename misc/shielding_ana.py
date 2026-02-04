@@ -471,8 +471,8 @@ class CosmicAna:
                                             (err_aw / np.where(hist_aw > 0, hist_aw, 1))**2)
 
             if rate:
-                label_1a = f"Run-1a: {np.sum(weights_1a):.3f}/day"
-                label_aw = f"Run-1: {np.sum(weights_aw):.3f}/day"
+                label_1a = f"Run-1a" # : {np.sum(weights_1a):.3f}/day"
+                label_aw = f"Run-1" # : {np.sum(weights_aw):.3f}/day"
             else:
                 label_1a = f"Run-1a" # : {np.sum(weights_1a):.3f}/day"
                 label_aw = f"Run-1" # : {np.sum(weights_aw):.3f}/day"
@@ -527,7 +527,7 @@ class CosmicAna:
             ax_ratio.set_ylabel("1a / aw", loc="center")
             ax_ratio.set_xlabel(f"{cls._format_label(name)} momentum [GeV/c]")
             ax_ratio.set_xlim(xmin, xmax)
-            ax_ratio.set_ylim(0, 4)
+            ax_ratio.set_ylim(0, 2.5)
             ax_ratio.tick_params(direction='in', which='both', right=True, top=True)
 
         # Align y-labels (skip spacer row)
@@ -702,102 +702,67 @@ class CosmicAna:
         if show: 
             plt.show()
         plt.close(fig)
-    
+   
     @classmethod
     def histogram_ratios(cls, results, window_name="extended", name="cosmic_parent", 
-                        nbins=60, xrange=(-0.5, 5.5), show=False):
+                        nbins=60, xrange=(0, 20), show=False):
         """
-        Create histograms of rate ratios for a single window
-        Shows all momentum, p < 5 GeV/c, and p > 5 GeV/c separately
+        Compare momentum distributions between runs
         """
-        fig, axes = plt.subplots(1, 3, figsize=(6.4, 3*4.8))
+        fig, axes = plt.subplots(1, 3, figsize=(18, 5))
         
-        # --- Data extraction ---
         mom_1a = results["1a"][window_name][name]["mom"]
         mom_aw = results["aw"][window_name][name]["mom"]
         
-        weights_1a = results["1a"][window_name][name]["weights"]
-        weights_aw = results["aw"][window_name][name]["weights"]
-        
-        # --- Weighted histogramming ---
-        hist_aw, bins = np.histogram(mom_aw, bins=nbins, range=xrange, weights=weights_aw)
-        hist_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange, weights=weights_1a)
-        bin_centers = (bins[:-1] + bins[1:]) / 2
-        
-        # Error = sqrt(sum of weights^2)
-        err_sq_aw, _ = np.histogram(mom_aw, bins=nbins, range=xrange, weights=weights_aw**2)
-        err_sq_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange, weights=weights_1a**2)
-        err_aw, err_1a = np.sqrt(err_sq_aw), np.sqrt(err_sq_1a)
-        
-        # --- Ratio and error propagation ---
-        with np.errstate(divide='ignore', invalid='ignore'):
-            ratio = hist_1a / hist_aw
-            ratio_err = ratio * np.sqrt((err_1a / np.where(hist_1a > 0, hist_1a, 1))**2 +
-                                        (err_aw / np.where(hist_aw > 0, hist_aw, 1))**2)
-        
-        # Filter valid ratios
-        mask = np.isfinite(ratio) & (ratio_err > 0) & (hist_aw > 0)
-        valid_mom = bin_centers[mask]
-        valid_ratio = ratio[mask]
-        valid_ratio_err = ratio_err[mask]
-        
-        # --- Three regions ---
+        # Three regions
         regions = [
-            ("All momentum", lambda p: np.ones_like(p, dtype=bool), 0),
-            ("p < 5 GeV/c", lambda p: p < 5.0, 1),
-            ("p > 5 GeV/c", lambda p: p >= 5.0, 2)
+            ("All momentum", (0, 100)),
+            ("p < 5 GeV/c", (0, 5.0)),
+            ("p > 5 GeV/c", (5.0, 100))
         ]
         
-        for region_name, region_mask_func, idx in regions:
+        for idx, (region_name, (pmin, pmax)) in enumerate(regions):
             ax = axes[idx]
-            region_mask = region_mask_func(valid_mom)
             
-            if np.sum(region_mask) == 0:
-                ax.text(0.5, 0.5, f"No data in range", 
-                    transform=ax.transAxes, ha='center', va='center')
-                ax.set_title(f"{region_name}")
-                continue
+            # Filter by momentum
+            mask_1a = (mom_1a >= pmin) & (mom_1a < pmax)
+            mask_aw = (mom_aw >= pmin) & (mom_aw < pmax)
             
-            region_ratio = valid_ratio[region_mask]
-            region_ratio_err = valid_ratio_err[region_mask]
+            region_1a = mom_1a[mask_1a]
+            region_aw = mom_aw[mask_aw]
             
-            # Calculate mean ratio and uncertainty
-            # Weighted mean
-            weights = 1 / (region_ratio_err**2)
-            mean_ratio = np.sum(region_ratio * weights) / np.sum(weights)
-            mean_ratio_err = 1 / np.sqrt(np.sum(weights))
+            # Overlay histograms
+            ax.hist(region_aw, bins=nbins, range=xrange, alpha=0.5, 
+                color='blue', label='Run-1', density=True)
+            ax.hist(region_1a, bins=nbins, range=xrange, alpha=0.5,
+                color='red', label='Run-1a', density=True)
             
-            # Histogram of ratio values
-            ax.hist(region_ratio, bins=30, range=(0, 4), 
-                alpha=0.7, color='steelblue', edgecolor='black')
+            # Statistics
+            mean_1a = np.mean(region_1a)
+            mean_aw = np.mean(region_aw)
             
-            # Add vertical line for mean
-            ax.axvline(mean_ratio, color='red', linestyle='--', linewidth=2,
-                    label=f'Mean: {mean_ratio:.3f} ± {mean_ratio_err:.3f}')
-            ax.axvline(1.0, color='gray', linestyle=':', linewidth=1.5,
-                    label='Unity')
-            
-            ax.set_xlabel("Rate ratio (1a / aw)")
-            ax.set_ylabel("Number of bins")
-            ax.set_title(f"{region_name}")
-            ax.legend()
-            # ax.grid(alpha=0.3)
-            
-            # Add text box with statistics
             stats_text = (
-                f"N: {np.sum(region_mask)}\n"
-                f"Mean: {mean_ratio:.3f} ± {mean_ratio_err:.3f}\n"
-                f"Std Dev: {np.std(region_ratio):.3f}"
+                f"Run-1: {len(region_aw)} events\n"
+                f"  Mean: {mean_aw:.3f} GeV/c\n"
+                f"Run-1a: {len(region_1a)} events\n"
+                f"  Mean: {mean_1a:.3f} GeV/c\n"
+                f"Rate ratio: {len(region_1a)/len(region_aw):.3f}"
             )
+            
             ax.text(0.95, 0.95, stats_text, transform=ax.transAxes,
                 verticalalignment='top', horizontalalignment='right',
-                bbox=dict(facecolor='white', alpha=0.8, edgecolor='black'))
+                bbox=dict(facecolor='white', alpha=0.8))
+            
+            ax.set_xlabel("Momentum [GeV/c]")
+            ax.set_ylabel("Density")
+            ax.set_title(f"{region_name}")
+            ax.legend()
+            ax.grid(alpha=0.3)
         
-        fig.suptitle(f"{window_name.capitalize()} window", 
-                    fontsize=14, fontweight='bold')
+        fig.suptitle(f"{window_name.capitalize()} window", fontsize=14)
         plt.tight_layout()
         
-        out_name = cls.IMG_PATH / f"hratio_dist_{window_name}_{name}.png"
+        out_name = cls.IMG_PATH / f"hratio_comparison_{window_name}_{name}.png"
         plt.savefig(out_name, dpi=300)
         print(f"Wrote {out_name}")
         
@@ -805,6 +770,206 @@ class CosmicAna:
             plt.show()
         plt.close(fig)
 
+    @classmethod
+    def plot_integrated_rate_ratio(cls, results, name="cosmic_parent", nbins=40, xrange=(0, 20), show=False):
+        """
+        Plot integrated rate ratio as a function of minimum momentum threshold.
+        
+        For each momentum threshold p0, calculates:
+            Ratio(p0) = Sum(Run-1a rates for p > p0) / Sum(Run-1 rates for p > p0)
+        
+        This should approach 1.0 at high p0 where 420 MeV energy loss is negligible.
+        """
+        fig, axes = plt.subplots(2, 2, figsize=(2*6.4, 2*4.8))
+        axes = axes.flatten()
+        
+        xmin, xmax = xrange
+        
+        for i, window_name in enumerate(cls.WINDOWS.keys()):
+            ax = axes[i]
+            
+            # --- Data extraction ---
+            mom_1a = results["1a"][window_name][name]["mom"]
+            mom_aw = results["aw"][window_name][name]["mom"]
+            weights_1a = results["1a"][window_name][name]["weights"]
+            weights_aw = results["aw"][window_name][name]["weights"]
+
+            # Calculate total rates (sum of all weights)
+            total_rate_1a = np.sum(weights_1a)
+            total_rate_aw = np.sum(weights_aw)
+            total_ratio = total_rate_1a / total_rate_aw
+            
+            print(f"\n{window_name.upper()} window:")
+            print(f"  Run-1  (aw): {total_rate_aw:.4f} events/day")
+            print(f"  Run-1a (1a): {total_rate_1a:.4f} events/day")
+            print(f"  Ratio (1a/aw): {total_ratio:.4f}")
+            
+            # --- Create histogram bins ---
+            hist_aw, bins = np.histogram(mom_aw, bins=nbins, range=xrange, weights=weights_aw)
+            hist_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange, weights=weights_1a)
+            
+            # Error = sqrt(sum of weights^2)
+            err_sq_aw, _ = np.histogram(mom_aw, bins=nbins, range=xrange, weights=weights_aw**2)
+            err_sq_1a, _ = np.histogram(mom_1a, bins=nbins, range=xrange, weights=weights_1a**2)
+            err_aw, err_1a = np.sqrt(err_sq_aw), np.sqrt(err_sq_1a)
+            
+            bin_centers = (bins[:-1] + bins[1:]) / 2
+            
+            # --- Calculate integrated rates and ratios ---
+            # Start from highest momentum and accumulate downward
+            integrated_1a = np.cumsum(hist_1a[::-1])[::-1]  # Reverse, cumsum, reverse back
+            integrated_aw = np.cumsum(hist_aw[::-1])[::-1]
+            
+            # Propagate errors for integrated rates
+            integrated_err_1a = np.sqrt(np.cumsum(err_1a[::-1]**2)[::-1])
+            integrated_err_aw = np.sqrt(np.cumsum(err_aw[::-1]**2)[::-1])
+            
+            # Calculate ratio and propagated errors
+            with np.errstate(divide='ignore', invalid='ignore'):
+                ratio = integrated_1a / integrated_aw
+                ratio_err = ratio * np.sqrt(
+                    (integrated_err_1a / np.where(integrated_1a > 0, integrated_1a, 1))**2 +
+                    (integrated_err_aw / np.where(integrated_aw > 0, integrated_aw, 1))**2
+                )
+            
+            # # --- Fitting (optional) ---
+            mask = np.isfinite(ratio) & (ratio_err > 0) & (integrated_aw > 0)
+            xf, rf, erf = bin_centers[mask], ratio[mask], ratio_err[mask]
+
+            if len(xf) > 3:
+                def exponential_approach(p, A, lam, c):
+                    """
+                    Ratio = A * exp(-p / lambda) + c
+                    where:
+                    - A: amplitude of momentum-dependent effect
+                    - lambda: momentum scale GeV/c
+                    - c: offset at infinite momentum
+                    """
+                    return A * np.exp(-p / lam) + c
+                
+                try:
+                    # Initial guesses: A~0.3, lambda~0.05 (1/GeV), c~1.0
+                    # p0 = [0.3, 0.05, 1.0]
+                    
+                    popt, pcov = optimize.curve_fit(
+                        exponential_approach, xf, rf, 
+                        sigma=erf, 
+                        absolute_sigma=True, 
+                        # p0=p0,
+                        # bounds=([0, 0.001, 0.5], [1.0, 1.0, 2.0])
+                    )
+                    
+                    A, lam, c = popt
+                    A_err = np.sqrt(pcov[0, 0])
+                    lam_err = np.sqrt(pcov[1, 1])
+                    c_err = np.sqrt(pcov[2, 2])
+                    
+                    # Calculate characteristic momentum scale
+                    # p_scale = 1.0 / lam
+                    # p_scale_err = p_scale * (lam_err / lam)  # Error propagation
+                    
+                    # Calculate reduced chi-squared
+                    ndf = len(xf) - 3
+                    chi2_ndf = np.sum(((rf - exponential_approach(xf, *popt)) / erf)**2) / ndf
+                    
+                    # Plot fit
+                    x_fit = np.linspace(xmin, xmax, 200)
+                    ax.plot(x_fit, exponential_approach(x_fit, *popt), 'r-', lw=2, label=r'$A e^{-p_{0}/\lambda}+c$')
+
+                    stats_str = (
+                        r"$c = "
+                        + f"{c:.2f}"
+                        + r" \pm "
+                        + f"{c_err:.2f}"
+                        + r"$"
+                        + "\n"
+                        + r"$A = "
+                        + f"{A:.2f}"
+                        + r" \pm "
+                        + f"{A_err:.2f}"
+                        + r"$"
+                        + "\n"
+                        + r"$\lambda = "
+                        + f"{lam:.0f}"
+                        + r" \pm "
+                        + f"{lam_err:.0f}"
+                        + r"\ \mathrm{GeV/c}$"
+                        + "\n"
+                        + r"$\chi^2/\mathrm{ndf} = "
+                        + f"{chi2_ndf:.3f}"
+                        + r"$"
+                    )
+                    
+                    ax.text(0.05, 0.85, stats_str, transform=ax.transAxes,
+                        verticalalignment='top', horizontalalignment='left',
+                        bbox=dict(facecolor='white', alpha=0, edgecolor='none'),
+                        fontsize=15)
+                        
+                    print(f"\n{window_name} fit results:")
+                    print(f"  Baseline (c): {c:.3f} ± {c_err:.3f}")
+                    print(f"  Amplitude (A): {A:.3f} ± {A_err:.3f}")
+                    print(f"  Lambda: {lam:.4f} ± {lam_err:.4f} GeV/c")
+                    # print(f"  Momentum scale (1/λ): {p_scale:.1f} ± {p_scale_err:.1f} GeV/c")
+                    print(f"  χ²/ndf: {chi2_ndf:.2f}")
+                    
+                except Exception as e:
+                    print(f"Fitting failed for {window_name}: {e}")
+
+            # if len(xf) > 2:
+            #     def power_law(x, delta_p):
+            #         return ((x + delta_p) / x) ** 1.7
+                
+            #     try:
+            #         popt, pcov = optimize.curve_fit(power_law, xf, rf, sigma=erf, 
+            #                                     absolute_sigma=True, p0=[0.42])
+            #         delta_p = popt[0]
+            #         delta_p_err = np.sqrt(pcov[0, 0])
+            #         chi2_ndf = np.sum(((rf - power_law(xf, *popt)) / erf)**2) / (len(xf) - 1)
+                    
+            #         # Plot fit
+            #         x_fit = np.linspace(xmin, xmax, 200)
+            #         ax.plot(x_fit, power_law(x_fit, *popt), 'r-', lw=2, label='Fit')
+                    
+            #         stats_str = (
+            #             r"$\Delta p = "
+            #             + f"{delta_p*1e3:.0f}"
+            #             + r" \pm "
+            #             + f"{delta_p_err*1e3:.0f}"
+            #             + r"\ \mathrm{MeV}/c$"
+            #             + "\n"
+            #             + r"$\chi^2/\mathrm{ndf} = "
+            #             + f"{chi2_ndf:.2f}"
+            #             + r"$"
+            #         )
+                    
+            #         ax.text(0.05, 0.95, stats_str, transform=ax.transAxes,
+            #             verticalalignment='top', horizontalalignment='left',
+            #             bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+            #     except Exception as e:
+            #         print(f"Fitting failed for {window_name}: {e}")
+            
+            # --- Plotting ---
+            ax.errorbar(xf, rf, yerr=erf, fmt='ko', markersize=5, capsize=3)
+            ax.axhline(y=1, color='gray', linestyle='--', linewidth=1)
+            
+            ax.set_xlabel(r"Minimum parent momentum, $p_{0}$ [GeV/c]")
+            ax.set_ylabel(r"Integrated rate ratio ($p > p_0$)")
+            ax.set_title(f"{window_name.capitalize()} window", fontsize=18)
+            ax.set_xlim(xmin, xmax)
+            ax.set_ylim(0.8, 2.5)
+            ax.legend(loc='upper left')
+            ax.grid(alpha=0.3)
+            ax.tick_params(direction='in', which='both', right=True, top=True)
+        
+        plt.tight_layout()
+        
+        out_name = cls.IMG_PATH / f"integrated_rate_ratio_{name}.png"
+        plt.savefig(out_name, dpi=300)
+        print(f"Wrote {out_name}")
+        
+        if show:
+            plt.show()
+        plt.close(fig)
 ###############
 # Usage methods 
 ###############
@@ -819,26 +984,29 @@ def run_plotting(ana):
     ana.IMG_PATH.mkdir(parents=True, exist_ok=True)
     results = ana.load_results()
 
-    ana.plot_particle_composition(results)
+    # ana.plot_particle_composition(results)
 
-    ana.plot_ratios(results, xrange=(-0.5,20.5), nbins=21,
-                    rate=False, norm=True, show=True,
-                    ylabel="Tracks [normalized]"
-    )
 
-    ana.plot_ratios(results, xrange=(-0.5,20.5), nbins=21,
+
+    # ana.plot_ratios(results, xrange=(-0.5,20.5), nbins=21,
+    #                 rate=False, norm=True, show=True,
+    #                 ylabel="Tracks [normalized]"
+    # )
+
+    ana.plot_ratios(results, xrange=(0, 40), nbins=20,
                     rate=True, norm=False, show=True,
                     ylabel="Rate [tracks/day]"
     )
     
-    ana.plot_and_fit_ratios(results, xrange=(-0.5,20.5), nbins=21, show=True)
+    # ana.plot_and_fit_ratios(results, xrange=(-0.5,20.5), nbins=21, show=True)
 
     # Something simpler: overlay histograms of the rate ratios for one window
     # All momentum 
     # Below 5 GeV/c
     # Above 5 GeV/c
-    ana.histogram_ratios(results, window_name="extended", xrange=(-0.5, 5.5), nbins=60, show=True)
+    # ana.histogram_ratios(results, window_name="extended", xrange=(-0.5, 5.5), nbins=60, show=True)
 
+    ana.plot_integrated_rate_ratio(results, xrange=(0, 40), nbins=20, show=True)
     # ana.plot_and_fit_ratios_2(resiults, xrange=(-0.5,10.5), nbins=22, show=True)
 
     # ana.plot_sig_ratio(results, xrange=(-0.5,20.5), nbins=21)
