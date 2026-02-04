@@ -13,6 +13,9 @@ import numpy as np
 import pandas as pd
 import awkward as ak
 
+# ML tools
+from sklearn.model_selection import train_test_split
+
 
 # Internal modules 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -30,7 +33,6 @@ class AssembleDataset():
     Not really sure what to call this, 'preprocesing' would get confusing 
     """
     def __init__(self, run="i", cutset_name="dev", verbosity=1):
-        logger = Logger(print_prefix="[Assemble]", verbosity=verbosity)
         self.run = run
         self.cutset_name = cutset_name
         self.base_in_path = Path(f"../../output/ml/{self.run}/data/")
@@ -41,7 +43,8 @@ class AssembleDataset():
         # Convert to DataFrame
         self.df_cry = ak.to_dataframe(self.cry_data["events"])
         self.df_ce_mix = ak.to_dataframe(self.ce_mix_data["events"])
-        logger.log(f"Initialised", "success")
+        self.logger = Logger(print_prefix="[Assemble]", verbosity=verbosity)
+        self.logger.log(f"Initialised", "success")
 
     def draw_hists(self):
         draw = Draw(cutset_name=self.cutset_name)
@@ -63,14 +66,7 @@ class AssembleDataset():
             df_with_veto = df.copy()
             df_with_veto["vetoed"] = veto_condition
 
-            # For CE Mix2BB: deadtime (fraction of events incorrectly vetoed)
-            # mix_in_window = (df_ce_mix['dT'] >= dt_min) & (df_ce_mix['dT'] <= dt_max)
-            # mix_vetoed_events = df_ce_mix[mix_in_window].groupby(['event', 'subrun']).size()
-            # mix_total_events = df_ce_mix.groupby(['event', 'subrun']).size()
-            # eff_mix = len(mix_vetoed_events) / len(mix_total_events)
-        
             event_veto = df_with_veto.groupby(["subrun", "event"])["vetoed"].max().reset_index()
-            # total = df_with_veto.groupby(['event', 'subrun']).size()
 
             total = len(event_veto)
             unvetoed = total - event_veto["vetoed"].sum()
@@ -83,10 +79,11 @@ class AssembleDataset():
             "CE Mix": _apply_dT_window(self.df_ce_mix),
         })
     
-    def get_ml_data(self):
+    def assemble_dataset(self):
         """ Load and prepare data for ML training/testing """
-        # Get awk arrays
-        cry_data, ce_mix_data = self.get_results()
+        # Use DataFrames already loaded in __init__
+        df_cry = self.df_cry
+        df_ce_mix = self.df_ce_mix
 
         # SORT by event IDs to ensure reproducibility
         df_cry = df_cry.sort_values(["subrun", "event"]).reset_index(drop=True)
@@ -111,6 +108,7 @@ class AssembleDataset():
         self.logger.log(f"Columns: {df_train_full.columns}", "max")
 
         # Define columns to drop for training (but keep event/subrun for now)
+        # Would be better if this wasn't hardcoded
         col_to_drop = ["d0", "tanDip", "maxr", "mom_mag", "PEs_per_hit", "t0", "timeStart", "timeEnd"]
         df_train.drop(columns=col_to_drop, inplace=True)
 
@@ -127,15 +125,7 @@ class AssembleDataset():
                 stratify=y
                 )       
         
-        self.logger.log("Split data", "max") 
-
-        # Scaling 
-        # Actually not really needed for BDTs
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_test_scaled = scaler.transform(X_test)
-
-        self.logger.log("Features scaled", "max") 
+        self.logger.log("Split data", "max")
 
         self.logger.log("Got ML data", "success") 
 
@@ -145,7 +135,7 @@ class AssembleDataset():
                 "X_train": X_train,
                 "X_test": X_test,
                 "y_train": y_train,
-                "y_train": y_train,
+                "y_test": y_test,
                 "metadata_train": metadata_train,
                 "metadata_test": metadata_test,
                 }
