@@ -43,7 +43,7 @@ class dTProcessor(Skeleton):
         defname = None, 
         file_list_path = None,
         file_name = None,
-        cutset_name = "MLPreprocess",
+        cutset_name = "dTPreprocess",
         branches = { 
             "evt" : ["run", "subrun", "event"],
             "crv" : ["crvcoincs.time", "crvcoincs.PEs", "crvcoincs.nHits", "crvcoincs.sectorType",
@@ -59,7 +59,7 @@ class dTProcessor(Skeleton):
         groups_to_toggle = None,
         use_remote = True,
         location = "disk",
-        max_workers = 50,
+        max_workers = 48,
         use_processes = True,
         verbosity = 1,
         worker_verbosity = 0
