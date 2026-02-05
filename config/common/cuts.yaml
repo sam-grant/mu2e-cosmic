@@ -30,7 +30,7 @@ defaults:
         hi_sig_win_mevc: 104.9
     active:
         # one_track_per_event: true
-        one_reco_electron: true # false # redundant with one_track_per_event 
+        one_reco_electron: true 
         is_reco_electron: true
         # has_trk_front: true
         thru_trk: true
@@ -43,7 +43,7 @@ defaults:
         within_d0: true
         within_pitch_angle_lo: true
         within_pitch_angle_hi: true
-        within_lhr_max_lo: true
+        within_lhr_max_lo: false 
         within_lhr_max_hi: true
         is_truth_electron: true
         # Dev 
@@ -137,6 +137,8 @@ cutsets:
             within_coinc_end_time: true
             unvetoed: false
             within_wide_win: true # no real cosmics below 85 MeV/c 
+            within_ext_win: false
+            within_sig_win: false
 
     dTPreprocess:
         description:
@@ -145,8 +147,8 @@ cutsets:
             lo_trkqual: 0.2
         active:
             within_lhr_max_lo: false
-            within_coinc_start_time: false 
-            within_coinc_end_time: false 
+            within_coinc_start_time: true # false 
+            within_coinc_end_time: true # false 
             unvetoed: false
             within_wide_win: false 
             within_ext_win: false
