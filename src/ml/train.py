@@ -132,15 +132,15 @@ class Train:
 
         # Scale features if requested
         if self.scale_features:
-            X_train_processed, X_test_processed = self._scale_features()
+            X_train_scaled, X_test_scaled = self._scale_features()
         else:
-            X_train_processed = self.X_train.values
-            X_test_processed = self.X_test.values
+            X_train_scaled = self.X_train.values
+            X_test_scaled = self.X_test.values
 
         # Train model based on type
         if self.is_keras:
             self.model = self._fit_keras_model(
-                X_train_processed, self.y_train.values,
+                X_train_scaled, self.y_train.values,
                 epochs=epochs,
                 batch_size=batch_size,
                 validation_split=validation_split,
@@ -149,22 +149,26 @@ class Train:
             )
         else:
             self.model = self._fit_model(
-                X_train_processed, self.y_train,
+                X_train_scaled, self.y_train,
                 random_state, **hyperparams
             )
 
-        # Predict on test set
-        y_pred, y_proba = self._predict(X_test_processed)
+        # Predict on test and train sets
+        y_pred, y_proba = self._predict(X_test_scaled)
+        _, y_proba_train = self._predict(X_train_scaled)
 
-        print(f"Training complete!\n")
+        self.logger.log("Training complete!", "success")
 
         # Package results
         results = {
             "tag": tag,
             "model": self.model,
+            "feature_names": list(self.X_train.columns),
+            "y_train": self.y_train,
             "y_test": self.y_test,
             "y_pred": y_pred,
             "y_proba": y_proba,
+            "y_proba_train": y_proba_train,
             "scaler": self.scaler,
             "metadata_test": self.metadata_test
         }
@@ -189,7 +193,7 @@ class Train:
         X_test_scaled = self.scaler.transform(self.X_test)
         return X_train_scaled, X_test_scaled
 
-    def _fit_model(self, X_train, y_train, random_state, **hyperparams):
+    def _fit_model(self, X_train, y_train, random_state=42, **hyperparams):
         """
         Fit sklearn-compatible models with hyperparameters
 
