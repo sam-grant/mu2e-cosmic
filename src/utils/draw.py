@@ -435,6 +435,7 @@ class Draw():
         
         plt.tight_layout()
         if out_path:
+            out_path.parent.mkdir(parents=True, exist_ok=True)
             plt.savefig(out_path)
             self.logger.log(f"\tWrote {out_path}", "success")
         plt.show()
