@@ -8,8 +8,7 @@ from sklearn.metrics import (
     confusion_matrix,
     classification_report,
     roc_curve,
-    roc_auc_score,
-    precision_score
+    roc_auc_score
 )
 from pathlib import Path
 
@@ -206,54 +205,6 @@ class AnaModel:
         if show:
             plt.show()
 
-    def find_threshold(self, target_recall=0.999):
-        """
-        Find threshold for target recall (sensitivity)
-
-        Useful for finding threshold at 99.9% signal efficiency
-
-        Args:
-            target_recall: Desired recall/sensitivity (default: 0.999 = 99.9%)
-
-        Returns:
-            dict: {
-                "threshold": optimal threshold,
-                "recall": actual recall achieved,
-                "precision": precision at this threshold,
-                "fpr": false positive rate at this threshold
-            }
-        """
-        # Compute ROC curve
-        fpr, tpr, thresholds = roc_curve(self.y_test, self.y_proba)
-
-        # Find threshold closest to target recall
-        idx = np.argmin(np.abs(tpr - target_recall))
-
-        threshold = thresholds[idx]
-        actual_recall = tpr[idx]
-        actual_fpr = fpr[idx]
-
-        # Compute precision at this threshold
-        y_pred_at_threshold = (self.y_proba >= threshold).astype(int)
-        actual_precision = precision_score(self.y_test, y_pred_at_threshold)
-
-        result = {
-            "threshold": threshold,
-            "recall": actual_recall,
-            "precision": actual_precision,
-            "fpr": actual_fpr
-        }
-
-        self.logger.log(
-            f"Threshold for {target_recall*100:.1f}% recall:\n"
-            f"  Threshold:  {threshold:.4f}\n"
-            f"  Recall:     {actual_recall:.4f} ({actual_recall*100:.2f}%)\n"
-            f"  Precision:  {actual_precision:.4f}\n"
-            f"  FPR:        {actual_fpr:.4f}",
-            "info"
-        )
-
-        return result
 
     def plot_feature_importance(self, feature_names=None, save_path=None, show=True):
         """
@@ -365,6 +316,9 @@ class AnaModel:
         if show:
             plt.show()
 
+    def check_overlap(self):
+        pass
+
     def print_summary(self):
         """
         Print validation summary
@@ -389,32 +343,114 @@ class AnaModel:
 
         print(f"{'='*60}\n")
 
-    # def _get_train_proba(self):
-        # """
-        # Get prediction probabilities for training set
 
-        # Handles both sklearn and Keras models
+    def find_threshold(self, min_eff=0.999, n_thresholds=10000, save_path=None, show=True):
+        """
+        Find model threshold at a minimum veto efficiency and plot
+        efficiency curves.
 
-        # Returns:
-            # np.ndarray: Probabilities for positive class on training set
-        # """
-        # try:
-            # import tensorflow as tf
-            # is_keras = isinstance(self.model, tf.keras.Model)
-        # except ImportError:
-            # is_keras = False
+        Scans thresholds and computes veto efficiency (TPR) and
+        signal efficiency (1 - deadtime, i.e. 1 - FPR). Returns
+        the threshold closest to the target efficiency from above.
 
-        # if is_keras:
-            # # Keras model
-            # proba_raw = self.model.predict(self.X_train.values, verbose=0)
-            # if proba_raw.shape[1] == 1:
-                # proba = proba_raw.flatten()
-            # else:
-                # proba = proba_raw[:, 1]
-        # else:
-            # # sklearn model
-            # proba_all = self.model.predict_proba(self.X_train)
-            # pos_idx = list(self.model.classes_).index(1)
-            # proba = proba_all[:, pos_idx]
+        Args:
+            min_eff: Minimum veto efficiency (default: 0.999)
+            n_thresholds: Number of thresholds to scan (default: 10000)
+            save_path: Path to save the overlay plot (optional)
+            show: Whether to display the plot
 
-        # return proba
+        Returns:
+            dict: {
+                "threshold": optimal threshold,
+                "veto_efficiency": actual veto efficiency achieved,
+                "deadtime": deadtime (FPR) at this threshold,
+                "signal_efficiency": 1 - deadtime
+            }
+        """
+        thresholds = np.linspace(0, 1, n_thresholds)
+
+        y_test = np.asarray(self.y_test)
+        y_proba = np.asarray(self.y_proba)
+
+        n_signal = (y_test == 1).sum()
+        n_background = (y_test == 0).sum()
+
+        # Vectorised computation of veto efficiency and deadtime
+        veto_efficiencies = np.empty(n_thresholds)
+        deadtime_losses = np.empty(n_thresholds)
+
+        for i, thr in enumerate(thresholds):
+            pred = (y_proba > thr).astype(int)
+
+            tp = ((y_test == 1) & (pred == 1)).sum()
+            fp = ((y_test == 0) & (pred == 1)).sum()
+
+            veto_efficiencies[i] = tp / n_signal if n_signal > 0 else 0
+            deadtime_losses[i] = fp / n_background if n_background > 0 else 0
+
+        signal_efficiencies = 1 - deadtime_losses
+
+        # Find threshold where veto efficiency >= min_eff
+        # (highest threshold that still meets the requirement)
+        above_target = np.where(veto_efficiencies >= min_eff)[0]
+        if len(above_target) > 0:
+            optimal_idx = above_target[-1]  # highest threshold still above target
+        else:
+            # Fall back to closest
+            optimal_idx = np.argmin(np.abs(veto_efficiencies - min_eff))
+            self.logger.log(
+                f"Target efficiency {min_eff*100:.2f}% not achievable, "
+                f"using closest: {veto_efficiencies[optimal_idx]*100:.2f}%",
+                "warning"
+            )
+
+        optimal_threshold = thresholds[optimal_idx]
+        actual_veto_eff = veto_efficiencies[optimal_idx]
+        actual_deadtime = deadtime_losses[optimal_idx]
+        actual_signal_eff = signal_efficiencies[optimal_idx]
+
+        self.logger.log(
+            f"Threshold optimisation (target {min_eff*100:.2f}% veto efficiency):\n"
+            f"  Threshold:         {optimal_threshold:.4f}\n"
+            f"  Veto efficiency:   {actual_veto_eff*100:.3f}%\n"
+            f"  Signal efficiency: {actual_signal_eff*100:.3f}%\n"
+            f"  Deadtime:          {actual_deadtime*100:.3f}%",
+            "info"
+        )
+
+        # Plot overlay of veto efficiency and signal efficiency
+        fig, ax = plt.subplots(figsize=(1.2 * 6.4, 4.8))
+
+        ax.plot(thresholds, veto_efficiencies, linewidth=2,
+                color='blue', label='Veto efficiency (CRY vetoed)')
+        ax.plot(thresholds, signal_efficiencies, linewidth=2,
+                color='red', label='Signal efficiency (CE mix passed)')
+
+        ax.axvline(optimal_threshold, color='green', linestyle='--',
+                   alpha=0.8, linewidth=1.5,
+                   label=f'{min_eff*100:.2f}% efficiency: {optimal_threshold:.3f}')
+
+        ax.set_xlabel('Threshold')
+        ax.set_ylabel('Fraction')
+        ax.set_ylim([0.97, 1.01])
+        ax.set_xlim([0, 0.1])
+        ax.legend(loc='best')
+        ax.grid(alpha=0.4)
+
+        plt.tight_layout()
+
+        if save_path:
+            save_path = Path(save_path)
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            plt.savefig(save_path)
+            self.logger.log(f"Threshold plot saved to {save_path}", "success")
+
+        if show:
+            plt.show()
+
+        return {
+            "threshold": optimal_threshold,
+            "veto_efficiency": actual_veto_eff,
+            "deadtime": actual_deadtime,
+            "signal_efficiency": actual_signal_eff
+        }
