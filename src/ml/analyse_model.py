@@ -13,6 +13,7 @@ from sklearn.metrics import (
 from pathlib import Path
 
 from pyutils.pylogger import Logger
+from pyutils.pyplot import Plot
 
 
 class AnaModel:
@@ -41,15 +42,18 @@ class AnaModel:
         >>> # Analyse model 
         >>> ana = AnaValidate(results, data)
         >>> ana.print_summary()
-        >>> ana.plot_roc(save_path="roc_curve.png")
+        >>> ana.plot_roc(out_path="roc_curve.png")
     """
 
-    def __init__(self, results, verbosity=1):
+    def __init__(self, results, run="j", img_out_path=None, verbosity=1):
         """
-        Initialise validator with training results
+        Initialise analyser with training results
 
         Args:
             results: Dictionary from Train.train()
+            run: Run identifier for default image output path (default: "j")
+            img_out_path: Directory for plot output
+                          (default: output/images/ml/{run}/{tag})
             verbosity: pylogger verbosity
         """
         self.model = results["model"]
@@ -61,16 +65,30 @@ class AnaModel:
         self.y_proba_train = results["y_proba_train"]
         self.tag = results["tag"]
 
-#        self.X_train = data["X_train"]
-#        self.X_test = data["X_test"]
-#        self.y_train = data["y_train"]
+        # Image output directory: output/images/ml/{run}/{tag}/
+        if img_out_path is not None:
+            self.img_out_path = Path(img_out_path)
+        else:
+            self.img_out_path = Path(f"../../output/images/ml/{run}/{self.tag}")
 
-        self.logger = Logger(print_prefix="[Validate]", verbosity=verbosity)
-        self.logger.log(f"Initialised validator for model: {self.tag}", "success")
+        self.logger = Logger(print_prefix="[AnaModel]", verbosity=verbosity)
+        self.logger.log(f"Initialised analyser for model: {self.tag}", "success")
 
         # Will be computed
         self._train_auc = None
         self._test_auc = None
+
+        # Just for styles
+        plotter = Plot()
+
+    def _save_fig(self, out_path, default_name):
+        """Save current figure, using default filename if no path given"""
+        if out_path is None:
+            out_path = self.img_out_path / default_name
+        out_path = Path(out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(out_path)
+        self.logger.log(f"Saved to {out_path}", "success")
 
     def confusion_matrix(self, normalise=False):
         """
@@ -171,12 +189,12 @@ class AnaModel:
 
         return result
 
-    def plot_roc(self, save_path=None, show=True):
+    def plot_roc(self, out_path=None, show=True):
         """
         Plot ROC curve for test set
 
         Args:
-            save_path: Path to save figure (optional)
+            out_path: Path to save figure (optional)
             show: Whether to display the plot
         """
         # Compute ROC curve
@@ -196,17 +214,13 @@ class AnaModel:
         plt.grid(alpha=0.5)
         plt.tight_layout()
 
-        if save_path:
-            save_path = Path(save_path)
-            save_path.parent.mkdir(parents=True, exist_ok=True)
-            plt.savefig(save_path)
-            self.logger.log(f"ROC curve saved to {save_path}", "success")
+        self._save_fig(out_path, "roc_curve.png")
 
         if show:
             plt.show()
 
 
-    def plot_feature_importance(self, feature_names=None, save_path=None, show=True):
+    def plot_feature_importance(self, feature_names=None, out_path=None, show=True):
         """
         Plot and print feature importance
 
@@ -215,7 +229,7 @@ class AnaModel:
 
         Args:
             feature_names: List of feature names (optional, retrieved from model if not provided)
-            save_path: Path to save figure (optional)
+            out_path: Path to save figure (optional)
             show: Whether to display the plot
 
         Returns:
@@ -271,24 +285,25 @@ class AnaModel:
         plt.xlabel(f"Feature {importance_type}")
         plt.tight_layout()
 
-        if save_path:
-            save_path = Path(save_path)
-            save_path.parent.mkdir(parents=True, exist_ok=True)
-            plt.savefig(save_path)
-            self.logger.log(f"Feature importance saved to {save_path}", "success")
+        self._save_fig(out_path, "bar_feature_importance.png")
 
         if show:
             plt.show()
 
         return dict(zip(feature_names, importances))
 
-    def plot_score_distribution(self, save_path=None, show=True):
+    def plot_score_distribution(self, out_path=None, show=True,
+                                xmin=None, xmax=None, vlines=None):
         """
         Plot model output score distributions for signal and background
 
         Args:
-            save_path: Path to save figure (optional)
+            out_path: Path to save figure (optional)
             show: Whether to display the plot
+            xmin: Minimum x-axis value (optional)
+            xmax: Maximum x-axis value (optional)
+            vlines: Threshold value(s) to draw as vertical lines
+                    (float or list of floats, optional)
         """
         # Separate scores by true label
         signal_scores = self.y_proba[self.y_test == 1]
@@ -301,17 +316,23 @@ class AnaModel:
         plt.hist(signal_scores, bins=100, alpha=0.6, label='CRY',
                  density=True, color='red')
 
+        if vlines is not None:
+            if not hasattr(vlines, '__iter__'):
+                vlines = [vlines]
+            for vl in vlines:
+                plt.axvline(vl, color='grey', linestyle='--', alpha=0.8,
+                            linewidth=1.5, label=f'Threshold: {vl:.4f}')
+
+        if xmin is not None or xmax is not None:
+            plt.xlim(left=xmin, right=xmax)
+
         plt.xlabel('Model output')
         plt.ylabel('Normalised events')
         plt.legend(loc='upper left', bbox_to_anchor=(0.1, 1))
         plt.yscale('log')
         plt.tight_layout()
 
-        if save_path:
-            save_path = Path(save_path)
-            save_path.parent.mkdir(parents=True, exist_ok=True)
-            plt.savefig(save_path)
-            self.logger.log(f"Score distribution saved to {save_path}", "success")
+        self._save_fig(out_path, "h1_score_distribution.png")
 
         if show:
             plt.show()
@@ -344,7 +365,7 @@ class AnaModel:
         print(f"{'='*60}\n")
 
 
-    def find_threshold(self, min_eff=0.999, n_thresholds=10000, save_path=None, show=True):
+    def find_threshold(self, min_eff=0.999, n_thresholds=10000, out_path=None, show=True):
         """
         Find model threshold at a minimum veto efficiency and plot
         efficiency curves.
@@ -356,7 +377,7 @@ class AnaModel:
         Args:
             min_eff: Minimum veto efficiency (default: 0.999)
             n_thresholds: Number of thresholds to scan (default: 10000)
-            save_path: Path to save the overlay plot (optional)
+            out_path: Path to save the overlay plot (optional)
             show: Whether to display the plot
 
         Returns:
@@ -419,31 +440,33 @@ class AnaModel:
         )
 
         # Plot overlay of veto efficiency and signal efficiency
-        fig, ax = plt.subplots(figsize=(1.2 * 6.4, 4.8))
+        fig, ax = plt.subplots(figsize=(6.4, 4.8))
 
         ax.plot(thresholds, veto_efficiencies, linewidth=2,
                 color='blue', label='Veto efficiency (CRY vetoed)')
         ax.plot(thresholds, signal_efficiencies, linewidth=2,
-                color='red', label='Signal efficiency (CE mix passed)')
+                color='red', label=r'$1-$'+'deadtime (CE mix passed)')
 
-        ax.axvline(optimal_threshold, color='green', linestyle='--',
+        ax.axvline(optimal_threshold, color='grey', linestyle='--',
                    alpha=0.8, linewidth=1.5,
-                   label=f'{min_eff*100:.2f}% efficiency: {optimal_threshold:.3f}')
+                   label=f'{min_eff*100:.2f}% efficiency: {optimal_threshold:.4f}')
+
+        # Mark operating point on both curves
+        ax.plot(optimal_threshold, actual_veto_eff, 'o', color='blue',
+                markersize=8, zorder=5)
+        ax.plot(optimal_threshold, actual_signal_eff, 'o', color='red',
+                markersize=8, zorder=5)
 
         ax.set_xlabel('Threshold')
         ax.set_ylabel('Fraction')
-        ax.set_ylim([0.97, 1.01])
-        ax.set_xlim([0, 0.1])
+        ax.set_ylim([0.9, 1.01])
+        ax.set_xlim([0, 0.010])
         ax.legend(loc='best')
         ax.grid(alpha=0.4)
 
         plt.tight_layout()
 
-        if save_path:
-            save_path = Path(save_path)
-            save_path.parent.mkdir(parents=True, exist_ok=True)
-            plt.savefig(save_path)
-            self.logger.log(f"Threshold plot saved to {save_path}", "success")
+        self._save_fig(out_path, "threshold_overlay.png")
 
         if show:
             plt.show()

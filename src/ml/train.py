@@ -17,7 +17,8 @@ class Train:
     Handles feature scaling, model training, and result persistence.
     """
 
-    def __init__(self, data, model=None, scale_features=True, verbosity=1):
+    def __init__(self, data, model=None, scale_features=True,
+                 run="j", out_path=None, verbosity=1):
         """
         Initialise trainer with pre-split data
 
@@ -28,10 +29,12 @@ class Train:
                 - metadata_train, metadata_test: Event/subrun info
                 - df_train_full: Full combined DataFrame
             model: Model class or compiled Keras model (default: xgb.XGBClassifier)
-                   - For sklearn: pass model class 
+                   - For sklearn: pass model class
                    - For Keras: pass compiled model instance
             scale_features: Whether to apply StandardScaler (default: True)
                     Set to False for tree-based models that don't need scaling
+            run: Run identifier for default output path (default: "j")
+            out_path: Base output directory for results (default: output/ml/{run}/results)
         """
         # Set default model
         if model is None:
@@ -56,8 +59,11 @@ class Train:
         self.model = None
         self.is_keras = self._is_keras_model()
 
+        # Output directory: output/ml/{run}/results/{tag}
+        self.out_path = Path(out_path) if out_path else Path(f"../../output/ml/{run}/results")
+
         self.logger = Logger(
-            print_prefix = "[Train]", 
+            print_prefix = "[Train]",
             verbosity = verbosity
         )
         self.logger.log("Initialised", "success")
@@ -74,7 +80,6 @@ class Train:
         return False
 
     def train(self, tag, random_state=42, save_output=False,
-              output_dir="../../output/ml/models",
               epochs=50, batch_size=32, validation_split=0.0, verbose=1,
               **hyperparams):
         """
@@ -84,7 +89,6 @@ class Train:
             tag: Identifier for this training run
             random_state: Random seed for reproducibility (default: 42)
             save_output: Save results to disk (default: False)
-            output_dir: Directory for saved results (default: "../../output/ml/models")
 
             # Keras-specific parameters
             epochs: Number of training epochs for Keras (default: 50, ignored for sklearn)
@@ -175,7 +179,7 @@ class Train:
 
         # Save if requested
         if save_output:
-            self._save_results(results, tag, output_dir)
+            self._save_results(results, tag)
 
         return results
 
@@ -296,31 +300,29 @@ class Train:
 
         return y_pred, y_proba
 
-    def _save_results(self, results, tag, output_dir):
+    def _save_results(self, results, tag):
         """
         Save results to disk using joblib
 
         Args:
             results: Results dictionary from train()
             tag: Model identifier
-            output_dir: Base directory for saved results
 
-        Creates: {output_dir}/{tag}/results.pkl
+        Creates: {self.out_path}/{tag}/results.pkl
 
         Note: For Keras models, the model itself should be saved separately
               using model.save() as Keras models may not pickle well.
         """
-        out_path = Path(output_dir) / tag
-        out_path.mkdir(parents=True, exist_ok=True)
+        tag_path = self.out_path / tag
+        tag_path.mkdir(parents=True, exist_ok=True)
 
-        # Save results
-        file_path = out_path / "results.pkl"
+        file_path = tag_path / "results.pkl"
 
         if self.is_keras:
             # Save Keras model separately
-            keras_model_path = out_path / "keras_model.keras"
+            keras_model_path = tag_path / "keras_model.keras"
             results["model"].save(keras_model_path)
-            self.logger(f"Keras model saved to {keras_model_path}", "success")
+            self.logger.log(f"Keras model saved to {keras_model_path}", "success")
 
             # Save results without the model (it's saved separately)
             results_copy = results.copy()

@@ -52,7 +52,10 @@ class AssembleDataset():
         draw.plot_summary(self.ce_mix_data["hists"], out_path = self.img_out_path / "h1o_3x3_cuts_CE_mix.png")
 
     def get_cut_flows(self):
-        return self.cry_data["cut_flow"], self.ce_mix_data["cut_flow"]
+        return {
+            "cry": self.cry_data["cut_flow"],
+            "ce_mix": self.ce_mix_data["cut_flow"]
+        }
 
     def check_dT_window_results(self, dT_min = 0, dT_max = 150):
         
