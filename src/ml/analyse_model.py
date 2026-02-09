@@ -440,7 +440,7 @@ class AnaModel:
             plt.show()
 
     @staticmethod
-    def self.event_level_confusion(y_pred, y_true, metadata):
+    def event_level_confusion(y_pred, y_true, metadata):
         """
         Compute event-level confusion matrix from per-coincidence predictions
 
@@ -683,15 +683,16 @@ class AnaModel:
 
     def find_threshold(self, min_eff=0.999, n_thresholds=10000, out_path=None, show=True):
         """
-        Find model threshold at a minimum veto efficiency and plot
-        efficiency curves.
+        Find model threshold at a minimum event-level veto efficiency
+        and plot efficiency curves.
 
-        Scans thresholds and computes veto efficiency (TPR) and
-        signal efficiency (1 - deadtime, i.e. 1 - FPR). Returns
-        the threshold closest to the target efficiency from above.
+        Scans thresholds and computes event-level veto efficiency and
+        deadtime. An event is vetoed if ANY of its coincidences has a
+        score above the threshold. Returns the highest threshold that
+        still meets the target efficiency.
 
         Args:
-            min_eff: Minimum veto efficiency (default: 0.999)
+            min_eff: Minimum event-level veto efficiency (default: 0.999)
             n_thresholds: Number of thresholds to scan (default: 10000)
             out_path: Path to save the overlay plot (optional)
             show: Whether to display the plot
@@ -704,26 +705,50 @@ class AnaModel:
                 "signal_efficiency": 1 - deadtime
             }
         """
+        if self.metadata_test is None:
+            self.logger.log(
+                "No metadata_test available — cannot do event-level threshold scan",
+                "error"
+            )
+            return None
+
         thresholds = np.linspace(0, 1, n_thresholds)
 
         y_test = np.asarray(self.y_test)
         y_proba = np.asarray(self.y_proba)
+        metadata = self.metadata_test
 
-        n_signal = (y_test == 1).sum()
-        n_background = (y_test == 0).sum()
+        # Pre-compute event-level quantities with a single groupby
+        df = metadata[["subrun", "event"]].copy()
+        df["label"] = y_test
+        df["proba"] = y_proba
 
-        # Vectorised computation of veto efficiency and deadtime
+        event_df = df.groupby(["subrun", "event"]).agg(
+            max_proba=("proba", "max"),
+            label=("label", "first")
+        )
+
+        event_labels = event_df["label"].values
+        event_max_proba = event_df["max_proba"].values
+
+        is_signal = (event_labels == 1)
+        is_background = (event_labels == 0)
+        n_signal_events = is_signal.sum()
+        n_background_events = is_background.sum()
+
+        # Vectorised threshold scan — no groupby in the loop
         veto_efficiencies = np.empty(n_thresholds)
         deadtime_losses = np.empty(n_thresholds)
 
         for i, thr in enumerate(thresholds):
-            pred = (y_proba > thr).astype(int)
+            # Event vetoed if its max coincidence score > threshold
+            event_vetoed = event_max_proba >= thr
 
-            tp = ((y_test == 1) & (pred == 1)).sum()
-            fp = ((y_test == 0) & (pred == 1)).sum()
+            tp = (is_signal & event_vetoed).sum()
+            fp = (is_background & event_vetoed).sum()
 
-            veto_efficiencies[i] = tp / n_signal if n_signal > 0 else 0
-            deadtime_losses[i] = fp / n_background if n_background > 0 else 0
+            veto_efficiencies[i] = tp / n_signal_events if n_signal_events > 0 else 0
+            deadtime_losses[i] = fp / n_background_events if n_background_events > 0 else 0
 
         signal_efficiencies = 1 - deadtime_losses
 
@@ -747,7 +772,7 @@ class AnaModel:
         actual_signal_eff = signal_efficiencies[optimal_idx]
 
         self.logger.log(
-            f"Threshold optimisation (target {min_eff*100:.2f}% veto efficiency):\n"
+            f"Event-level threshold (target {min_eff*100:.2f}% veto efficiency):\n"
             f"  Threshold:         {optimal_threshold:.4f}\n"
             f"  Veto efficiency:   {actual_veto_eff*100:.3f}%\n"
             f"  Signal efficiency: {actual_signal_eff*100:.3f}%\n"
