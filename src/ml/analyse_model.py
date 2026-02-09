@@ -293,7 +293,8 @@ class AnaModel:
         return dict(zip(feature_names, importances))
 
     def plot_score_distribution(self, out_path=None, show=True,
-                                xmin=None, xmax=None, vlines=None):
+                                nbins=100, xmin=0, xmax=1, vlines=None):
+
         """
         Plot model output score distributions for signal and background
 
@@ -311,9 +312,11 @@ class AnaModel:
 
         # Plot
         plt.figure()
-        plt.hist(background_scores, bins=100, alpha=0.6, label='CE mix',
+        plt.hist(background_scores, bins=nbins, range=(xmin,xmax), 
+                 alpha=0.6, label='CE mix',
                  density=True, color='blue')
-        plt.hist(signal_scores, bins=100, alpha=0.6, label='CRY',
+        plt.hist(signal_scores, bins=nbins, range=(xmin,xmax), 
+                 alpha=0.6, label='CRY',
                  density=True, color='red')
 
         if vlines is not None:
@@ -322,9 +325,6 @@ class AnaModel:
             for vl in vlines:
                 plt.axvline(vl, color='grey', linestyle='--', alpha=0.8,
                             linewidth=1.5, label=f'Threshold: {vl:.4f}')
-
-        if xmin is not None or xmax is not None:
-            plt.xlim(left=xmin, right=xmax)
 
         plt.xlabel('Model output')
         plt.ylabel('Normalised events')
