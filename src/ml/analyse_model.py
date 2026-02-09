@@ -63,6 +63,7 @@ class AnaModel:
         self.y_pred = results["y_pred"]
         self.y_proba = results["y_proba"]
         self.y_proba_train = results["y_proba_train"]
+        self.metadata_test = results.get("metadata_test", None)
         self.tag = results["tag"]
 
         # Image output directory: output/images/ml/{run}/{tag}/
@@ -333,6 +334,93 @@ class AnaModel:
         plt.tight_layout()
 
         self._save_fig(out_path, "h1_score_distribution.png")
+
+        if show:
+            plt.show()
+
+    def plot_low_score_physics(self, df_full, threshold, variables=None,
+                               nbins=50, out_path=None, show=True):
+        """
+        Plot physics distributions for test events with model score below threshold
+
+        Matches test set events back to the full DataFrame using pandas index,
+        then plots normalised distributions split by CRY / CE mix.
+
+        Args:
+            df_full: Full DataFrame (df_train_full from assemble_dataset)
+            threshold: Score threshold — plot events with score < threshold
+            variables: List of column names to plot
+                       (default: mom_mag, d0, tanDip, maxr, dT, t0, PEs_per_hit)
+            nbins: Number of histogram bins (default: 50)
+            out_path: Path to save figure (optional)
+            show: Whether to display the plot
+        """
+        if self.metadata_test is None:
+            self.logger.log("No metadata_test available — cannot match events", "error")
+            return
+
+        # Match test events back to full DataFrame
+        df_test = df_full.loc[self.metadata_test.index].copy()
+        df_test["score"] = np.asarray(self.y_proba)
+        df_test["label"] = np.asarray(self.y_test)
+
+        # Select low-score events
+        df_low = df_test[df_test["score"] < threshold]
+
+        self.logger.log(
+            f"Low-score events (score < {threshold:.4f}):\n"
+            f"  CRY:    {(df_low['label'] == 1).sum()}\n"
+            f"  CE mix: {(df_low['label'] == 0).sum()}",
+            "info"
+        )
+
+        # Default physics variables
+        if variables is None:
+            variables = ["mom_mag", "d0", "tanDip", "maxr", "dT",
+                         "t0", "PEs_per_hit", "timeStart", "timeEnd"]
+        # Filter to columns that actually exist
+        variables = [v for v in variables if v in df_low.columns]
+
+        if len(variables) == 0:
+            self.logger.log("No matching columns found in DataFrame", "warning")
+            return
+
+        # Split by label
+        df_cry = df_low[df_low["label"] == 1]
+        df_mix = df_low[df_low["label"] == 0]
+
+        # Plot grid
+        ncols = 3
+        nrows = (len(variables) + ncols - 1) // ncols
+
+        fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows))
+        axes = np.atleast_2d(axes).flatten()
+
+        for i, var in enumerate(variables):
+            ax = axes[i]
+            mix_vals = df_mix[var].dropna()
+            cry_vals = df_cry[var].dropna()
+
+            # Common range
+            all_vals = pd.concat([mix_vals, cry_vals])
+            lo, hi = all_vals.quantile(0.01), all_vals.quantile(0.99)
+
+            ax.hist(mix_vals, bins=nbins, range=(lo, hi),
+                    alpha=0.6, label="CE mix", density=True, color="blue")
+            ax.hist(cry_vals, bins=nbins, range=(lo, hi),
+                    alpha=0.6, label="CRY", density=True, color="red")
+            ax.set_xlabel(var)
+            ax.set_ylabel("Normalised")
+            ax.legend(fontsize=8)
+
+        # Hide unused axes
+        for i in range(len(variables), len(axes)):
+            axes[i].set_visible(False)
+
+        fig.suptitle(f"Physics distributions (score < {threshold:.4f})", y=1.01)
+        plt.tight_layout()
+
+        self._save_fig(out_path, "h1_low_score_physics.png")
 
         if show:
             plt.show()

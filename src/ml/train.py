@@ -52,7 +52,7 @@ class Train:
         self.metadata_test = data["metadata_test"]
 
         # Optional full dataframe
-        self.df_train_full = data.get("df_train_full", None)
+        self.df_full = data.get("df_full", None)
 
         # Will be set during training
         self.scaler = None

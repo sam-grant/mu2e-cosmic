@@ -99,26 +99,22 @@ class AssembleDataset():
         self.logger.log("Got sorted and labelled DataFrames", "max")
         
         # Combine and shuffle
-        df_train = pd.concat([df_cry, df_ce_mix], ignore_index=True)
-        df_train = df_train.sample(frac=1, random_state=42).reset_index(drop=True)
-        
-        self.logger.log("Got combined training dataset", "max") 
+        df_full = pd.concat([df_cry, df_ce_mix], ignore_index=True)
+        df_full = df_full.sample(frac=1, random_state=42).reset_index(drop=True)
 
-        # Make a copy for later
-        # We will want to be able to peek at full events post processing
-        df_train_full = df_train.copy()
+        self.logger.log("Got combined dataset", "max")
 
-        self.logger.log(f"Columns: {df_train_full.columns}", "max")
+        self.logger.log(f"Columns: {df_full.columns}", "max")
 
-        # Define columns to drop for training (but keep event/subrun for now)
+        # Drop columns not used for training (but keep event/subrun for now)
         # Would be better if this wasn't hardcoded
         col_to_drop = ["d0", "tanDip", "maxr", "mom_mag", "PEs_per_hit", "t0", "timeStart", "timeEnd"]
-        df_train.drop(columns=col_to_drop, inplace=True)
+        df_ml = df_full.drop(columns=col_to_drop)
 
         # Separate features, labels, and metadata
-        X = df_train.drop(["label", "event", "subrun"], axis=1)
-        y = df_train["label"]
-        metadata = df_train[["event", "subrun"]]
+        X = df_ml.drop(["label", "event", "subrun"], axis=1)
+        y = df_ml["label"]
+        metadata = df_ml[["event", "subrun"]]
 
         # Split data AND metadata together
         X_train, X_test, y_train, y_test, metadata_train, metadata_test = train_test_split(
@@ -134,7 +130,7 @@ class AssembleDataset():
 
         # Return as dictionary
         return {
-                "df_train_full": df_train_full,
+                "df_full": df_full,
                 "X_train": X_train,
                 "X_test": X_test,
                 "y_train": y_train,
