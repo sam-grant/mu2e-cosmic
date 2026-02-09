@@ -14,7 +14,6 @@ from pathlib import Path
 
 from pyutils.pylogger import Logger
 from pyutils.pyplot import Plot
-from ml_utils import event_level_confusion
 
 
 class AnaModel:
@@ -440,6 +439,52 @@ class AnaModel:
         if show:
             plt.show()
 
+    @staticmethod
+    def self.event_level_confusion(y_pred, y_true, metadata):
+        """
+        Compute event-level confusion matrix from per-coincidence predictions
+
+        Groups coincidences by (subrun, event). An event is vetoed if ANY
+        coincidence is predicted as cosmic (1). The true label is taken
+        from the first row per event (all rows in an event share the same label).
+
+        Args:
+            y_pred: array-like of int (0/1), per-coincidence predictions
+            y_true: array-like of int (0/1), per-coincidence true labels
+            metadata: DataFrame with 'subrun' and 'event' columns
+
+        Returns:
+            dict: {
+                "tp": true positives (CRY events correctly vetoed),
+                "tn": true negatives (CE mix events correctly passed),
+                "fp": false positives (CE mix events incorrectly vetoed),
+                "fn": false negatives (CRY events incorrectly passed),
+                "n_events": total number of unique events
+            }
+        """
+        df = metadata[["subrun", "event"]].copy()
+        df["pred"] = np.asarray(y_pred).astype(int)
+        df["label"] = np.asarray(y_true).astype(int)
+
+        # Group by event: veto if ANY coincidence flagged, label from first row
+        event_df = df.groupby(["subrun", "event"]).agg(
+            vetoed=("pred", "max"),
+            label=("label", "first")
+        ).reset_index()
+
+        tp = ((event_df["label"] == 1) & (event_df["vetoed"] == 1)).sum()
+        tn = ((event_df["label"] == 0) & (event_df["vetoed"] == 0)).sum()
+        fp = ((event_df["label"] == 0) & (event_df["vetoed"] == 1)).sum()
+        fn = ((event_df["label"] == 1) & (event_df["vetoed"] == 0)).sum()
+
+        return {
+            "tp": int(tp),
+            "tn": int(tn),
+            "fp": int(fp),
+            "fn": int(fn),
+            "n_events": len(event_df),
+        }
+
     def money_table(self, X, y, metadata, threshold=None,
                     dT_min=0, dT_max=150, save_csv=True):
         """
@@ -502,10 +547,10 @@ class AnaModel:
         y_true = np.asarray(y)
 
         # --- Aggregate to event level ---
-        cm_ml = event_level_confusion(y_pred_ml, y_true, metadata)
+        cm_ml = self.event_level_confusion(y_pred_ml, y_true, metadata)
         tp, tn, fp, fn = cm_ml["tp"], cm_ml["tn"], cm_ml["fp"], cm_ml["fn"]
 
-        cm_dt = event_level_confusion(y_pred_dt, y_true, metadata)
+        cm_dt = self.event_level_confusion(y_pred_dt, y_true, metadata)
         tp_dt, tn_dt = cm_dt["tp"], cm_dt["tn"]
         fp_dt, fn_dt = cm_dt["fp"], cm_dt["fn"]
 
