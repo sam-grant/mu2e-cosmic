@@ -14,7 +14,7 @@ import pandas as pd
 import awkward as ak
 
 # ML tools
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupShuffleSplit
 
 
 # Internal modules 
@@ -116,15 +116,19 @@ class AssembleDataset():
         y = df_ml["label"]
         metadata = df_ml[["event", "subrun"]]
 
-        # Split data AND metadata together
-        X_train, X_test, y_train, y_test, metadata_train, metadata_test = train_test_split(
-                X, y, metadata,
-                test_size=0.2, 
-                random_state=42,
-                stratify=y
-                )       
-        
-        self.logger.log("Split data", "max")
+        # Split at event level — all coincidences from the same event
+        # stay together in train or test
+        groups = metadata["subrun"].astype(str) + "_" + metadata["event"].astype(str)
+
+        gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+        train_idx, test_idx = next(gss.split(X, y, groups=groups))
+
+        X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+        y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+        metadata_train = metadata.iloc[train_idx]
+        metadata_test = metadata.iloc[test_idx]
+
+        self.logger.log("Split data (event-level grouping)", "max")
 
         self.logger.log("Got ML data", "success") 
 
