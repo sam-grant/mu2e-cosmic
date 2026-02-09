@@ -14,6 +14,7 @@ from pathlib import Path
 
 from pyutils.pylogger import Logger
 from pyutils.pyplot import Plot
+from ml_utils import event_level_confusion
 
 
 class AnaModel:
@@ -57,6 +58,7 @@ class AnaModel:
             verbosity: pylogger verbosity
         """
         self.model = results["model"]
+        self.scaler = results.get("scaler", None)
         self.feature_names = results.get("feature_names", None)
         self.y_test = results["y_test"]
         self.y_train = results["y_train"]
@@ -367,17 +369,31 @@ class AnaModel:
         # Select low-score events
         df_low = df_test[df_test["score"] < threshold]
 
+        # Print low-score CRY event metadata
+        df_low_cry = df_low[df_low["label"] == 1]
         self.logger.log(
             f"Low-score events (score < {threshold:.4f}):\n"
-            f"  CRY:    {(df_low['label'] == 1).sum()}\n"
+            f"  CRY:    {len(df_low_cry)}\n"
             f"  CE mix: {(df_low['label'] == 0).sum()}",
             "info"
         )
+        if len(df_low_cry) > 0:
+            meta_cols = ["event", "subrun", "score"]
+            meta_cols = [c for c in meta_cols if c in df_low_cry.columns]
+            print(f"\nLow-score CRY events:\n{df_low_cry[meta_cols].to_string(index=False)}\n")
+            # Save to CSV
+            csv_path = self.img_out_path / "low_score_cry.csv"
+            csv_path.parent.mkdir(parents=True, exist_ok=True)
+            df_low_cry.to_csv(csv_path, index=False)
+            self.logger.log(f"Saved low-score CRY events to {csv_path}", "success")
 
-        # Default physics variables
+        # Default to trained feature names
         if variables is None:
-            variables = ["mom_mag", "d0", "tanDip", "maxr", "dT",
-                         "t0", "PEs_per_hit", "timeStart", "timeEnd"]
+            if self.feature_names is not None:
+                variables = list(self.feature_names)
+            else:
+                self.logger.log("No feature_names or variables provided", "warning")
+                return
         # Filter to columns that actually exist
         variables = [v for v in variables if v in df_low.columns]
 
@@ -393,7 +409,7 @@ class AnaModel:
         ncols = 3
         nrows = (len(variables) + ncols - 1) // ncols
 
-        fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows))
+        fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 5 * nrows))
         axes = np.atleast_2d(axes).flatten()
 
         for i, var in enumerate(variables):
@@ -410,20 +426,188 @@ class AnaModel:
             ax.hist(cry_vals, bins=nbins, range=(lo, hi),
                     alpha=0.6, label="CRY", density=True, color="red")
             ax.set_xlabel(var)
-            ax.set_ylabel("Normalised")
-            ax.legend(fontsize=8)
+            ax.legend() # fontsize=8)
 
         # Hide unused axes
         for i in range(len(variables), len(axes)):
             axes[i].set_visible(False)
 
-        fig.suptitle(f"Physics distributions (score < {threshold:.4f})", y=1.01)
+        fig.suptitle(f"Feature distributions (score < {threshold:.4f})", y=1.01)
         plt.tight_layout()
 
         self._save_fig(out_path, "h1_low_score_physics.png")
 
         if show:
             plt.show()
+
+    def money_table(self, X, y, metadata, threshold=None,
+                    dT_min=0, dT_max=150, save_csv=True):
+        """
+        Compare ML model performance against a simple dT window cut
+        at event level
+
+        Scores coincidences with the trained model, then groups
+        by (subrun, event) — an event is vetoed if ANY coincidence
+        is flagged. Events with NaN dT are never vetoed by the dT cut.
+
+        Works with any data split (train, test, or full).
+
+        Args:
+            X: Feature DataFrame (must contain feature columns and 'dT')
+            y: Labels array (0 = CE mix, 1 = CRY)
+            metadata: DataFrame with 'subrun' and 'event' columns
+            threshold: ML score threshold for classification
+                       (default: uses 0.5)
+            dT_min: Lower bound of dT veto window in ns (default: 0)
+            dT_max: Upper bound of dT veto window in ns (default: 150)
+            save_csv: Whether to save comparison tables to CSV (default: True)
+
+        Returns:
+            dict: {
+                "metrics": pd.DataFrame of metrics comparison,
+                "confusion": pd.DataFrame of confusion matrix comparison
+            }
+        """
+        if self.feature_names is None:
+            self.logger.log("No feature_names available", "error")
+            return None
+
+        # --- Score coincidences with the ML model ---
+        X_scaled = X[self.feature_names].values
+        if self.scaler is not None:
+            X_scaled = self.scaler.transform(X_scaled)
+
+        # Get model probabilities
+        if hasattr(self.model, "predict_proba"):
+            proba = self.model.predict_proba(X_scaled)
+            pos_idx = list(self.model.classes_).index(1)
+            y_proba = proba[:, pos_idx]
+        else:
+            # Keras or similar
+            y_proba = self.model.predict(X_scaled, verbose=0).flatten()
+
+        if threshold is None:
+            threshold = 0.5
+        y_pred_ml = (y_proba >= threshold).astype(int)
+
+        # --- Simple dT cut: same logic as check_dT_window_results ---
+        dT = X["dT"].values
+        y_pred_dt = (
+            (~np.isnan(dT))
+            & (dT >= dT_min)
+            & (dT <= dT_max)
+        ).astype(int)
+
+        # --- Labels ---
+        y_true = np.asarray(y)
+
+        # --- Aggregate to event level ---
+        cm_ml = event_level_confusion(y_pred_ml, y_true, metadata)
+        tp, tn, fp, fn = cm_ml["tp"], cm_ml["tn"], cm_ml["fp"], cm_ml["fn"]
+
+        cm_dt = event_level_confusion(y_pred_dt, y_true, metadata)
+        tp_dt, tn_dt = cm_dt["tp"], cm_dt["tn"]
+        fp_dt, fn_dt = cm_dt["fp"], cm_dt["fn"]
+
+        n_events = cm_ml["n_events"]
+        n_coincidences = len(y_true)
+
+        # --- Compute metrics for both ---
+        veto_eff = tp / (tp + fn) if (tp + fn) > 0 else 0
+        deadtime = fp / (tn + fp) if (tn + fp) > 0 else 0
+        veto_purity = tp / (tp + fp) if (tp + fp) > 0 else 0
+        accuracy = (tp + tn) / (tp + tn + fp + fn)
+        fom = veto_eff * (1 - deadtime)
+
+        veto_eff_dt = tp_dt / (tp_dt + fn_dt) if (tp_dt + fn_dt) > 0 else 0
+        deadtime_dt = fp_dt / (tn_dt + fp_dt) if (tn_dt + fp_dt) > 0 else 0
+        veto_purity_dt = tp_dt / (tp_dt + fp_dt) if (tp_dt + fp_dt) > 0 else 0
+        accuracy_dt = (tp_dt + tn_dt) / (tp_dt + tn_dt + fp_dt + fn_dt)
+        fom_dt = veto_eff_dt * (1 - deadtime_dt)
+
+        # --- Metrics comparison table ---
+        metrics_df = pd.DataFrame({
+            "Metric": [
+                "Veto efficiency",
+                "Deadtime",
+                "Veto purity",
+                "Overall accuracy",
+                "Figure of merit",
+            ],
+            "ML model": [
+                f"{veto_eff*100:.3f}%",
+                f"{deadtime*100:.3f}%",
+                f"{veto_purity*100:.3f}%",
+                f"{accuracy*100:.3f}%",
+                f"{fom*100:.3f}%",
+            ],
+            f"dT cut [{dT_min}, {dT_max}] ns": [
+                f"{veto_eff_dt*100:.3f}%",
+                f"{deadtime_dt*100:.3f}%",
+                f"{veto_purity_dt*100:.3f}%",
+                f"{accuracy_dt*100:.3f}%",
+                f"{fom_dt*100:.3f}%",
+            ],
+            "Difference": [
+                f"{(veto_eff - veto_eff_dt)*100:+.3f}%",
+                f"{(deadtime - deadtime_dt)*100:+.3f}%",
+                f"{(veto_purity - veto_purity_dt)*100:+.3f}%",
+                f"{(accuracy - accuracy_dt)*100:+.3f}%",
+                f"{(fom - fom_dt)*100:+.3f}%",
+            ],
+            "Description": [
+                "Fraction of cosmics vetoed",
+                "Fraction of CE mix vetoed",
+                "Of vetoed events, fraction that are cosmics",
+                "Overall correct classification rate",
+                "eff_veto * (1 - deadtime)",
+            ],
+        })
+
+        # --- Confusion matrix comparison table ---
+        confusion_df = pd.DataFrame({
+            "Category": [
+                "True Positives (CRY vetoed)",
+                "True Negatives (CE mix passed)",
+                "False Positives (CE mix vetoed)",
+                "False Negatives (CRY passed)",
+            ],
+            "ML model": [tp, tn, fp, fn],
+            "dT cut": [tp_dt, tn_dt, fp_dt, fn_dt],
+            "Difference": [tp - tp_dt, tn - tn_dt, fp - fp_dt, fn - fn_dt],
+        })
+
+        # --- Print ---
+        print(f"\n{'='*80}")
+        print(f"EVENT-LEVEL COMPARISON: ML MODEL (threshold={threshold:.4f}) "
+              f"vs dT CUT [{dT_min}, {dT_max}] ns")
+        print(f"  ({n_events} unique events from {n_coincidences} coincidences)")
+        print(f"{'='*80}")
+        print(f"\nMetrics:")
+        print(metrics_df.to_string(index=False))
+        print(f"\nConfusion matrix counts (events):")
+        print(confusion_df.to_string(index=False))
+        print(f"{'='*80}\n")
+
+        # --- Save to CSV ---
+        if save_csv:
+            self.img_out_path.mkdir(parents=True, exist_ok=True)
+
+            metrics_path = self.img_out_path / "metrics_comparison.csv"
+            metrics_df.to_csv(metrics_path, index=False)
+
+            confusion_path = self.img_out_path / "confusion_comparison.csv"
+            confusion_df.to_csv(confusion_path, index=False)
+
+            self.logger.log(
+                f"Saved comparison tables to {self.img_out_path}",
+                "success"
+            )
+
+        return {
+            "metrics": metrics_df,
+            "confusion": confusion_df,
+        }
 
     def check_overlap(self):
         pass
@@ -451,7 +635,6 @@ class AnaModel:
         self.classification_report()
 
         print(f"{'='*60}\n")
-
 
     def find_threshold(self, min_eff=0.999, n_thresholds=10000, out_path=None, show=True):
         """
