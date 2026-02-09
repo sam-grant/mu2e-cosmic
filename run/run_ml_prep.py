@@ -27,7 +27,6 @@ def run(defname=None, file_name=None, feature_set="crv",
         feature_set=feature_set,
         use_remote=True, # if defname else False,  # Use remote only if using defname
         max_workers=max_workers,
-        # cuts_to_toggle={"within_wide_win" : False}
     ) 
     results = process.execute()
 
