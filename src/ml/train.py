@@ -10,32 +10,11 @@ import numpy as np
 from pyutils.pylogger import Logger
 
 class Train:
-    """
-    Train ML models on pre-split data from assemble_dataset()
-
-    Supports XGBoost (default), sklearn-compatible models, and TensorFlow Keras models.
-    Handles feature scaling, model training, and result persistence.
-    """
+    """Train ML models on pre-split data from assemble_dataset()."""
 
     def __init__(self, data, model=None, scale_features=True,
                  run="j", out_path=None, verbosity=1):
-        """
-        Initialise trainer with pre-split data
-
-        Args:
-            data: Dictionary from assemble_dataset() with keys:
-                - X_train, X_test: Feature DataFrames (unscaled)
-                - y_train, y_test: Labels
-                - metadata_train, metadata_test: Event/subrun info
-                - df_train_full: Full combined DataFrame
-            model: Model class or compiled Keras model (default: xgb.XGBClassifier)
-                   - For sklearn: pass model class
-                   - For Keras: pass compiled model instance
-            scale_features: Whether to apply StandardScaler (default: True)
-                    Set to False for tree-based models that don't need scaling
-            run: Run identifier for default output path (default: "j")
-            out_path: Base output directory for results (default: output/ml/{run}/results)
-        """
+        """Initialise with assemble_dataset() dict. Default model: XGBClassifier."""
         # Set default model
         if model is None:
             model = xgb.XGBClassifier
@@ -82,36 +61,7 @@ class Train:
     def train(self, tag, random_state=42, save_output=False,
               epochs=50, batch_size=32, validation_split=0.0, verbose=1,
               **hyperparams):
-        """
-        Train the model on pre-split data
-
-        Args:
-            tag: Identifier for this training run
-            random_state: Random seed for reproducibility (default: 42)
-            save_output: Save results to disk (default: False)
-
-            # Keras-specific parameters
-            epochs: Number of training epochs for Keras (default: 50, ignored for sklearn)
-            batch_size: Batch size for Keras (default: 32, ignored for sklearn)
-            validation_split: Fraction of training data to use for validation in Keras (default: 0.0)
-            verbose: Verbosity level for Keras training (default: 1)
-
-            **hyperparams: Model-specific hyperparameters
-                For XGBoost: n_estimators, max_depth, learning_rate, etc.
-                For sklearn models: pass model-specific parameters
-                For Keras: callbacks, class_weight, etc.
-
-        Returns:
-            dict: {
-                "tag": tag,
-                "model": trained model,
-                "y_test": test labels,
-                "y_pred": predictions,
-                "y_proba": prediction probabilities for positive class,
-                "scaler": fitted scaler (if scaling enabled, else None),
-                "metadata_test": test metadata
-            }
-        """
+        """Train model and return results dict. Pass hyperparams as kwargs."""
         model_type = "Keras" if self.is_keras else self.model_class.__name__
         self.logger.log(
             f"Training model: {model_type}\n"
@@ -184,35 +134,14 @@ class Train:
         return results
 
     def _scale_features(self):
-        """
-        Scale features using StandardScaler
-
-        Fits scaler on training data only to prevent data leakage.
-
-        Returns:
-            tuple: (X_train_scaled, X_test_scaled) as numpy arrays
-        """
+        """Scale features using StandardScaler (fit on train only)."""
         self.scaler = StandardScaler()
         X_train_scaled = self.scaler.fit_transform(self.X_train)
         X_test_scaled = self.scaler.transform(self.X_test)
         return X_train_scaled, X_test_scaled
 
     def _fit_model(self, X_train, y_train, random_state=42, **hyperparams):
-        """
-        Fit sklearn-compatible models with hyperparameters
-
-        Automatically detects if the model accepts random_state parameter.
-        If not, trains without it (useful for some sklearn models).
-
-        Args:
-            X_train: Training features
-            y_train: Training labels
-            random_state: Random seed
-            **hyperparams: Model-specific hyperparameters
-
-        Returns:
-            Trained model instance
-        """
+        """Fit sklearn-compatible model. Falls back if random_state unsupported."""
         # Try to pass random_state if model supports it
         try:
             model = self.model_class(random_state=random_state, **hyperparams)
@@ -229,21 +158,7 @@ class Train:
 
     def _fit_keras_model(self, X_train, y_train, epochs, batch_size,
                         validation_split, verbose, **keras_params):
-        """
-        Fit Keras model
-
-        Args:
-            X_train: Training features
-            y_train: Training labels
-            epochs: Number of training epochs
-            batch_size: Batch size
-            validation_split: Fraction for validation
-            verbose: Verbosity level
-            **keras_params: Additional Keras fit parameters (callbacks, class_weight, etc.)
-
-        Returns:
-            Trained Keras model
-        """
+        """Fit compiled Keras model instance."""
         # Use the compiled model instance
         model = self.model_class
 
@@ -263,17 +178,7 @@ class Train:
         return model
 
     def _predict(self, X_test):
-        """
-        Get predictions and probabilities for both sklearn and Keras models
-
-        Args:
-            X_test: Test features
-
-        Returns:
-            tuple: (y_pred, y_proba)
-                - y_pred: Class predictions (0 or 1)
-                - y_proba: Probabilities for positive class (label=1)
-        """
+        """Return (y_pred, y_proba) for sklearn or Keras models."""
         if self.is_keras:
             # Keras: predict returns probabilities
             y_proba_raw = self.model.predict(X_test, verbose=0)
@@ -301,18 +206,7 @@ class Train:
         return y_pred, y_proba
 
     def _save_results(self, results, tag):
-        """
-        Save results to disk using joblib
-
-        Args:
-            results: Results dictionary from train()
-            tag: Model identifier
-
-        Creates: {self.out_path}/{tag}/results.pkl
-
-        Note: For Keras models, the model itself should be saved separately
-              using model.save() as Keras models may not pickle well.
-        """
+        """Save results dict to {out_path}/{tag}/results.pkl."""
         tag_path = self.out_path / tag
         tag_path.mkdir(parents=True, exist_ok=True)
 

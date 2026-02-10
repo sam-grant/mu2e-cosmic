@@ -29,9 +29,7 @@ from load import LoadML
 from pyutils.pylogger import Logger
 
 class AssembleDataset():
-    """ Assemble and validate data from processing 
-    Not really sure what to call this, 'preprocesing' would get confusing 
-    """
+    """Load, label, and split CRY/CE mix data for ML training."""
     def __init__(self, run="i", cutset_name="dev", verbosity=1):
         self.run = run
         self.cutset_name = cutset_name
@@ -83,7 +81,7 @@ class AssembleDataset():
         })
     
     def assemble_dataset(self):
-        """ Load and prepare data for ML training/testing """
+        """Combine, shuffle, and split data. Returns dict with train/test arrays."""
         # Use DataFrames already loaded in __init__
         df_cry = self.df_cry
         df_ce_mix = self.df_ce_mix
