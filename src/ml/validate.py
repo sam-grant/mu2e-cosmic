@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import (
-    confusion_matrix,
-    classification_report,
     roc_curve,
     roc_auc_score
 )
@@ -64,30 +62,6 @@ class Validate:
         plt.savefig(out_path)
         self.logger.log(f"Saved to {out_path}", "success")
 
-    def confusion_matrix(self, normalise=False):
-        """Compute confusion matrix. Returns dict with TP, FN, FP, TN, matrix."""
-        cm = confusion_matrix(self.y_test, self.y_pred, normalize='true' if normalise else None)
-
-        # Extract components
-        tn, fp, fn, tp = cm.ravel()
-
-        result = {
-            "TP": tp,
-            "FN": fn,
-            "FP": fp,
-            "TN": tn,
-            "matrix": cm
-        }
-
-        self.logger.log(
-            f"Confusion Matrix:\n"
-            f"  TP: {tp:.0f}, FN: {fn:.0f}\n"
-            f"  FP: {fp:.0f}, TN: {tn:.0f}",
-            "info"
-        )
-
-        return result
-
     def roc_auc(self):
         """Compute ROC AUC for train and test sets."""
         # Test AUC 
@@ -107,28 +81,6 @@ class Validate:
             "train_auc": self._train_auc,
             "test_auc": self._test_auc
         }
-
-    def classification_report(self):
-        """Classification report with precision, recall, F1, accuracy."""
-        report_str = classification_report(self.y_test, self.y_pred,
-                                           target_names=["Background (0)", "Signal (1)"])
-
-        # Also compute key metrics for programmatic access
-        report_dict = classification_report(self.y_test, self.y_pred,
-                                            target_names=["Background (0)", "Signal (1)"],
-                                            output_dict=True)
-
-        result = {
-            "report": report_str,
-            "accuracy": report_dict["accuracy"],
-            "precision": report_dict["Signal (1)"]["precision"],
-            "recall": report_dict["Signal (1)"]["recall"],
-            "f1": report_dict["Signal (1)"]["f1-score"]
-        }
-
-        self.logger.log(f"Classification Report:\n{report_str}", "info")
-
-        return result
 
     def plot_roc(self, out_path=None, show=True):
         """Plot ROC curve for test set."""
@@ -678,20 +630,3 @@ class Validate:
             "metrics": metrics_df,
             "confusion": confusion_df,
         }
-
-    def print_summary(self):
-        """Print confusion matrix, ROC AUC, and classification report."""
-        print(f"\n{'='*60}")
-        print(f"  VALIDATION SUMMARY: {self.tag}")
-        print(f"{'='*60}\n")
-
-        # Confusion matrix
-        self.confusion_matrix()
-
-        # ROC AUC
-        self.roc_auc()
-
-        # Classification report (includes accuracy metrics)
-        self.classification_report()
-
-        print(f"{'='*60}\n")
