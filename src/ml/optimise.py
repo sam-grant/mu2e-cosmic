@@ -5,6 +5,7 @@ import itertools
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from sklearn.model_selection import GroupKFold
 
 from pyutils.pylogger import Logger
 from train import Train
@@ -12,39 +13,11 @@ from analyse_model import AnaModel
 
 
 class Optimise:
-    """
-    Hyperparameter optimisation over the Train → AnaModel pipeline
+    """Grid search over Train -> AnaModel pipeline. Minimises deadtime at target veto efficiency."""
 
-    Runs grid search over a parameter space, training and evaluating
-    each combination. Ranks results by veto efficiency at a given
-    minimum efficiency constraint.
-
-    Example:
-        >>> data = assembler.assemble_dataset()
-        >>> opt = Optimise(data, run="j")
-        >>> param_grid = {
-        ...     "n_estimators": [100, 200, 500],
-        ...     "max_depth": [3, 5, 7],
-        ...     "learning_rate": [0.01, 0.1, 0.3]
-        ... }
-        >>> results = opt.grid_search(param_grid, tag_prefix="xgb_scan")
-        >>> opt.print_summary()
-    """
-
-    def __init__(self, data, run="j", min_efficiency=0.99,
+    def __init__(self, data, run="j", min_efficiency=0.999,
                  model=None, scale_features=True, verbosity=1):
-        """
-        Initialise optimiser
-
-        Args:
-            data: Dictionary from assemble_dataset()
-            run: Run identifier
-            min_efficiency: Minimum veto efficiency constraint for
-                            threshold selection (default: 0.99)
-            model: Model class (default: XGBClassifier via Train)
-            scale_features: Whether to scale features (default: True)
-            verbosity: Logger verbosity
-        """
+        """Initialise with assemble_dataset() dict."""
         self.data = data
         self.run = run
         self.min_efficiency = min_efficiency
@@ -59,20 +32,7 @@ class Optimise:
 
     def grid_search(self, param_grid, tag_prefix="scan",
                     save_output=False, random_state=42):
-        """
-        Run grid search over hyperparameter combinations
-
-        Args:
-            param_grid: Dictionary of parameter names → lists of values
-                        e.g. {"n_estimators": [100, 200], "max_depth": [3, 5]}
-            tag_prefix: Prefix for model tags (each run gets a unique suffix)
-            save_output: Whether to save each model's results to disk
-            random_state: Random seed for training
-
-        Returns:
-            dict: Best result dictionary from Train.train(),
-                  augmented with threshold info from AnaModel
-        """
+        """Run grid search. Returns best result (lowest deadtime meeting efficiency constraint)."""
         # Build all combinations
         param_names = list(param_grid.keys())
         param_values = list(param_grid.values())
@@ -84,7 +44,7 @@ class Optimise:
             "info"
         )
 
-        best_veto_eff = -1
+        best_deadtime = np.inf
 
         for i, combo in enumerate(combinations):
             hyperparams = dict(zip(param_names, combo))
@@ -112,8 +72,10 @@ class Optimise:
 
             # Analyse — find threshold at minimum efficiency
             ana = AnaModel(training_results, run=self.run, verbosity=0)
+            ana.roc_auc()
             threshold_results = ana.find_threshold(
                 min_eff=self.min_efficiency,
+                plot=False,
                 show=False
             )
 
@@ -129,9 +91,10 @@ class Optimise:
             }
             self.results_table.append(row)
 
-            # Track best
-            if threshold_results["veto_efficiency"] > best_veto_eff:
-                best_veto_eff = threshold_results["veto_efficiency"]
+            # Track best: lowest deadtime among combos meeting efficiency constraint
+            meets_constraint = threshold_results["veto_efficiency"] >= self.min_efficiency
+            if meets_constraint and threshold_results["deadtime"] < best_deadtime:
+                best_deadtime = threshold_results["deadtime"]
                 self.best_result = {
                     "training_results": training_results,
                     "threshold_results": threshold_results,
@@ -139,31 +102,175 @@ class Optimise:
                     "tag": tag,
                 }
 
+        if self.best_result is not None:
+            self.logger.log(
+                f"Grid search complete. Best: {self.best_result['tag']} "
+                f"(deadtime: {best_deadtime*100:.3f}%, "
+                f"veto eff: {self.best_result['threshold_results']['veto_efficiency']*100:.3f}%)",
+                "success"
+            )
+            # Plot threshold overlay for winning scan only
+            best_ana = AnaModel(
+                self.best_result["training_results"],
+                run=self.run, verbosity=0
+            )
+            best_ana.find_threshold(
+                min_eff=self.min_efficiency,
+                plot=True,
+                show=True
+            )
+        else:
+            self.logger.log(
+                f"Grid search complete. No combination met "
+                f"{self.min_efficiency*100:.2f}% veto efficiency constraint",
+                "warning"
+            )
+
+        return self.best_result
+
+    def grid_search_cv(self, param_grid, n_folds=5, tag_prefix="scan_cv",
+                       random_state=42):
+        """K-fold CV grid search. Averages metrics across folds per hyperparam combo."""
+        param_names = list(param_grid.keys())
+        param_values = list(param_grid.values())
+        combinations = list(itertools.product(*param_values))
+
+        # Recombine train/test to get full dataset
+        X = pd.concat([self.data["X_train"], self.data["X_test"]]).reset_index(drop=True)
+        y = pd.concat([self.data["y_train"], self.data["y_test"]]).reset_index(drop=True)
+        metadata = pd.concat([self.data["metadata_train"],
+                              self.data["metadata_test"]]).reset_index(drop=True)
+
+        # Event-level groups for fold splitting
+        groups = metadata["subrun"].astype(str) + "_" + metadata["event"].astype(str)
+
+        gkf = GroupKFold(n_splits=n_folds)
+        folds = list(gkf.split(X, y, groups=groups))
+
         self.logger.log(
-            f"Grid search complete. Best: {self.best_result['tag']} "
-            f"(veto eff: {best_veto_eff*100:.3f}%)",
-            "success"
+            f"CV grid search: {len(combinations)} combinations x {n_folds} folds "
+            f"= {len(combinations) * n_folds} fits over {param_names}",
+            "info"
         )
+
+        best_deadtime = np.inf
+
+        for i, combo in enumerate(combinations):
+            hyperparams = dict(zip(param_names, combo))
+            tag = f"{tag_prefix}_{i:03d}"
+
+            fold_results = []
+
+            for k, (train_idx, test_idx) in enumerate(folds):
+                # Build fold data dict
+                fold_data = {
+                    "X_train": X.iloc[train_idx],
+                    "X_test": X.iloc[test_idx],
+                    "y_train": y.iloc[train_idx],
+                    "y_test": y.iloc[test_idx],
+                    "metadata_train": metadata.iloc[train_idx],
+                    "metadata_test": metadata.iloc[test_idx],
+                }
+
+                trainer = Train(
+                    fold_data,
+                    model=self.model,
+                    scale_features=self.scale_features,
+                    run=self.run,
+                    verbosity=0
+                )
+                training_results = trainer.train(
+                    tag=f"{tag}_fold{k}",
+                    random_state=random_state,
+                    save_output=False,
+                    **hyperparams
+                )
+
+                ana = AnaModel(training_results, run=self.run, verbosity=0)
+                ana.roc_auc()
+                threshold_results = ana.find_threshold(
+                    min_eff=self.min_efficiency,
+                    plot=False,
+                    show=False
+                )
+
+                fold_results.append({
+                    "auc": ana._test_auc,
+                    "threshold": threshold_results["threshold"],
+                    "veto_efficiency": threshold_results["veto_efficiency"],
+                    "deadtime": threshold_results["deadtime"],
+                    "signal_efficiency": threshold_results["signal_efficiency"],
+                })
+
+            # Average across folds
+            mean_auc = np.mean([r["auc"] for r in fold_results])
+            mean_deadtime = np.mean([r["deadtime"] for r in fold_results])
+            mean_veto_eff = np.mean([r["veto_efficiency"] for r in fold_results])
+            mean_signal_eff = np.mean([r["signal_efficiency"] for r in fold_results])
+            mean_threshold = np.mean([r["threshold"] for r in fold_results])
+            std_deadtime = np.std([r["deadtime"] for r in fold_results])
+            std_veto_eff = np.std([r["veto_efficiency"] for r in fold_results])
+
+            row = {
+                "tag": tag,
+                **hyperparams,
+                "auc": mean_auc,
+                "threshold": mean_threshold,
+                "veto_efficiency": mean_veto_eff,
+                "veto_efficiency_std": std_veto_eff,
+                "deadtime": mean_deadtime,
+                "deadtime_std": std_deadtime,
+                "signal_efficiency": mean_signal_eff,
+            }
+            self.results_table.append(row)
+
+            self.logger.log(
+                f"[{i+1}/{len(combinations)}] {tag}: "
+                f"deadtime={mean_deadtime*100:.3f}±{std_deadtime*100:.3f}%, "
+                f"veto_eff={mean_veto_eff*100:.3f}±{std_veto_eff*100:.3f}%",
+                "info"
+            )
+
+            # Track best: lowest mean deadtime meeting mean efficiency constraint
+            meets_constraint = mean_veto_eff >= self.min_efficiency
+            if meets_constraint and mean_deadtime < best_deadtime:
+                best_deadtime = mean_deadtime
+                self.best_result = {
+                    "hyperparams": hyperparams,
+                    "tag": tag,
+                    "mean_deadtime": mean_deadtime,
+                    "mean_veto_efficiency": mean_veto_eff,
+                    "fold_results": fold_results,
+                }
+
+        if self.best_result is not None:
+            self.logger.log(
+                f"CV grid search complete. Best: {self.best_result['tag']} "
+                f"(deadtime: {best_deadtime*100:.3f}%, "
+                f"veto eff: {self.best_result['mean_veto_efficiency']*100:.3f}%)",
+                "success"
+            )
+        else:
+            self.logger.log(
+                f"CV grid search complete. No combination met "
+                f"{self.min_efficiency*100:.2f}% mean veto efficiency constraint",
+                "warning"
+            )
 
         return self.best_result
 
     def get_summary(self):
-        """
-        Get results summary as a DataFrame, sorted by veto efficiency
-
-        Returns:
-            pd.DataFrame: One row per hyperparameter combination
-        """
+        """Results as DataFrame, sorted by deadtime ascending."""
         if not self.results_table:
             self.logger.log("No results yet — run grid_search first", "warning")
             return None
 
         df = pd.DataFrame(self.results_table)
-        df = df.sort_values("veto_efficiency", ascending=False).reset_index(drop=True)
+        df = df.sort_values("deadtime", ascending=True).reset_index(drop=True)
         return df
 
     def print_summary(self):
-        """Print results summary table"""
+        """Print results summary table."""
         df = self.get_summary()
         if df is not None:
             print(f"\n{'='*80}")
@@ -174,13 +281,7 @@ class Optimise:
             print(f"{'='*80}\n")
 
     def save_summary(self, out_path=None):
-        """
-        Save results summary to CSV
-
-        Args:
-            out_path: Output file path
-                      (default: output/ml/{run}/results/optimisation_summary.csv)
-        """
+        """Save results summary to CSV."""
         df = self.get_summary()
         if df is None:
             return
