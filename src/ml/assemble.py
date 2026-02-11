@@ -1,3 +1,4 @@
+#
 # Sam Grant 2025
 # 
 
@@ -16,7 +17,6 @@ import awkward as ak
 # ML tools
 from sklearn.model_selection import GroupShuffleSplit
 
-
 # Internal modules 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.extend([
@@ -24,30 +24,96 @@ sys.path.extend([
     os.path.join(script_dir, "..", "core")
 ])
 
+import matplotlib.pyplot as plt
+
 from draw import Draw
 from load import LoadML
 from pyutils.pylogger import Logger
+from pyutils.pyplot import Plot
 
 class AssembleDataset():
     """Load, label, and split CRY/CE mix data for ML training."""
-    def __init__(self, run="i", cutset_name="dev", verbosity=1):
+    def __init__(self, run="j", cutset_name="dev", verbosity=1):
         self.run = run
         self.cutset_name = cutset_name
         self.base_in_path = Path(f"../../output/ml/{self.run}/data/")
-        # A bit hacky but...
+        # this is a bit weird, but 
         # this is defined from the notebook/ml location
-        self.img_out_path = Path(f"../../../output/images/ml/{self.run}/process/") 
+        self.img_out_path = Path(f"../../output/images/ml/{self.run}/process/") 
+        self.logger = Logger(print_prefix="[Assemble]", verbosity=verbosity)
+        self.load_data()
+        self.logger.log(f"Initialised", "success")
+
+    def load_data(self):
+        """ Load input data from processing """
         self.cry_data, self.ce_mix_data = LoadML(run=self.run).get_results()
         # Convert to DataFrame
         self.df_cry = ak.to_dataframe(self.cry_data["events"])
         self.df_ce_mix = ak.to_dataframe(self.ce_mix_data["events"])
-        self.logger = Logger(print_prefix="[Assemble]", verbosity=verbosity)
-        self.logger.log(f"Initialised", "success")
+        self.logger.log("Loaded data", "success")
 
-    def draw_hists(self):
+    def draw_cuts(self):
         draw = Draw(cutset_name=self.cutset_name)
         draw.plot_summary(self.cry_data["hists"], out_path = self.img_out_path / "h1o_3x3_cuts_CRY.png")
         draw.plot_summary(self.ce_mix_data["hists"], out_path = self.img_out_path / "h1o_3x3_cuts_CE_mix.png")
+
+    def draw_features(self, out_path=None, show=True):
+        """Plot CRV feature distributions for CRY vs CE mix."""
+        plotter = Plot(verbosity=0)
+
+        features = [
+            {"key": "crv_z", "xlabel": "CRV z-position [mm]", "nbins": 100, "xmin": -15000, "xmax": 10000},
+            {"key": "crv_y", "xlabel": "CRV y-position [mm]", "nbins": 100, "xmin": -4000, "xmax": 4000},
+            {"key": "crv_x", "xlabel": "CRV x-position [mm]", "nbins": 100, "xmin": -4000, "xmax": 6000},
+            {"key": "angle", "xlabel": "Angle [rad]", "nbins": 80, "xmin": -3.14159, "xmax": 3.14159},
+            {"key": "nLayers", "xlabel": "Number of layers", "nbins": 6, "xmin": 0, "xmax": 6},
+            {"key": "PEs", "xlabel": "PEs", "nbins": 100, "xmin": 10, "xmax": 1e4, "log_x": True},
+            {"key": "nHits", "xlabel": "Number of hits", "nbins": 50, "xmin": 0, "xmax": 100},
+            {"key": "dT", "xlabel": r"$\Delta t$: track time $-$ CRV time [ns]", "nbins": 100, "xmin": -200, "xmax": 300},
+        ]
+
+        ncols = 4
+        nrows = (len(features) + ncols - 1) // ncols
+        fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 6.4, nrows * 4.8))
+        axes = np.atleast_2d(axes)
+
+        styles = {"CRY": {"color": "red"}, "CE Mix": {"color": "blue"}}
+
+        for i, feat in enumerate(features):
+            ax = axes[i // ncols, i % ncols]
+            plotter.plot_1D_overlay(
+                {
+                    "CRY": ak.flatten(self.cry_data["events"][feat["key"]], axis=-1),
+                    "CE Mix": ak.flatten(self.ce_mix_data["events"][feat["key"]], axis=-1),
+                },
+                nbins=feat["nbins"],
+                xmin=feat["xmin"],
+                xmax=feat["xmax"],
+                xlabel=feat["xlabel"],
+                ylabel="Normalised coincidences",
+                log_y=True,
+                log_x=feat.get("log_x", False),
+                norm_by_area=True,
+                styles=styles,
+                ax=ax,
+                show=False,
+            )
+
+        # Hide unused axes
+        for i in range(len(features), nrows * ncols):
+            axes[i // ncols, i % ncols].set_visible(False)
+
+        plt.tight_layout()
+
+        if out_path is None:
+            out_path = self.img_out_path / "h1o_2x4_crv_features.png"
+        out_path = Path(out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(out_path)
+        self.logger.log(f"Saved feature distributions to {out_path}", "success")
+
+        if show:
+            plt.show()
 
     def get_cut_flows(self):
         return {
