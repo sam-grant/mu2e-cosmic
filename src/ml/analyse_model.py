@@ -38,6 +38,9 @@ class AnaModel:
         else:
             self.img_out_path = Path(f"../../output/images/ml/{run}/{self.tag}")
 
+        # Results output directory: output/ml/{run}/results/{tag}/
+        self.results_out_path = Path(f"../../output/ml/{run}/results/{self.tag}")
+
         self.logger = Logger(print_prefix="[AnaModel]", verbosity=verbosity)
         self.logger.log(f"Initialised analyser for model: {self.tag}", "success")
 
@@ -589,16 +592,16 @@ class AnaModel:
 
         # --- Save to CSV ---
         if save_csv:
-            self.img_out_path.mkdir(parents=True, exist_ok=True)
+            self.results_out_path.mkdir(parents=True, exist_ok=True)
 
-            metrics_path = self.img_out_path / "metrics_comparison.csv"
+            metrics_path = self.results_out_path / "metrics_comparison.csv"
             metrics_df.to_csv(metrics_path, index=False)
 
-            confusion_path = self.img_out_path / "confusion_comparison.csv"
+            confusion_path = self.results_out_path / "confusion_comparison.csv"
             confusion_df.to_csv(confusion_path, index=False)
 
             self.logger.log(
-                f"Saved comparison tables to {self.img_out_path}",
+                f"Saved comparison tables to {self.results_out_path}",
                 "success"
             )
 
