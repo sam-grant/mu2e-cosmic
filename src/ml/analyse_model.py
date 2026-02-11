@@ -46,7 +46,7 @@ class AnaModel:
         self._test_auc = None
 
         # Just for styles
-        plotter = Plot()
+        plotter = Plot(verbosity=0)
 
     def _save_fig(self, out_path, default_name):
         """Save current figure, using default filename if no path given"""
@@ -208,7 +208,7 @@ class AnaModel:
 
         return dict(zip(feature_names, importances))
 
-    def find_threshold(self, min_eff=0.999, n_thresholds=10000, out_path=None, show=True):
+    def find_threshold(self, min_eff=0.999, n_thresholds=10000, plot=True, out_path=None, show=True):
         """Find highest threshold meeting min_eff event-level veto efficiency."""
         if self.metadata_test is None:
             self.logger.log(
@@ -285,37 +285,39 @@ class AnaModel:
             "info"
         )
 
-        # Plot overlay of veto efficiency and signal efficiency
-        fig, ax = plt.subplots(figsize=(6.4, 4.8))
+        if plot:
+            # Plot overlay of veto efficiency and signal efficiency
+            fig, ax = plt.subplots(figsize=(6.4, 4.8))
 
-        ax.plot(thresholds, veto_efficiencies, linewidth=2,
-                color='blue', label='Veto efficiency (CRY vetoed)')
-        ax.plot(thresholds, signal_efficiencies, linewidth=2,
-                color='red', label=r'$1-$'+'deadtime (CE mix passed)')
+            ax.plot(thresholds, veto_efficiencies, linewidth=2,
+                    color='blue', label='Veto efficiency (CRY vetoed)')
+            ax.plot(thresholds, signal_efficiencies, linewidth=2,
+                    color='red', label=r'$1-$'+'deadtime (CE mix passed)')
 
-        ax.axvline(optimal_threshold, color='grey', linestyle='--',
-                   alpha=0.8, linewidth=1.5,
-                   label=f'{min_eff*100:.2f}% efficiency: {optimal_threshold:.4f}')
+            ax.axvline(optimal_threshold, color='grey', linestyle='--',
+                       alpha=0.8, linewidth=1.5,
+                       label=f'{min_eff*100:.2f}% efficiency: {optimal_threshold:.4f}')
 
-        # Mark operating point on both curves
-        ax.plot(optimal_threshold, actual_veto_eff, 'o', color='blue',
-                markersize=8, zorder=5)
-        ax.plot(optimal_threshold, actual_signal_eff, 'o', color='red',
-                markersize=8, zorder=5)
+            # Mark operating point on both curves
+            ax.plot(optimal_threshold, actual_veto_eff, 'o', color='blue',
+                    markersize=8, zorder=5)
+            ax.plot(optimal_threshold, actual_signal_eff, 'o', color='red',
+                    markersize=8, zorder=5)
 
-        ax.set_xlabel('Threshold')
-        ax.set_ylabel('Fraction')
-        ax.set_ylim([0.96, 1.01])
-        ax.set_xlim([0, 0.10])
-        ax.legend(loc='best')
-        ax.grid(alpha=0.4)
+            ax.set_xlabel('Threshold')
+            ax.set_ylabel('Fraction')
+            ax.set_ylim([0.99, 1.01])
+            # ax.set_xlim([0, 0.10])
+            ax.legend(loc='best')
+            ax.grid(alpha=0.4)
+            ax.set_yscale("log")
 
-        plt.tight_layout()
+            plt.tight_layout()
 
-        self._save_fig(out_path, "threshold_overlay.png")
+            self._save_fig(out_path, "threshold_overlay.png")
 
-        if show:
-            plt.show()
+            if show:
+                plt.show()
 
         return {
             "threshold": optimal_threshold,
