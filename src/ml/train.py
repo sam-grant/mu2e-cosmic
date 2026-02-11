@@ -2,10 +2,12 @@
 # Training class for ML models with pre-split data
 
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GroupKFold
 from pathlib import Path
 import joblib
 import xgboost as xgb
 import numpy as np
+import pandas as pd
 
 from pyutils.pylogger import Logger
 
@@ -21,6 +23,7 @@ class Train:
 
         self.model_class = model
         self.scale_features = scale_features
+        self.run = run
 
         # Extract data components
         self.X_train = data["X_train"]
@@ -123,6 +126,7 @@ class Train:
             "y_pred": y_pred,
             "y_proba": y_proba,
             "y_proba_train": y_proba_train,
+            "X_test": self.X_test,
             "scaler": self.scaler,
             "metadata_test": self.metadata_test
         }
@@ -130,6 +134,119 @@ class Train:
         # Save if requested
         if save_output:
             self._save_results(results, tag)
+
+        return results
+
+    def train_cv(self, tag, n_folds=5, min_eff=0.999, random_state=42,
+                 save_output=False, **hyperparams):
+        """Train with K-fold CV for robust threshold estimation. Returns results dict with CV threshold."""
+        from analyse_model import AnaModel
+
+        # Recombine train/test into full dataset
+        X = pd.concat([self.X_train, self.X_test]).reset_index(drop=True)
+        y = pd.concat([self.y_train, self.y_test]).reset_index(drop=True)
+        metadata = pd.concat([self.metadata_train, self.metadata_test]).reset_index(drop=True)
+
+        groups = metadata["subrun"].astype(str) + "_" + metadata["event"].astype(str)
+        gkf = GroupKFold(n_splits=n_folds)
+        folds = list(gkf.split(X, y, groups=groups))
+
+        self.logger.log(
+            f"CV training: {n_folds} folds, tag={tag}\n"
+            f"  Hyperparams: {hyperparams}",
+            "info"
+        )
+
+        fold_metrics = []
+
+        for k, (train_idx, test_idx) in enumerate(folds):
+            fold_data = {
+                "X_train": X.iloc[train_idx],
+                "X_test": X.iloc[test_idx],
+                "y_train": y.iloc[train_idx],
+                "y_test": y.iloc[test_idx],
+                "metadata_train": metadata.iloc[train_idx],
+                "metadata_test": metadata.iloc[test_idx],
+            }
+
+            fold_trainer = Train(
+                fold_data,
+                model=self.model_class,
+                scale_features=self.scale_features,
+                run=self.run,
+                verbosity=0
+            )
+            fold_results = fold_trainer.train(
+                tag=f"{tag}_fold{k}",
+                random_state=random_state,
+                save_output=False,
+                **hyperparams
+            )
+
+            ana = AnaModel(fold_results, verbosity=0)
+            ana.roc_auc()
+            threshold_results = ana.find_threshold(min_eff=min_eff, plot=False, show=False)
+
+            fold_metrics.append({
+                "auc": ana._test_auc,
+                "threshold": threshold_results["threshold"],
+                "veto_efficiency": threshold_results["veto_efficiency"],
+                "deadtime": threshold_results["deadtime"],
+                "signal_efficiency": threshold_results["signal_efficiency"],
+                "thresholds": threshold_results["thresholds"],
+                "veto_efficiencies": threshold_results["veto_efficiencies"],
+                "signal_efficiencies": threshold_results["signal_efficiencies"],
+            })
+
+        # CV summary
+        cv_threshold = np.mean([m["threshold"] for m in fold_metrics])
+        cv_threshold_std = np.std([m["threshold"] for m in fold_metrics])
+        cv_deadtime = np.mean([m["deadtime"] for m in fold_metrics])
+        cv_deadtime_std = np.std([m["deadtime"] for m in fold_metrics])
+        cv_veto_eff = np.mean([m["veto_efficiency"] for m in fold_metrics])
+        cv_veto_eff_std = np.std([m["veto_efficiency"] for m in fold_metrics])
+        cv_auc = np.mean([m["auc"] for m in fold_metrics])
+
+        self.logger.log(
+            f"CV results ({n_folds} folds):\n"
+            f"  Threshold:       {cv_threshold:.4f} +/- {cv_threshold_std:.4f}\n"
+            f"  Veto efficiency: {cv_veto_eff*100:.3f} +/- {cv_veto_eff_std*100:.3f}%\n"
+            f"  Deadtime:        {cv_deadtime*100:.3f} +/- {cv_deadtime_std*100:.3f}%\n"
+            f"  AUC:             {cv_auc:.6f}",
+            "info"
+        )
+
+        # Train final model on full pre-split data (original train/test)
+        self.logger.log("Training final model on full train set...", "info")
+        results = self.train(
+            tag=tag,
+            random_state=random_state,
+            save_output=save_output,
+            **hyperparams
+        )
+
+        # Attach CV metrics to results
+        results["cv_threshold"] = cv_threshold
+        results["cv_threshold_std"] = cv_threshold_std
+        results["cv_metrics"] = {
+            "auc": cv_auc,
+            "threshold": cv_threshold,
+            "threshold_std": cv_threshold_std,
+            "veto_efficiency": cv_veto_eff,
+            "veto_efficiency_std": cv_veto_eff_std,
+            "deadtime": cv_deadtime,
+            "deadtime_std": cv_deadtime_std,
+            "fold_metrics": fold_metrics,
+        }
+
+        self.logger.log(
+            f"Use CV threshold: {cv_threshold:.4f} (not single-split threshold)",
+            "success"
+        )
+
+        # Plot CV threshold overlay
+        final_ana = AnaModel(results, run=self.run, verbosity=0)
+        final_ana.plot_threshold_cv(fold_metrics, cv_threshold, min_eff=min_eff)
 
         return results
 

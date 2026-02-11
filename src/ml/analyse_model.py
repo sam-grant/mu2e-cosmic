@@ -29,6 +29,7 @@ class AnaModel:
         self.y_pred = results["y_pred"]
         self.y_proba = results["y_proba"]
         self.y_proba_train = results["y_proba_train"]
+        self.X_test = results.get("X_test", None)
         self.metadata_test = results.get("metadata_test", None)
         self.tag = results["tag"]
 
@@ -326,30 +327,91 @@ class AnaModel:
             "threshold": optimal_threshold,
             "veto_efficiency": actual_veto_eff,
             "deadtime": actual_deadtime,
-            "signal_efficiency": actual_signal_eff
+            "signal_efficiency": actual_signal_eff,
+            "thresholds": thresholds,
+            "veto_efficiencies": veto_efficiencies,
+            "signal_efficiencies": signal_efficiencies,
         }
 
+    def plot_threshold_cv(self, fold_scans, cv_threshold, min_eff=0.999,
+                          out_path=None, show=True):
+        """Overlay threshold scans from K-fold CV on a single plot."""
+        fig, ax = plt.subplots(figsize=(6.4, 4.8))
+
+        # Per-fold curves (thin, transparent)
+        for k, scan in enumerate(fold_scans):
+            label_veto = 'Fold veto eff.' if k == 0 else None
+            label_sig = 'Fold 1-deadtime' if k == 0 else None
+            ax.plot(scan["thresholds"], scan["veto_efficiencies"],
+                    linewidth=1, color='blue', alpha=0.25, label=label_veto)
+            ax.plot(scan["thresholds"], scan["signal_efficiencies"],
+                    linewidth=1, color='red', alpha=0.25, label=label_sig)
+            # Per-fold threshold (thin dashed)
+            ax.axvline(scan["threshold"], color='grey', linestyle=':',
+                       alpha=0.3, linewidth=1)
+
+        # Mean curves
+        mean_veto = np.mean([s["veto_efficiencies"] for s in fold_scans], axis=0)
+        mean_signal = np.mean([s["signal_efficiencies"] for s in fold_scans], axis=0)
+        thresholds = fold_scans[0]["thresholds"]
+
+        ax.plot(thresholds, mean_veto, linewidth=2.5, color='blue',
+                label='Mean veto efficiency')
+        ax.plot(thresholds, mean_signal, linewidth=2.5, color='red',
+                label=r'Mean $1-$deadtime')
+
+        # Mean threshold
+        ax.axvline(cv_threshold, color='grey', linestyle='--',
+                   alpha=0.8, linewidth=2,
+                   label=f'CV threshold: {cv_threshold:.4f}')
+
+        ax.set_xlabel('Threshold')
+        ax.set_ylabel('Fraction')
+        ax.set_ylim([0.99, 1.01])
+        ax.legend(loc='best', fontsize=8)
+        ax.grid(alpha=0.4)
+        ax.set_yscale("log")
+
+        plt.tight_layout()
+
+        self._save_fig(out_path, "threshold_overlay_cv.png")
+
+        if show:
+            plt.show()
+
     def plot_score_distribution(self, threshold, out_path=None, show=True,
-                                nbins=100):
-        """Score distributions for signal/background. Full range and zoomed to 2*threshold."""
-        # Separate scores by true label
-        signal_scores = self.y_proba[self.y_test == 1]
-        background_scores = self.y_proba[self.y_test == 0]
+                                nbins=100, density=False):
+        """Event-level max score distributions. Full range and zoomed to 2*threshold."""
+        if self.metadata_test is None:
+            self.logger.log("No metadata_test — cannot compute event-level scores", "error")
+            return
+
+        # Group by event, take max score per event (same as find_threshold)
+        df = self.metadata_test[["subrun", "event"]].copy()
+        df["label"] = np.asarray(self.y_test)
+        df["proba"] = np.asarray(self.y_proba)
+
+        event_df = df.groupby(["subrun", "event"]).agg(
+            max_proba=("proba", "max"),
+            label=("label", "first")
+        )
+
+        signal_scores = event_df.loc[event_df["label"] == 1, "max_proba"].values
+        background_scores = event_df.loc[event_df["label"] == 0, "max_proba"].values
 
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(2*6.4, 4.8))
 
-        # Left: full range
         for ax, xrange in [(ax1, (0, 1)), (ax2, (0, 2 * threshold))]:
             ax.hist(background_scores, bins=nbins, range=xrange,
                     alpha=0.6, label='CE mix',
-                    density=True, color='blue')
+                    density=False, color='blue')
             ax.hist(signal_scores, bins=nbins, range=xrange,
                     alpha=0.6, label='CRY',
-                    density=True, color='red')
+                    density=False, color='red')
             ax.axvline(threshold, color='grey', linestyle='--', alpha=0.8,
                        linewidth=1.5, label=f'Threshold: {threshold:.4f}')
-            ax.set_xlabel('Model output')
-            ax.set_ylabel('Normalised events')
+            ax.set_xlabel('Event max score')
+            ax.set_ylabel('Events')
             ax.legend(loc='upper left', bbox_to_anchor=(0.1, 1))
             ax.set_yscale('log')
             ax.grid(alpha=0.4)
@@ -361,45 +423,50 @@ class AnaModel:
         if show:
             plt.show()
 
-    def plot_physics_by_score(self, df_full, threshold, above=False, variables=None,
-                               nbins=50, out_path=None, show=True):
-        """Plot feature distributions for events above or below threshold, split by CRY/CE mix."""
-        if self.metadata_test is None:
-            self.logger.log("No metadata_test available — cannot match events", "error")
-            return
+    def get_events_by_threshold(self, threshold, above=False):
+        """Select test events by event-level max score. Returns DataFrame with all coincidences."""
+        if self.metadata_test is None or self.X_test is None:
+            self.logger.log("No metadata_test or X_test available", "error")
+            return None
 
-        # Match test events back to full DataFrame
-        df_test = df_full.loc[self.metadata_test.index].copy()
+        # Reconstruct test DataFrame from stored components
+        df_test = self.X_test.copy()
+        df_test["subrun"] = self.metadata_test["subrun"].values
+        df_test["event"] = self.metadata_test["event"].values
         df_test["score"] = np.asarray(self.y_proba)
         df_test["label"] = np.asarray(self.y_test)
 
-        # Select events above or below threshold
-        if above:
-            df_sel = df_test[df_test["score"] >= threshold]
-            score_label = f"score >= {threshold:.4f}"
-            default_fname = "h1_high_score_physics.png"
-        else:
-            df_sel = df_test[df_test["score"] < threshold]
-            score_label = f"score < {threshold:.4f}"
-            default_fname = "h1_low_score_physics.png"
+        # Event-level max score (same logic as find_threshold)
+        event_max = df_test.groupby(["subrun", "event"])["score"].max()
 
-        # Print selected CRY event metadata
-        df_sel_cry = df_sel[df_sel["label"] == 1]
+        if above:
+            selected_events = event_max[event_max >= threshold].index
+        else:
+            selected_events = event_max[event_max < threshold].index
+
+        df_sel = df_test.set_index(["subrun", "event"]).loc[selected_events].reset_index()
+
+        n_cry = df_sel.loc[df_sel["label"] == 1].groupby(["subrun", "event"]).ngroups
+        n_mix = df_sel.loc[df_sel["label"] == 0].groupby(["subrun", "event"]).ngroups
+        direction = "above" if above else "below"
         self.logger.log(
-            f"Selected events ({score_label}):\n"
-            f"  CRY:    {len(df_sel_cry)}\n"
-            f"  CE mix: {(df_sel['label'] == 0).sum()}",
+            f"Events {direction} threshold {threshold:.4f}:\n"
+            f"  CRY:    {n_cry}\n"
+            f"  CE mix: {n_mix}",
             "info"
         )
-        if not above and len(df_sel_cry) > 0:
-            meta_cols = ["event", "subrun", "score"]
-            meta_cols = [c for c in meta_cols if c in df_sel_cry.columns]
-            print(f"\nLow-score CRY events:\n{df_sel_cry[meta_cols].to_string(index=False)}\n")
-            # Save to CSV
-            csv_path = self.img_out_path / "low_score_cry.csv"
-            csv_path.parent.mkdir(parents=True, exist_ok=True)
-            df_sel_cry.to_csv(csv_path, index=False)
-            self.logger.log(f"Saved low-score CRY events to {csv_path}", "success")
+
+        return df_sel
+
+    def plot_physics_by_score(self, threshold, above=False, variables=None,
+                               nbins=50, out_path=None, show=True):
+        """Plot feature distributions for events above or below threshold, split by CRY/CE mix."""
+        df_sel = self.get_events_by_threshold(threshold, above=above)
+        if df_sel is None or len(df_sel) == 0:
+            return
+
+        score_label = f"event max score {'above' if above else 'below'} {threshold:.4f}"
+        default_fname = "h1_high_score_physics.png" if above else "h1_low_score_physics.png"
 
         # Default to trained feature names
         if variables is None:
@@ -408,7 +475,6 @@ class AnaModel:
             else:
                 self.logger.log("No feature_names or variables provided", "warning")
                 return
-        # Filter to columns that actually exist
         variables = [v for v in variables if v in df_sel.columns]
 
         if len(variables) == 0:
