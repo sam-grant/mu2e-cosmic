@@ -1,6 +1,7 @@
 # Sam Grant 2025
 # Analyse ML model
 
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -11,6 +12,8 @@ from sklearn.metrics import (
     roc_auc_score
 )
 from pathlib import Path
+
+REPO_ROOT = Path(os.path.dirname(os.path.abspath(__file__))).parents[1]
 
 from pyutils.pylogger import Logger
 from pyutils.pyplot import Plot
@@ -37,10 +40,10 @@ class AnaModel:
         if img_out_path is not None:
             self.img_out_path = Path(img_out_path)
         else:
-            self.img_out_path = Path(f"../../output/images/ml/{run}/{self.tag}")
+            self.img_out_path = REPO_ROOT / f"output/images/ml/{run}/{self.tag}"
 
         # Results output directory: output/ml/{run}/results/{tag}/
-        self.results_out_path = Path(f"../../output/ml/{run}/results/{self.tag}")
+        self.results_out_path = REPO_ROOT / f"output/ml/{run}/results/{self.tag}"
 
         self.logger = Logger(print_prefix="[AnaModel]", verbosity=verbosity)
         self.logger.log(f"Initialised analyser for model: {self.tag}", "success")

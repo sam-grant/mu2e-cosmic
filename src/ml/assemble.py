@@ -17,8 +17,9 @@ import awkward as ak
 # ML tools
 from sklearn.model_selection import GroupShuffleSplit
 
-# Internal modules 
+# Internal modules
 script_dir = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = Path(script_dir).parents[1]
 sys.path.extend([
     os.path.join(script_dir, "..", "utils"),
     os.path.join(script_dir, "..", "core")
@@ -36,10 +37,8 @@ class AssembleDataset():
     def __init__(self, run="j", cutset_name="dev", verbosity=1):
         self.run = run
         self.cutset_name = cutset_name
-        self.base_in_path = Path(f"../../output/ml/{self.run}/data/")
-        # this is a bit weird, but 
-        # this is defined from the notebook/ml location
-        self.img_out_path = Path(f"../../output/images/ml/{self.run}/process/") 
+        self.base_in_path = REPO_ROOT / f"output/ml/{self.run}/data/"
+        self.img_out_path = REPO_ROOT / f"output/images/ml/{self.run}/process/" 
         self.logger = Logger(print_prefix="[Assemble]", verbosity=verbosity)
         self.load_data()
         self.logger.log(f"Initialised", "success")
@@ -62,14 +61,14 @@ class AssembleDataset():
         plotter = Plot(verbosity=0)
 
         features = [
-            {"key": "crv_z", "xlabel": "CRV z-position [mm]", "nbins": 100, "xmin": -15000, "xmax": 10000},
-            {"key": "crv_y", "xlabel": "CRV y-position [mm]", "nbins": 100, "xmin": -4000, "xmax": 4000},
-            {"key": "crv_x", "xlabel": "CRV x-position [mm]", "nbins": 100, "xmin": -4000, "xmax": 6000},
-            {"key": "angle", "xlabel": "Angle [rad]", "nbins": 80, "xmin": -3.14159, "xmax": 3.14159},
-            {"key": "nLayers", "xlabel": "Number of layers", "nbins": 6, "xmin": 0, "xmax": 6},
-            {"key": "PEs", "xlabel": "PEs", "nbins": 100, "xmin": 10, "xmax": 1e4, "log_x": True},
-            {"key": "nHits", "xlabel": "Number of hits", "nbins": 50, "xmin": 0, "xmax": 100},
-            {"key": "dT", "xlabel": r"$\Delta t$: track time $-$ CRV time [ns]", "nbins": 100, "xmin": -200, "xmax": 300},
+            {"name": "crv_z", "xlabel": "CRV z-position [mm]", "nbins": 100, "xmin": -15000, "xmax": 10000},
+            {"name": "crv_y", "xlabel": "CRV y-position [mm]", "nbins": 100, "xmin": -4000, "xmax": 4000},
+            {"name": "crv_x", "xlabel": "CRV x-position [mm]", "nbins": 100, "xmin": -4000, "xmax": 6000},
+            {"name": "angle", "xlabel": "Angle [rad]", "nbins": 80, "xmin": -3.14159, "xmax": 3.14159},
+            {"name": "nLayers", "xlabel": "Number of layers", "nbins": 6, "xmin": 0, "xmax": 6},
+            {"name": "PEs", "xlabel": "PEs", "nbins": 100, "xmin": 10, "xmax": 1e4, "log_x": True},
+            {"name": "nHits", "xlabel": "Number of hits", "nbins": 50, "xmin": 0, "xmax": 100},
+            {"name": "dT", "xlabel": r"$\Delta t$: track time $-$ CRV time [ns]", "nbins": 100, "xmin": -200, "xmax": 300},
         ]
 
         ncols = 4
@@ -83,8 +82,8 @@ class AssembleDataset():
             ax = axes[i // ncols, i % ncols]
             plotter.plot_1D_overlay(
                 {
-                    "CRY": ak.flatten(self.cry_data["events"][feat["key"]], axis=-1),
-                    "CE Mix": ak.flatten(self.ce_mix_data["events"][feat["key"]], axis=-1),
+                    "CRY": ak.flatten(self.cry_data["events"][feat["name"]], axis=-1),
+                    "CE Mix": ak.flatten(self.ce_mix_data["events"][feat["name"]], axis=-1),
                 },
                 nbins=feat["nbins"],
                 xmin=feat["xmin"],

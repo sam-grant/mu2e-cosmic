@@ -16,6 +16,7 @@ from sklearn.model_selection import train_test_split
 
 # Internal modules
 script_dir = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = Path(script_dir).parents[1]
 sys.path.extend([
     os.path.join(script_dir, "..", "utils"),
     os.path.join(script_dir, "..", "core")
@@ -26,7 +27,7 @@ class LoadML():
     """ Load up ML dataset """
     def __init__(self, run="h", verbosity=1):
         self.run = run
-        self.base_in_path = Path(f"../../output/ml/{self.run}/data/")
+        self.base_in_path = REPO_ROOT / f"output/ml/{self.run}/data/"
         self.logger = Logger(print_prefix="[LoadML]", verbosity=verbosity)
         self.logger.log("Initialised", "success")
 

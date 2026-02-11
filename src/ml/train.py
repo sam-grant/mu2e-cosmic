@@ -4,10 +4,13 @@
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GroupKFold
 from pathlib import Path
+import os
 import joblib
 import xgboost as xgb
 import numpy as np
 import pandas as pd
+
+REPO_ROOT = Path(os.path.dirname(os.path.abspath(__file__))).parents[1]
 
 from pyutils.pylogger import Logger
 
@@ -42,7 +45,7 @@ class Train:
         self.is_keras = self._is_keras_model()
 
         # Output directory: output/ml/{run}/results/{tag}
-        self.out_path = Path(out_path) if out_path else Path(f"../../output/ml/{run}/results")
+        self.out_path = Path(out_path) if out_path else REPO_ROOT / f"output/ml/{run}/results"
 
         self.logger = Logger(
             print_prefix = "[Train]",

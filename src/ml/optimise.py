@@ -1,11 +1,14 @@
 # Sam Grant 2025
 # Hyperparameter optimisation for ML models
 
+import os
 import itertools
 import numpy as np
 import pandas as pd
 from pathlib import Path
 from sklearn.model_selection import GroupKFold
+
+REPO_ROOT = Path(os.path.dirname(os.path.abspath(__file__))).parents[1]
 
 from pyutils.pylogger import Logger
 from train import Train
@@ -287,7 +290,7 @@ class Optimise:
             return
 
         if out_path is None:
-            out_path = Path(f"../../output/ml/{self.run}/results/optimisation_summary.csv")
+            out_path = REPO_ROOT / f"output/ml/{self.run}/results/optimisation_summary.csv"
 
         out_path = Path(out_path)
         out_path.parent.mkdir(parents=True, exist_ok=True)
