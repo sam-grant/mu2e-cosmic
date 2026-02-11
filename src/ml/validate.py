@@ -263,7 +263,7 @@ class Validate:
             ax.plot(optimal_threshold, actual_signal_eff, 'o', color='red',
                     markersize=8, zorder=5)
 
-            ax.set_xlabel('Threshold')
+            ax.set_xlabel('Event maximum probability')
             ax.set_ylabel('Fraction')
             ax.set_ylim([0.99, 1.01])
             # ax.set_xlim([0, 0.10])
@@ -293,38 +293,44 @@ class Validate:
         """Overlay threshold scans from K-fold CV on a single plot."""
         fig, ax = plt.subplots(figsize=(6.4, 4.8))
 
+        # Horiztonal line at 1
+        ax.axhline(1.0, color="grey", alpha=.35, linewidth=1.0, linestyle="--")
+
         # Per-fold curves (thin, transparent)
         for k, scan in enumerate(fold_scans):
-            label_veto = 'Fold veto eff.' if k == 0 else None
-            label_sig = 'Fold 1-deadtime' if k == 0 else None
+            label_veto = 'Fold veto efficiency (cosmics passed)' if k == 0 else None
+            label_sig = r'Fold $1-$deadtime (pileup passed)' if k == 0 else None
             ax.plot(scan["thresholds"], scan["veto_efficiencies"],
-                    linewidth=1, color='blue', alpha=0.25, label=label_veto)
+                    linewidth=1, color='blue', alpha=0.35, label=label_veto)
             ax.plot(scan["thresholds"], scan["signal_efficiencies"],
-                    linewidth=1, color='red', alpha=0.25, label=label_sig)
+                    linewidth=1, color='red', alpha=0.35, label=label_sig)
             # Per-fold threshold (thin dashed)
+            fold_thres_label = "Fold thresholds (99.9% efficiency)" if k == 0 else ""
             ax.axvline(scan["threshold"], color='grey', linestyle=':',
-                       alpha=0.3, linewidth=1)
+                       alpha=0.35, linewidth=1, label=fold_thres_label)
 
         # Mean curves
         mean_veto = np.mean([s["veto_efficiencies"] for s in fold_scans], axis=0)
         mean_signal = np.mean([s["signal_efficiencies"] for s in fold_scans], axis=0)
         thresholds = fold_scans[0]["thresholds"]
 
-        ax.plot(thresholds, mean_veto, linewidth=2.5, color='blue',
+        ax.plot(thresholds, mean_veto, linewidth=1.5, color='blue',
                 label='Mean veto efficiency')
-        ax.plot(thresholds, mean_signal, linewidth=2.5, color='red',
+        ax.plot(thresholds, mean_signal, linewidth=1.5, color='red',
                 label=r'Mean $1-$deadtime')
 
         # Mean threshold
         ax.axvline(cv_threshold, color='grey', linestyle='--',
-                   alpha=0.8, linewidth=2,
-                   label=f'CV threshold: {cv_threshold:.4f}')
+                   alpha=0.8, linewidth=1.5,
+                   label=f'Mean threshold: {cv_threshold:.4f}')
 
-        ax.set_xlabel('Threshold')
-        ax.set_ylabel('Fraction')
-        ax.set_ylim([0.99, 1.01])
-        ax.legend(loc='best', fontsize=8)
-        ax.grid(alpha=0.4)
+
+
+        ax.set_xlabel('Maximum probability / event')
+        # ax.set_ylabel('Fraction')
+        ax.set_ylim([0.9925, 1.0075])
+        ax.legend(fontsize=12, loc='upper left')
+        # ax.grid(alpha=0.4)
         ax.set_yscale("log")
 
         plt.tight_layout()
@@ -365,7 +371,7 @@ class Validate:
                     density=False, color='red')
             ax.axvline(threshold, color='grey', linestyle='--', alpha=0.8,
                        linewidth=1.5, label=f'Threshold: {threshold:.4f}')
-            ax.set_xlabel('Event max score')
+            ax.set_xlabel('Event maximum probability')
             ax.set_ylabel('Events')
             ax.legend(loc='upper left', bbox_to_anchor=(0.1, 1))
             ax.set_yscale('log')

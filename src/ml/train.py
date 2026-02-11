@@ -47,9 +47,10 @@ class Train:
         # Output directory: output/ml/{run}/results/{tag}
         self.out_path = Path(out_path) if out_path else REPO_ROOT / f"output/ml/{run}/results"
 
+        self.verbosity = verbosity
         self.logger = Logger(
             print_prefix = "[Train]",
-            verbosity = verbosity
+            verbosity = self.verbosity
         )
         self.logger.log("Initialised", "success")
 
@@ -248,7 +249,7 @@ class Train:
         )
 
         # Plot CV threshold overlay
-        final_ana = Validate(results, run=self.run, verbosity=0)
+        final_ana = Validate(results, run=self.run, verbosity=self.verbosity)
         final_ana.plot_threshold_cv(fold_metrics, cv_threshold, min_eff=min_eff)
 
         return results
