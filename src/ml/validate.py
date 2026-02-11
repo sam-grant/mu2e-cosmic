@@ -19,8 +19,8 @@ from pyutils.pylogger import Logger
 from pyutils.pyplot import Plot
 
 
-class AnaModel:
-    """Analyse trained model. Works with results dict from Train.train()."""
+class Validate:
+    """Validate and analyse trained model. Works with results dict from Train.train()."""
 
     def __init__(self, results, run="j", img_out_path=None, verbosity=1):
         """Initialise with Train.train() results dict."""
@@ -45,7 +45,7 @@ class AnaModel:
         # Results output directory: output/ml/{run}/results/{tag}/
         self.results_out_path = REPO_ROOT / f"output/ml/{run}/results/{self.tag}"
 
-        self.logger = Logger(print_prefix="[AnaModel]", verbosity=verbosity)
+        self.logger = Logger(print_prefix="[Validate]", verbosity=verbosity)
         self.logger.log(f"Initialised analyser for model: {self.tag}", "success")
 
         # Will be computed

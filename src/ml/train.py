@@ -143,7 +143,7 @@ class Train:
     def train_cv(self, tag, n_folds=5, min_eff=0.999, random_state=42,
                  save_output=False, **hyperparams):
         """Train with K-fold CV for robust threshold estimation. Returns results dict with CV threshold."""
-        from analyse_model import AnaModel
+        from validate import Validate
 
         # Recombine train/test into full dataset
         X = pd.concat([self.X_train, self.X_test]).reset_index(drop=True)
@@ -186,7 +186,7 @@ class Train:
                 **hyperparams
             )
 
-            ana = AnaModel(fold_results, verbosity=0)
+            ana = Validate(fold_results, verbosity=0)
             ana.roc_auc()
             threshold_results = ana.find_threshold(min_eff=min_eff, plot=False, show=False)
 
@@ -248,7 +248,7 @@ class Train:
         )
 
         # Plot CV threshold overlay
-        final_ana = AnaModel(results, run=self.run, verbosity=0)
+        final_ana = Validate(results, run=self.run, verbosity=0)
         final_ana.plot_threshold_cv(fold_metrics, cv_threshold, min_eff=min_eff)
 
         return results

@@ -12,11 +12,11 @@ REPO_ROOT = Path(os.path.dirname(os.path.abspath(__file__))).parents[1]
 
 from pyutils.pylogger import Logger
 from train import Train
-from analyse_model import AnaModel
+from validate import Validate
 
 
 class Optimise:
-    """Grid search over Train -> AnaModel pipeline. Minimises deadtime at target veto efficiency."""
+    """Grid search over Train -> Validate pipeline. Minimises deadtime at target veto efficiency."""
 
     def __init__(self, data, run="j", min_efficiency=0.999,
                  model=None, scale_features=True, verbosity=1):
@@ -74,7 +74,7 @@ class Optimise:
             )
 
             # Analyse — find threshold at minimum efficiency
-            ana = AnaModel(training_results, run=self.run, verbosity=0)
+            ana = Validate(training_results, run=self.run, verbosity=0)
             ana.roc_auc()
             threshold_results = ana.find_threshold(
                 min_eff=self.min_efficiency,
@@ -113,7 +113,7 @@ class Optimise:
                 "success"
             )
             # Plot threshold overlay for winning scan only
-            best_ana = AnaModel(
+            best_ana = Validate(
                 self.best_result["training_results"],
                 run=self.run, verbosity=0
             )
@@ -189,7 +189,7 @@ class Optimise:
                     **hyperparams
                 )
 
-                ana = AnaModel(training_results, run=self.run, verbosity=0)
+                ana = Validate(training_results, run=self.run, verbosity=0)
                 ana.roc_auc()
                 threshold_results = ana.find_threshold(
                     min_eff=self.min_efficiency,
