@@ -47,47 +47,45 @@ class LoadML():
 
         return cry_data, ce_mix_data
 
-    # def load_model(self, tag, in_path=None):
-        # """
-        # Load trained model results saved by Train._save_results()
+    def load_training_results(self, tag, in_path=None):
+        """Load training results saved by Train._save_results().
 
-        # Loads the results.pkl file for the given tag, and for Keras
-        # models also loads the separately saved .keras file.
+        For Keras models, also loads the separately saved .keras file.
 
-        # Args:
-            # tag: Model identifier (directory name under in_path)
-            # in_path: Base directory containing saved models
-                       # (default: ../../output/ml/{run}/models)
+        Args:
+            tag: Model identifier (directory name under in_path)
+            in_path: Base directory containing saved results
+                     (default: output/ml/{run}/results)
 
-        # Returns:
-            # dict: Results dictionary matching Train.train() output
-        # """
-        # if in_path is None:
-            # in_path = Path(f"../../output/ml/{self.run}/models")
-        # else:
-            # in_path = Path(in_path)
+        Returns:
+            dict: Results dictionary matching Train.train() output
+        """
+        if in_path is None:
+            in_path = REPO_ROOT / f"output/ml/{self.run}/results"
+        else:
+            in_path = Path(in_path)
 
-        # model_path = in_path / tag
-        # results_file = model_path / "results.pkl"
+        tag_path = in_path / tag
+        results_file = tag_path / "results.pkl"
 
-        # if not results_file.exists():
-            # self.logger.log(f"Results file not found: {results_file}", "error")
-            # return None
+        if not results_file.exists():
+            self.logger.log(f"Results file not found: {results_file}", "error")
+            return None
 
-        # results = joblib.load(results_file)
+        results = joblib.load(results_file)
 
-        # # Reload Keras model if saved separately
-        # if results.get("model") is None and "keras_model_path" in results:
-            # keras_path = Path(results["keras_model_path"])
-            # if keras_path.exists():
-                # import tensorflow as tf
-                # results["model"] = tf.keras.models.load_model(keras_path)
-                # self.logger.log(f"Loaded Keras model from {keras_path}", "info")
-            # else:
-                # self.logger.log(f"Keras model file not found: {keras_path}", "error")
-                # return None
+        # Reload Keras model if saved separately
+        if results.get("model") is None and "keras_model_path" in results:
+            keras_path = Path(results["keras_model_path"])
+            if keras_path.exists():
+                import tensorflow as tf
+                results["model"] = tf.keras.models.load_model(keras_path)
+                self.logger.log(f"Loaded Keras model from {keras_path}", "info")
+            else:
+                self.logger.log(f"Keras model file not found: {keras_path}", "error")
+                return None
 
-        # self.logger.log(f"Loaded model '{tag}' from {model_path}", "success")
+        self.logger.log(f"Loaded training results for '{tag}' from {tag_path}", "success")
 
-        # return results
+        return results
 

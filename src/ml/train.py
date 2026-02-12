@@ -191,6 +191,15 @@ class Train:
             ana.roc_auc()
             threshold_results = ana.find_threshold(min_eff=min_eff, plot=False, show=False)
 
+            # Money table for this fold (using fold's own threshold)
+            money = ana.money_table(
+                X=fold_data["X_test"],
+                y=fold_data["y_test"],
+                metadata=fold_data["metadata_test"],
+                threshold=threshold_results["threshold"],
+                save_csv=False
+            )
+
             fold_metrics.append({
                 "auc": ana._test_auc,
                 "threshold": threshold_results["threshold"],
@@ -200,6 +209,7 @@ class Train:
                 "thresholds": threshold_results["thresholds"],
                 "veto_efficiencies": threshold_results["veto_efficiencies"],
                 "signal_efficiencies": threshold_results["signal_efficiencies"],
+                "money_table": money,
             })
 
         # CV summary
@@ -225,13 +235,25 @@ class Train:
         results = self.train(
             tag=tag,
             random_state=random_state,
-            save_output=save_output,
+            save_output=False,
             **hyperparams
         )
+
+        # CV-averaged money table metrics
+        money_keys = ["veto_efficiency", "deadtime", "veto_purity",
+                       "accuracy", "figure_of_merit"]
+        money_keys_dt = [f"{k}_dt" for k in money_keys]
+
+        cv_money = {}
+        for key in money_keys + money_keys_dt:
+            vals = [m["money_table"]["raw"][key] for m in fold_metrics]
+            cv_money[key] = np.mean(vals)
+            cv_money[f"{key}_std"] = np.std(vals)
 
         # Attach CV metrics to results
         results["cv_threshold"] = cv_threshold
         results["cv_threshold_std"] = cv_threshold_std
+        results["cv_money_table"] = cv_money
         results["cv_metrics"] = {
             "auc": cv_auc,
             "threshold": cv_threshold,
@@ -242,6 +264,10 @@ class Train:
             "deadtime_std": cv_deadtime_std,
             "fold_metrics": fold_metrics,
         }
+
+        # Save after CV metrics are attached
+        if save_output:
+            self._save_results(results, tag)
 
         self.logger.log(
             f"Use CV threshold: {cv_threshold:.4f} (not single-split threshold)",

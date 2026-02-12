@@ -341,13 +341,13 @@ class Validate:
             plt.show()
 
     def plot_score_distribution(self, threshold, out_path=None, show=True,
-                                nbins=100, density=False):
-        """Event-level max score distributions. Full range and zoomed to 2*threshold."""
+                                nbins=100):
+        """Event-level max score distribution over full range [0, 1]."""
         if self.metadata_test is None:
             self.logger.log("No metadata_test — cannot compute event-level scores", "error")
             return
 
-        # Group by event, take max score per event (same as find_threshold)
+        # Group by event, take max score per event
         df = self.metadata_test[["subrun", "event"]].copy()
         df["label"] = np.asarray(self.y_test)
         df["proba"] = np.asarray(self.y_proba)
@@ -360,22 +360,18 @@ class Validate:
         signal_scores = event_df.loc[event_df["label"] == 1, "max_proba"].values
         background_scores = event_df.loc[event_df["label"] == 0, "max_proba"].values
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(2*6.4, 4.8))
+        fig, ax = plt.subplots(figsize=(6.4, 4.8))
 
-        for ax, xrange in [(ax1, (0, 1)), (ax2, (0, 2 * threshold))]:
-            ax.hist(background_scores, bins=nbins, range=xrange,
-                    alpha=0.6, label='CE mix',
-                    density=False, color='blue')
-            ax.hist(signal_scores, bins=nbins, range=xrange,
-                    alpha=0.6, label='CRY',
-                    density=False, color='red')
-            ax.axvline(threshold, color='grey', linestyle='--', alpha=0.8,
-                       linewidth=1.5, label=f'Threshold: {threshold:.4f}')
-            ax.set_xlabel('Event maximum probability')
-            ax.set_ylabel('Events')
-            ax.legend(loc='upper left', bbox_to_anchor=(0.1, 1))
-            ax.set_yscale('log')
-            ax.grid(alpha=0.4)
+        ax.hist(background_scores, bins=nbins, range=(0, 1),
+                alpha=0.6, label='CE mix', color='blue')
+        ax.hist(signal_scores, bins=nbins, range=(0, 1),
+                alpha=0.6, label='CRY', color='red')
+        ax.axvline(threshold, color='grey', linestyle='--', alpha=0.8,
+                   linewidth=1.5, label=f'Threshold: {threshold:.4f}')
+        ax.set_xlabel('Maximum probability per event')
+        ax.set_ylabel('Events')
+        ax.legend()
+        ax.set_yscale('log')
 
         plt.tight_layout()
 
@@ -635,4 +631,53 @@ class Validate:
         return {
             "metrics": metrics_df,
             "confusion": confusion_df,
+            "raw": {
+                "veto_efficiency": veto_eff,
+                "deadtime": deadtime,
+                "veto_purity": veto_purity,
+                "accuracy": accuracy,
+                "figure_of_merit": fom,
+                "tp": tp, "tn": tn, "fp": fp, "fn": fn,
+                "veto_efficiency_dt": veto_eff_dt,
+                "deadtime_dt": deadtime_dt,
+                "veto_purity_dt": veto_purity_dt,
+                "accuracy_dt": accuracy_dt,
+                "figure_of_merit_dt": fom_dt,
+                "tp_dt": tp_dt, "tn_dt": tn_dt, "fp_dt": fp_dt, "fn_dt": fn_dt,
+            },
         }
+
+    def cv_money_table(self, cv_money, save_csv=True):
+        """Display CV-averaged money table from results['cv_money_table']."""
+        metrics = ["veto_efficiency", "deadtime", "veto_purity",
+                    "accuracy", "figure_of_merit"]
+        labels = ["Veto efficiency", "Deadtime", "Veto purity",
+                   "Overall accuracy", "Figure of merit"]
+        descriptions = [
+            "Fraction of cosmics vetoed",
+            "Fraction of CE mix vetoed",
+            "Of vetoed events, fraction that are cosmics",
+            "Overall correct classification rate",
+            "eff_veto * (1 - deadtime)",
+        ]
+
+        df = pd.DataFrame({
+            "Metric": labels,
+            "ML model": [
+                f"{cv_money[k]*100:.3f} +/- {cv_money[f'{k}_std']*100:.3f}%"
+                for k in metrics
+            ],
+            "dT cut": [
+                f"{cv_money[f'{k}_dt']*100:.3f} +/- {cv_money[f'{k}_dt_std']*100:.3f}%"
+                for k in metrics
+            ],
+            "Description": descriptions,
+        })
+
+        if save_csv:
+            self.results_out_path.mkdir(parents=True, exist_ok=True)
+            csv_path = self.results_out_path / "cv_money_table.csv"
+            df.to_csv(csv_path, index=False)
+            self.logger.log(f"Saved CV money table to {csv_path}", "success")
+
+        return df
