@@ -41,7 +41,7 @@ Trains a model on pre-split data. Supports XGBoost (default), sklearn, and Keras
 - **Output**: Results dict with `model`, `scaler`, `feature_names`, `X_test`, `y_test`, `y_pred`, `y_proba`, `metadata_test`, etc.
 - **Methods**:
   - `train(tag, **hyperparams)` -- single train/test run
-  - `train_cv(tag, n_folds=5, min_eff=0.999, **hyperparams)` -- K-fold CV for robust threshold estimation, then trains final model on original split. Returns results dict with `cv_threshold` and `cv_metrics` attached.
+  - `train_cv(tag, n_folds=5, min_eff=0.999, **hyperparams)` -- K-fold CV for robust threshold estimation, then trains final model on original split. Returns results dict with `cv_threshold`, `cv_metrics`, and `cv_money_table` (CV-averaged performance metrics) attached.
 
 ### Validate (`src/ml/validate.py`)
 
@@ -52,13 +52,14 @@ Validates a trained model. All methods operate on the test set unless otherwise 
 - **Methods**:
   - `find_threshold(min_eff=0.999)` -- event-level threshold scan. Finds highest threshold maintaining target veto efficiency. Returns threshold + scan arrays.
   - `plot_threshold_cv(fold_scans, cv_threshold)` -- overlays per-fold threshold scans with mean curves and CV-averaged threshold
-  - `plot_score_distribution(threshold)` -- event-level max score histograms (full range + zoomed to 2x threshold)
+  - `plot_score_distribution(threshold)` -- event-level max score histogram over full range [0, 1]
   - `plot_roc()` -- ROC curve
   - `plot_feature_importance()` -- supports tree-based (`feature_importances_`) and linear (`coef_`) models
   - `get_events_by_threshold(threshold, above=False)` -- returns DataFrame of all coincidences from events whose max score is above/below threshold
   - `plot_physics_by_score(threshold, above=False)` -- feature distributions for events above/below threshold
-  - `money_table(X, y, metadata, threshold)` -- event-level comparison of ML veto vs dT window cut
-  - `roc_auc()`, `confusion_matrix()`, `classification_report()`, `print_summary()`
+  - `money_table(X, y, metadata, threshold)` -- single-split event-level comparison of ML veto vs dT window cut. Returns formatted DataFrames and raw numeric values.
+  - `cv_money_table(cv_money)` -- displays CV-averaged money table from `results["cv_money_table"]` with mean +/- std for all metrics. Saves to CSV.
+  - `roc_auc()` -- train and test AUC
 
 ### Optimise (`src/ml/optimise.py`)
 
@@ -102,25 +103,31 @@ threshold = results["cv_threshold"]
 
 `train_cv` runs K-fold CV to get a robust threshold estimate, then trains the final model on the original train/test split. Use `cv_threshold` for deployment, not the single-split threshold.
 
-### 4. Analyse
+### 4. Validate (from saved results)
 
 ```python
-ana = Validate(results, run=run)
-ana.roc_auc()
-ana.plot_roc()
-ana.plot_feature_importance()
-ana.plot_score_distribution(threshold)
-ana.plot_physics_by_score(threshold, above=False)
-ana.plot_physics_by_score(threshold, above=True)
+from load import LoadML
+loader = LoadML(run=run)
+results = loader.load_training_results("xgb_final")
+threshold = results["cv_threshold"]
+```
 
-# Full comparison table
-tables = ana.money_table(data["df_full"], data["df_full"]["label"],
-                         data["df_full"][["event", "subrun"]], threshold=threshold)
-display(tables["metrics"])
-display(tables["confusion"])
+### 5. Analyse
+
+```python
+val = Validate(results, run=run)
+val.roc_auc()
+val.plot_roc()
+val.plot_feature_importance()
+val.plot_score_distribution(threshold)
+val.plot_physics_by_score(threshold, above=False)
+val.plot_physics_by_score(threshold, above=True)
+
+# CV-averaged performance comparison
+display(val.cv_money_table(results["cv_money_table"]))
 
 # Inspect missed events
-df_missed = ana.get_events_by_threshold(threshold, above=False)
+df_missed = val.get_events_by_threshold(threshold, above=False)
 display(df_missed[df_missed["label"] == 1])
 ```
 
