@@ -133,8 +133,8 @@ cutsets:
         thresholds:
             lo_trkqual: 0.2
         active:
-            within_coinc_start_time: true
-            within_coinc_end_time: true
+            within_coinc_start_time: false 
+            within_coinc_end_time: false
             unvetoed: false
             within_wide_win: true # no real cosmics below 85 MeV/c 
             within_ext_win: false
