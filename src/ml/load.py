@@ -1,17 +1,22 @@
-# System tools  
+# System tools
 import os
 import sys
 from pathlib import Path
 
-# Python stack 
+# Python stack
 import pandas as pd
 import awkward as ak
+import joblib
+
+# pyutils
+from pyutils.pylogger import Logger
 
 # ML tools
 from sklearn.model_selection import train_test_split
 
-# Internal modules 
+# Internal modules
 script_dir = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = Path(script_dir).parents[1]
 sys.path.extend([
     os.path.join(script_dir, "..", "utils"),
     os.path.join(script_dir, "..", "core")
@@ -20,11 +25,13 @@ from io_manager import Load
 
 class LoadML():
     """ Load up ML dataset """
-    def __init__(self, run="h"):
+    def __init__(self, run="h", verbosity=1):
         self.run = run
-        self.base_in_path = Path(f"../../output/ml/{self.run}/data/")
-        
-    def get_full_results(self):
+        self.base_in_path = REPO_ROOT / f"output/ml/{self.run}/data/"
+        self.logger = Logger(print_prefix="[LoadML]", verbosity=verbosity)
+        self.logger.log("Initialised", "success")
+
+    def get_results(self):
         """ Raw full processing output from pkl files
         Can use be used seperately for validation
         without cluttering main ML notebook """ 
@@ -36,57 +43,49 @@ class LoadML():
         cry_data = Load(in_path=cry_in_path).load_pkl()
         ce_mix_data = Load(in_path=ce_mix_in_path).load_pkl()
 
+        self.logger.log("Got full results", "success")
+
         return cry_data, ce_mix_data
 
-    def get_ml_data(self):
-        """ Load and prepare data for ML training/testing """
-        # Get awk arrays
-        cry_data, ce_mix_data = self.get_full_results()
-    
-        # Convert to DataFrame
-        df_cry = ak.to_dataframe(cry_data["events"])
-        df_ce_mix = ak.to_dataframe(ce_mix_data["events"])
+    def load_training_results(self, tag, in_path=None):
+        """Load training results saved by Train._save_results().
 
-        # SORT by event IDs to ensure reproducibility
-        df_cry = df_cry.sort_values(['subrun', 'event']).reset_index(drop=True)
-        df_ce_mix = df_ce_mix.sort_values(['subrun', 'event']).reset_index(drop=True)
-        
-        # Add labels
-        df_cry["label"] = 1 # "signal"
-        df_ce_mix["label"] = 0 # "background"
+        For Keras models, also loads the separately saved .keras file.
 
-        # Combine and shuffle
-        df_train = pd.concat([df_cry, df_ce_mix], ignore_index=True)
-        df_train = df_train.sample(frac=1, random_state=42).reset_index(drop=True)
+        Args:
+            tag: Model identifier (directory name under in_path)
+            in_path: Base directory containing saved results
+                     (default: output/ml/{run}/results)
 
-        # Make a copy for later
-        # We will want to be able to peek at full events post processing
-        df_train_full = df_train.copy()
+        Returns:
+            dict: Results dictionary matching Train.train() output
+        """
+        if in_path is None:
+            in_path = REPO_ROOT / f"output/ml/{self.run}/results"
+        else:
+            in_path = Path(in_path)
 
-        # Define columns to drop for training (but keep event/subrun for now)
-        col_to_drop = ["d0", "tanDip", "maxr", "mom_mag", "PEs_per_hit", "t0", "timeStart", "timeEnd"]
-        df_train.drop(columns=col_to_drop, axis=1, inplace=True)
+        tag_path = in_path / tag
+        results_file = tag_path / "results.pkl"
 
-        # Separate features, labels, and metadata
-        X = df_train.drop(["label", "event", "subrun"], axis=1)
-        y = df_train["label"]
-        metadata = df_train[["event", "subrun"]]
+        if not results_file.exists():
+            self.logger.log(f"Results file not found: {results_file}", "error")
+            return None
 
-        # Split data AND metadata together
-        X_train, X_test, y_train, y_test, metadata_train, metadata_test = train_test_split(
-                X, y, metadata,
-                test_size=0.2, 
-                random_state=42,
-                stratify=y
-                )       
+        results = joblib.load(results_file)
 
-        # Return as dictionary
-        return {
-                "df_train_full": df_train_full,
-                "X_train": X_train,
-                "X_test": X_test,
-                "y_train": y_train,
-                "y_train": y_train,
-                "metadata_train": metadata_train,
-                "metadata_test": metadata_test,
-                }
+        # Reload Keras model if saved separately
+        if results.get("model") is None and "keras_model_path" in results:
+            keras_path = Path(results["keras_model_path"])
+            if keras_path.exists():
+                import tensorflow as tf
+                results["model"] = tf.keras.models.load_model(keras_path)
+                self.logger.log(f"Loaded Keras model from {keras_path}", "info")
+            else:
+                self.logger.log(f"Keras model file not found: {keras_path}", "error")
+                return None
+
+        self.logger.log(f"Loaded training results for '{tag}' from {tag_path}", "success")
+
+        return results
+

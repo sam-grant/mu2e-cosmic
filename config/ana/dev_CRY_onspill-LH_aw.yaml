@@ -5,7 +5,7 @@
 process:
   defname: "nts.mu2e.CosmicCRYSignalAllOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.root"
   cutset_name: "dev"
-  max_workers: 75
+  max_workers: 48 
   verbosity: 1
   worker_verbosity: 0
   use_remote: true

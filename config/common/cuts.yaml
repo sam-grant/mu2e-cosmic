@@ -29,11 +29,11 @@ defaults:
         lo_sig_win_mevc: 103.6
         hi_sig_win_mevc: 104.9
     active:
-        one_track_per_event: true
-        # one_reco_electron: false # redundant with one_track_per_event 
+        # one_track_per_event: true
+        one_reco_electron: true 
         is_reco_electron: true
-        has_trk_front: true
-        has_trk_mid: true
+        # has_trk_front: true
+        thru_trk: true
         good_trkqual: true
         within_t0: true
         is_downstream: true 
@@ -43,7 +43,7 @@ defaults:
         within_d0: true
         within_pitch_angle_lo: true
         within_pitch_angle_hi: true
-        within_lhr_max_lo: true
+        within_lhr_max_lo: false 
         within_lhr_max_hi: true
         is_truth_electron: true
         # Dev 
@@ -133,28 +133,26 @@ cutsets:
         thresholds:
             lo_trkqual: 0.2
         active:
-            is_reco_electron: true
-            has_trk_front: true
-            has_trk_mid: true
-            within_t0: true
-            is_downstream: true
-            is_truth_electron: true
-            one_reco_electron: true
-            good_trkqual: true
-            has_hits: true
-            within_t0err: true
-            within_d0: true
-            within_pitch_angle_lo: true
-            within_pitch_angle_hi: true
-            within_lhr_max_lo: false
-            within_lhr_max_hi: true
-            within_coinc_start_time: true
-            within_coinc_end_time: true
+            within_coinc_start_time: false 
+            within_coinc_end_time: false
             unvetoed: false
-            within_wide_win: true
+            within_wide_win: true # no real cosmics below 85 MeV/c 
             within_ext_win: false
             within_sig_win: false
 
+    dTPreprocess:
+        description:
+            "dT optimisation cuts" 
+        thresholds:
+            lo_trkqual: 0.2
+        active:
+            within_lhr_max_lo: false
+            within_coinc_start_time: true # false 
+            within_coinc_end_time: true # false 
+            unvetoed: false
+            within_wide_win: false 
+            within_ext_win: false
+            within_sig_win: false
     dev:
         description:
             "CRV development cuts"

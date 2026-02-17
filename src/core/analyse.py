@@ -178,76 +178,99 @@ class Analyse:
             raise e
             
         try:
-            # Track level definition 
-            has_trk_front = ak.any(at_trk_front, axis=-1)
-            
-            # Add cut 
+            thru_trk = (
+                    ak.any(at_trk_front, axis=-1)
+                    & ak.any(at_trk_mid, axis=-1)
+                    & ak.any(at_trk_back, axis=-1)
+                    )
+
             cut_manager.add_cut(
-                name="has_trk_front", 
-                description="Tracks intersect tracker entrance", 
-                mask=has_trk_front,
-                active=self.active_cuts["has_trk_front"],
+                name="thru_trk", 
+                description="Tracks intersect full tracker", 
+                mask=thru_trk,
+                active=self.active_cuts["thru_trk"],
                 group="Preselect"
             )
             # Append for debugging
-            data = self._append_array(data, at_trk_front, "at_trk_front")
-            data = self._append_array(data, has_trk_front, "has_trk_front")
+            data = self._append_array(data, thru_trk, "thru_trk")
             
         except Exception as e:
-            self.logger.log(f"Error defining 'has_trk_front' cut: {e}", "error") 
+            self.logger.log(f"Error defining 'thru_trk' cut: {e}", "error") 
             raise e
 
-        try:
-            # Track level definition 
-            has_trk_mid = ak.any(at_trk_mid, axis=-1)
-            
-            # Add cut 
-            cut_manager.add_cut(
-                name="has_trk_mid", 
-                description="Tracks intersect tracker middle", 
-                mask=has_trk_mid,
-                active=self.active_cuts["has_trk_mid"],
-                group="Preselect"
-            )
-            # Append for debugging
-            data = self._append_array(data, at_trk_mid, "at_trk_mid")
-            data = self._append_array(data, has_trk_mid, "has_trk_mid")
-            
-        except Exception as e:
-            self.logger.log(f"Error defining 'has_trk_mid' cut: {e}", "error") 
-            raise e
+#        try:
+#            # Track level definition 
+#            has_trk_front = ak.any(at_trk_front, axis=-1)
+#            
+#            # Add cut 
+#            cut_manager.add_cut(
+#                name="has_trk_front", 
+#                description="Tracks intersect tracker entrance", 
+#                mask=has_trk_front,
+#                active=self.active_cuts["has_trk_front"],
+#                group="Preselect"
+#            )
+#            # Append for debugging
+#            data = self._append_array(data, at_trk_front, "at_trk_front")
+#            data = self._append_array(data, has_trk_front, "has_trk_front")
+#            
+#        except Exception as e:
+#            self.logger.log(f"Error defining 'has_trk_front' cut: {e}", "error") 
+#            raise e
+#
+#        try:
+#            # Track level definition 
+#            has_trk_mid = ak.any(at_trk_mid, axis=-1)
+#            
+#            # Add cut 
+#            cut_manager.add_cut(
+#                name="has_trk_mid", 
+#                description="Tracks intersect tracker middle", 
+#                mask=has_trk_mid,
+#                active=self.active_cuts["has_trk_mid"],
+#                group="Preselect"
+#            )
+#            # Append for debugging
+#            data = self._append_array(data, at_trk_mid, "at_trk_mid")
+#            data = self._append_array(data, has_trk_mid, "has_trk_mid")
+#            
+#        except Exception as e:
+#            self.logger.log(f"Error defining 'has_trk_mid' cut: {e}", "error") 
+#            raise e
            
-        ###################################################
-        # One track / event
-        ###################################################
-        try:
+        # ###################################################
+        # # One track / event
+        # # An approximation...
+        # # Really not sure how to do better...
+        # ###################################################
+        # try:
 
-            # Count unique pdgs
-            pdgs = data["trk"]["trk.pdg"]
-            n_unique_pdgs = ak.num(ak.run_lengths(ak.sort(pdgs)), axis=-1)
-            n_total_pdgs = ak.num(pdgs, axis=-1)
-            has_duplicate_pdgs = n_unique_pdgs < n_total_pdgs  # duplicates exist
+        #     # Count unique pdgs
+        #     pdgs = data["trk"]["trk.pdg"]
+        #     n_unique_pdgs = ak.num(ak.run_lengths(ak.sort(pdgs)), axis=-1)
+        #     n_total_pdgs = ak.num(pdgs, axis=-1)
+        #     has_duplicate_pdgs = n_unique_pdgs < n_total_pdgs  # duplicates exist
 
-            # Event-level definition 
-            single_track = ~has_duplicate_pdgs 
+        #     # Event-level definition 
+        #     single_track = ~has_duplicate_pdgs 
 
-            # Add cut 
-            cut_manager.add_cut(
-                name="one_track_per_event",
-                description="One track / event", 
-                mask=single_track,
-                active=self.active_cuts["one_track_per_event"],
-                group="Preselect"
-            )
+        #     # Add cut 
+        #     cut_manager.add_cut(
+        #         name="one_track_per_event",
+        #         description="One track / event", 
+        #         mask=single_track,
+        #         active=self.active_cuts["one_track_per_event"],
+        #         group="Preselect"
+        #     )
 
-            # Append for debugging
-            data = self._append_array(data, single_track, "one_track_per_event")
-            data = self._append_array(data, has_duplicate_pdgs, "has_duplicate_pdgs")
-            data = self._append_array(data, n_unique_pdgs, "n_unique_pdgs")
+        #     # Append for debugging
+        #     data = self._append_array(data, single_track, "one_track_per_event")
+        #     data = self._append_array(data, has_duplicate_pdgs, "has_duplicate_pdgs")
+        #     data = self._append_array(data, n_unique_pdgs, "n_unique_pdgs")
 
-        except Exception as e:
-            self.logger.log(f"Error defining 'one_track_per_event' cut: {e}", "error") 
-            raise e
+        # except Exception as e:
+        #     self.logger.log(f"Error defining 'one_track_per_event' cut: {e}", "error") 
+        #     raise e
 
         ###################################################
         # Select electron track fit hypothesis  
@@ -270,32 +293,27 @@ class Analyse:
             self.logger.log(f"Error defining 'is_reco_electron' cut: {e}", "error") 
             raise e
 
-        # ###################################################
-        # # One electron track fit / event 
-        # # This deals with split reflected tracks
-        # # This is redundant 
-        # ###################################################
-        # try: 
-        #     # Event-level definition
-        #     # one_reco_electron_per_event = ak.sum(is_reco_electron, axis=-1) == 1
-        #     one_reco_electron = ak.sum(is_reco_electron, axis=-1) == 1
-        #     # Broadcast to track level
-        #     # Is this even needed? Aren't event level cuts just fine? 
-        #     # one_reco_electron, _ = ak.broadcast_arrays(one_reco_electron_per_event, is_reco_electron) # this returns a tuple
-        #     # Add cut 
-        #     cut_manager.add_cut(
-        #         name="one_reco_electron",
-        #         description="One reco electron / event",
-        #         mask=one_reco_electron,
-        #         active=self.active_cuts["one_reco_electron"],
-        #         group="Preselect"
-        #     )
-        #     # Append for debugging 
-        #     data = self._append_array(data, one_reco_electron, "one_reco_electron")
-        #     # data = self._append_array(data, one_reco_electron_per_event, "one_reco_electron_per_event")
-        # except Exception as e:
-        #     self.logger.log(f"Error defining 'one_reco_electron' cut: {e}", "error") 
-        #     raise e
+        ###################################################
+        # One electron track fit / event 
+        # This deals with split reflected tracks
+        # But not cases where you have non-electron reflections
+        ###################################################
+        try: 
+            # Event-level definition
+            one_reco_electron = ak.sum(is_reco_electron, axis=-1) == 1
+            # Add cut 
+            cut_manager.add_cut(
+                name="one_reco_electron",
+                description="One reco electron / event",
+                mask=one_reco_electron,
+                active=self.active_cuts["one_reco_electron"],
+                group="Preselect"
+            )
+            # Append for debugging 
+            data = self._append_array(data, one_reco_electron, "one_reco_electron")
+        except Exception as e:
+            self.logger.log(f"Error defining 'one_reco_electron' cut: {e}", "error") 
+            raise e
 
         # ###################################################
         # # Downstream track thro' tracker

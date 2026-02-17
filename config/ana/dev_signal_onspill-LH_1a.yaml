@@ -5,7 +5,7 @@
 process:
   defname: "nts.mu2e.CeEndpointOnSpillTriggered.MDC2025-000.root"
   cutset_name: "dev"
-  max_workers: 10
+  max_workers: 4 
   verbosity: 1
   worker_verbosity: 0
   use_remote: true
@@ -14,7 +14,7 @@ process:
 postprocess:
   write_events: false 
   write_event_info: false 
-  generated_events: 10000000
+  generated_events: 10000000 #196589320411 # Check with Natalie
   livetime: null 
 
 output:

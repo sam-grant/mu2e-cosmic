@@ -101,8 +101,14 @@ ana_labels=(
     # "SU2020b_CRY_onspill-LH_aw"
 
     # "dev_CRY_onspill-LH_aw"
-    "dev_CRY_mix2BB_onspill-LH_aw"
-    "dev_signal_mix2BB_onspill-LH_aw"
+    #"dev_CRY_mix2BB_onspill-LH_aw"
+    #"dev_signal_mix2BB_onspill-LH_aw"
+    #"dev_signal_onspill-LH_aw"
+    #"dev_CRY_mix1BB_onspill-LH_1a" # doesn't exist
+    #"dev_signal_mix1BB_onspill-LH_1a"
+    #"dev_CRY_onspill-LH_1a"
+    #"dev_signal_onspill-LH_1a"
+    "dev_CRY_onspill-LH_aw"
     "dev_signal_onspill-LH_aw"
 )
 

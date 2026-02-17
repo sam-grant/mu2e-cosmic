@@ -61,7 +61,7 @@ def main():
             run(file_name=config["file_name"], tag=config["tag"], run_str=config["run"])
         return
 
-    run_str = "a"
+    run_str = "c"
 
     configs = [
         {
@@ -69,19 +69,19 @@ def main():
             "tag": "CRY_onspill-LH_aw",
             "run": run_str
         },
-        {
-            "defname": "nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root",
-            "tag": "CRY_mix2BB_onspill-LH_aw",
-            "run": run_str
-        },
-        {
-            "defname" : "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.root",
-            "tag": "CE_onspill-LH_aw",
-            "run": run_str
-        },
+#         {
+#             "defname": "nts.mu2e.CosmicCRYSignalAllMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root",
+#             "tag": "CRY_mix2BB_onspill-LH_aw",
+#             "run": run_str
+#         },
+#         {
+#             "defname" : "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aw_perfect_v1_3_v06_06_00.root",
+#             "tag": "CE_onspill-LH_aw",
+#             "run": run_str
+#         },
         {
             "defname": "nts.mu2e.CeEndpointMix2BBTriggered.MDC2020aw_best_v1_3_v06_06_00.root",
-            "tag": "CE_mix_onspill-LH_aw",
+            "tag": "CE_mix2BB_onspill-LH_aw",
             "run": run_str
         },
     ]
