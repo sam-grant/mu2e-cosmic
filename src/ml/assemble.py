@@ -169,6 +169,12 @@ class AssembleDataset():
 
         self.logger.log(f"Columns: {df_full.columns}", "max")
 
+        # Derived features
+        df_full["duration"] = df_full["timeEnd"] - df_full["timeStart"]
+
+        # Replace inf with NaN (XGBoost handles NaN natively)
+        df_full.replace([np.inf, -np.inf], np.nan, inplace=True)
+
         # Drop columns not used for training (but keep event/subrun for now)
         # Would be better if this wasn't hardcoded
         col_to_drop = ["d0", "tanDip", "maxr", "mom_mag", "PEs_per_hit", "t0", "timeStart", "timeEnd"]
