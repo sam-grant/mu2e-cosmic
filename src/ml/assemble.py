@@ -170,7 +170,7 @@ class AssembleDataset():
         self.logger.log(f"Columns: {df_full.columns}", "max")
 
         # Derived features
-        df_full["duration"] = df_full["timeEnd"] - df_full["timeStart"]
+        # df_full["duration"] = df_full["timeEnd"] - df_full["timeStart"]
 
         # Replace inf with NaN (XGBoost handles NaN natively)
         df_full.replace([np.inf, -np.inf], np.nan, inplace=True)
