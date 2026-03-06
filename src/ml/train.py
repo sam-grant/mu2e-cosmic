@@ -17,7 +17,7 @@ from pyutils.pylogger import Logger
 class Train:
     """Train ML models on pre-split data from assemble_dataset()."""
 
-    def __init__(self, data, model=None, scale_features=True,
+    def __init__(self, data, model=None, scale_features=False,
                  run="j", out_path=None, verbosity=1):
         """Initialise with assemble_dataset() dict. Default model: XGBClassifier."""
         # Set default model
