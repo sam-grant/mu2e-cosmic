@@ -36,7 +36,7 @@ class Optimise:
         self.logger.log("Initialised", "success")
 
     def grid_search(self, param_grid, tag_prefix="scan",
-                    save_output=False, random_state=42):
+                    save_output=False, random_state=42, fixed_params=None):
         """Run grid search. Returns best result (lowest deadtime meeting efficiency constraint)."""
         # Build all combinations
         param_names = list(param_grid.keys())
@@ -68,11 +68,12 @@ class Optimise:
                 run=self.run,
                 verbosity=0
             )
+            all_params = {**(fixed_params or {}), **hyperparams}
             training_results = trainer.train(
                 tag=tag,
                 random_state=random_state,
                 save_output=save_output,
-                **hyperparams
+                **all_params
             )
 
             # Analyse — find threshold at minimum efficiency
@@ -136,7 +137,7 @@ class Optimise:
         return self.best_result
 
     def grid_search_cv(self, param_grid, n_folds=5, tag_prefix="scan_cv",
-                       random_state=42):
+                       random_state=42, fixed_params=None):
         """K-fold CV grid search. Averages metrics across folds per hyperparam combo."""
         param_names = list(param_grid.keys())
         param_values = list(param_grid.values())
@@ -185,11 +186,12 @@ class Optimise:
                     run=self.run,
                     verbosity=0
                 )
+                all_params = {**(fixed_params or {}), **hyperparams}
                 training_results = trainer.train(
                     tag=f"{tag}_fold{k}",
                     random_state=random_state,
                     save_output=False,
-                    **hyperparams
+                    **all_params
                 )
 
                 ana = Validate(training_results, run=self.run, verbosity=0)
