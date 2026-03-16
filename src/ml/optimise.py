@@ -5,12 +5,14 @@ import os
 import itertools
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.model_selection import GroupKFold
 
 REPO_ROOT = Path(os.path.dirname(os.path.abspath(__file__))).parents[1]
 
 from pyutils.pylogger import Logger
+from pyutils.pyplot import Plot
 from train import Train
 from validate import Validate
 
@@ -86,7 +88,9 @@ class Optimise:
             row = {
                 "tag": tag,
                 **hyperparams,
-                "auc": ana._test_auc,
+                "train_auc": ana._train_auc,
+                "test_auc": ana._test_auc,
+                "overfit_gap": ana._train_auc - ana._test_auc,
                 "threshold": threshold_results["threshold"],
                 "veto_efficiency": threshold_results["veto_efficiency"],
                 "signal_efficiency": threshold_results["signal_efficiency"],
@@ -197,7 +201,8 @@ class Optimise:
                 )
 
                 fold_results.append({
-                    "auc": ana._test_auc,
+                    "train_auc": ana._train_auc,
+                    "test_auc": ana._test_auc,
                     "threshold": threshold_results["threshold"],
                     "veto_efficiency": threshold_results["veto_efficiency"],
                     "deadtime": threshold_results["deadtime"],
@@ -205,7 +210,8 @@ class Optimise:
                 })
 
             # Average across folds
-            mean_auc = np.mean([r["auc"] for r in fold_results])
+            mean_train_auc = np.mean([r["train_auc"] for r in fold_results])
+            mean_test_auc = np.mean([r["test_auc"] for r in fold_results])
             mean_deadtime = np.mean([r["deadtime"] for r in fold_results])
             mean_veto_eff = np.mean([r["veto_efficiency"] for r in fold_results])
             mean_signal_eff = np.mean([r["signal_efficiency"] for r in fold_results])
@@ -216,7 +222,9 @@ class Optimise:
             row = {
                 "tag": tag,
                 **hyperparams,
-                "auc": mean_auc,
+                "train_auc": mean_train_auc,
+                "test_auc": mean_test_auc,
+                "overfit_gap": mean_train_auc - mean_test_auc,
                 "threshold": mean_threshold,
                 "veto_efficiency": mean_veto_eff,
                 "veto_efficiency_std": std_veto_eff,
@@ -229,7 +237,8 @@ class Optimise:
             self.logger.log(
                 f"[{i+1}/{len(combinations)}] {tag}: "
                 f"deadtime={mean_deadtime*100:.3f}±{std_deadtime*100:.3f}%, "
-                f"veto_eff={mean_veto_eff*100:.3f}±{std_veto_eff*100:.3f}%",
+                f"veto_eff={mean_veto_eff*100:.3f}%, "
+                f"overfit_gap={mean_train_auc - mean_test_auc:.5f}",
                 "info"
             )
 
@@ -282,16 +291,91 @@ class Optimise:
             print(df.to_string(index=False))
             print(f"{'='*80}\n")
 
-    def save_summary(self, out_path=None):
+    def save_summary(self, tag=None, out_path=None):
         """Save results summary to CSV."""
         df = self.get_summary()
         if df is None:
             return
 
         if out_path is None:
-            out_path = REPO_ROOT / f"output/ml/{self.run}/results/optimisation_summary.csv"
+            fname = f"optimisation_summary_{tag}.csv" if tag else "optimisation_summary.csv"
+            out_path = REPO_ROOT / f"output/ml/{self.run}/results/{fname}"
 
         out_path = Path(out_path)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(out_path, index=False)
         self.logger.log(f"Summary saved to {out_path}", "success")
+
+    def plot_overfit_diagnostic(self, param_name, tag=None, out_path=None, show=True):
+        """Plot train vs test AUC and overfit gap as a function of a hyperparameter.
+        Other params are averaged over."""
+        df = self.get_summary()
+        if df is None or param_name not in df.columns:
+            self.logger.log(f"No results or '{param_name}' not in summary", "warning")
+            return
+
+        Plot(verbosity=0)  # Load Mu2e style
+
+        # Group by the parameter, averaging over all other hyperparam combinations
+        agg_dict = {
+            "train_auc": ("train_auc", "mean"),
+            "test_auc": ("test_auc", "mean"),
+            "train_auc_std": ("train_auc", "std"),
+            "test_auc_std": ("test_auc", "std"),
+            "overfit_gap": ("overfit_gap", "mean"),
+            "overfit_gap_std": ("overfit_gap", "std"),
+            "deadtime": ("deadtime", "mean"),
+            "deadtime_std": ("deadtime", "std"),
+        }
+        grouped = df.groupby(param_name).agg(**agg_dict).reset_index()
+
+        fig, axes = plt.subplots(1, 3, figsize=(5.3 * 3, 4.8))
+
+        # Train vs test AUC
+        ax = axes[0]
+        ax.errorbar(grouped[param_name], grouped["train_auc"],
+                     yerr=grouped["train_auc_std"],
+                     marker="o", label="Train", capsize=3)
+        ax.errorbar(grouped[param_name], grouped["test_auc"],
+                     yerr=grouped["test_auc_std"],
+                     marker="s", label="Test", capsize=3)
+        ax.set_xlabel(param_name)
+        ax.set_ylabel("AUC")
+        ax.legend(loc="best")
+        ax.set_title("Train vs test AUC")
+
+        # Overfit gap
+        ax = axes[1]
+        ax.errorbar(grouped[param_name], grouped["overfit_gap"],
+                    yerr=grouped["overfit_gap_std"],
+                    marker="o", color="purple", capsize=3)
+        ax.axhline(0, color="grey", linestyle="--", alpha=0.5)
+        ax.ticklabel_format(axis="y", style="scientific", scilimits=(0, 0),
+                            useMathText=True)
+        ax.set_xlabel(param_name)
+        ax.set_ylabel("Train AUC $-$ test AUC")
+        ax.set_title("Overfit gap")
+
+        # Deadtime
+        ax = axes[2]
+        ax.errorbar(grouped[param_name], grouped["deadtime"] * 100,
+                    yerr=grouped["deadtime_std"],
+                    marker="o", color="green", capsize=3)
+        ax.set_xlabel(param_name)
+        ax.set_ylabel("Deadtime [%]")
+        ax.set_title("Deadtime")
+
+        plt.tight_layout()
+
+        if out_path is None:
+            img_dir = REPO_ROOT / f"output/images/ml/{self.run}/optimise"
+            img_dir.mkdir(parents=True, exist_ok=True)
+            fname = f"overfit_{tag}_{param_name}.png" if tag else f"overfit_{param_name}.png"
+            out_path = img_dir / fname
+        out_path = Path(out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(out_path)
+        self.logger.log(f"Saved to {out_path}", "success")
+
+        if show:
+            plt.show()
