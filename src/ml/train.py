@@ -30,10 +30,13 @@ class Train:
 
         # Extract data components
         self.X_train = data["X_train"]
+        self.X_val = data.get("X_val", None)
         self.X_test = data["X_test"]
         self.y_train = data["y_train"]
+        self.y_val = data.get("y_val", None)
         self.y_test = data["y_test"]
         self.metadata_train = data["metadata_train"]
+        self.metadata_val = data.get("metadata_val", None)
         self.metadata_test = data["metadata_test"]
 
         # Optional full dataframe
@@ -93,10 +96,11 @@ class Train:
 
         # Scale features if requested
         if self.scale_features:
-            X_train_scaled, X_test_scaled = self._scale_features()
+            X_train_scaled, X_test_scaled, X_val_scaled = self._scale_features()
         else:
             X_train_scaled = self.X_train.values
             X_test_scaled = self.X_test.values
+            X_val_scaled = self.X_val.values if self.X_val is not None else None
 
         # Train model based on type
         if self.is_keras:
@@ -114,9 +118,13 @@ class Train:
                 random_state, **hyperparams
             )
 
-        # Predict on test and train sets
+        # Predict on train, val, and test sets
         y_pred, y_proba = self._predict(X_test_scaled)
         _, y_proba_train = self._predict(X_train_scaled)
+
+        y_pred_val, y_proba_val = None, None
+        if X_val_scaled is not None:
+            y_pred_val, y_proba_val = self._predict(X_val_scaled)
 
         self.logger.log("Training complete!", "success")
 
@@ -126,12 +134,17 @@ class Train:
             "model": self.model,
             "feature_names": list(self.X_train.columns),
             "y_train": self.y_train,
+            "y_val": self.y_val,
             "y_test": self.y_test,
             "y_pred": y_pred,
             "y_proba": y_proba,
+            "y_pred_val": y_pred_val,
+            "y_proba_val": y_proba_val,
             "y_proba_train": y_proba_train,
+            "X_val": self.X_val,
             "X_test": self.X_test,
             "scaler": self.scaler,
+            "metadata_val": self.metadata_val,
             "metadata_test": self.metadata_test
         }
 
@@ -143,13 +156,14 @@ class Train:
 
     def train_cv(self, tag, n_folds=5, min_eff=0.999, random_state=42,
                  save_output=False, **hyperparams):
-        """Train with K-fold CV for robust threshold estimation. Returns results dict with CV threshold."""
+        """Train with K-fold CV over train set for robust threshold estimation.
+        Val and test sets are held out entirely."""
         from validate import Validate
 
-        # Recombine train/test into full dataset
-        X = pd.concat([self.X_train, self.X_test]).reset_index(drop=True)
-        y = pd.concat([self.y_train, self.y_test]).reset_index(drop=True)
-        metadata = pd.concat([self.metadata_train, self.metadata_test]).reset_index(drop=True)
+        # CV folds over train set only — val/test held out
+        X = self.X_train.reset_index(drop=True)
+        y = self.y_train.reset_index(drop=True)
+        metadata = self.metadata_train.reset_index(drop=True)
 
         groups = metadata["subrun"].astype(str) + "_" + metadata["event"].astype(str)
         gkf = GroupKFold(n_splits=n_folds)
@@ -230,7 +244,7 @@ class Train:
             "info"
         )
 
-        # Train final model on full pre-split data (original train/test)
+        # Train final model on full train set (val/test held out)
         self.logger.log("Training final model on full train set...", "info")
         results = self.train(
             tag=tag,
@@ -265,7 +279,39 @@ class Train:
             "fold_metrics": fold_metrics,
         }
 
-        # Save after CV metrics are attached
+        # Evaluate on val and test sets with CV threshold
+        final_ana = Validate(results, run=self.run, verbosity=self.verbosity)
+
+        if self.X_val is not None:
+            val_money = final_ana.money_table(
+                X=self.X_val, y=self.y_val,
+                metadata=self.metadata_val,
+                threshold=cv_threshold,
+                save_csv=False
+            )
+            results["val_money_table"] = val_money
+            self.logger.log(
+                f"Validation set metrics (threshold={cv_threshold:.4f}):\n"
+                f"  Veto efficiency: {val_money['raw']['veto_efficiency']*100:.3f}%\n"
+                f"  Deadtime:        {val_money['raw']['deadtime']*100:.3f}%",
+                "info"
+            )
+
+        test_money = final_ana.money_table(
+            X=self.X_test, y=self.y_test,
+            metadata=self.metadata_test,
+            threshold=cv_threshold,
+            save_csv=False
+        )
+        results["test_money_table"] = test_money
+        self.logger.log(
+            f"Test set metrics (threshold={cv_threshold:.4f}):\n"
+            f"  Veto efficiency: {test_money['raw']['veto_efficiency']*100:.3f}%\n"
+            f"  Deadtime:        {test_money['raw']['deadtime']*100:.3f}%",
+            "info"
+        )
+
+        # Save after all metrics are attached
         if save_output:
             self._save_results(results, tag)
 
@@ -275,7 +321,6 @@ class Train:
         )
 
         # Plot CV threshold overlay
-        final_ana = Validate(results, run=self.run, verbosity=self.verbosity)
         final_ana.plot_threshold_cv(fold_metrics, cv_threshold, min_eff=min_eff)
 
         return results
@@ -285,7 +330,8 @@ class Train:
         self.scaler = StandardScaler()
         X_train_scaled = self.scaler.fit_transform(self.X_train)
         X_test_scaled = self.scaler.transform(self.X_test)
-        return X_train_scaled, X_test_scaled
+        X_val_scaled = self.scaler.transform(self.X_val) if self.X_val is not None else None
+        return X_train_scaled, X_test_scaled, X_val_scaled
 
     def _fit_model(self, X_train, y_train, random_state=42, **hyperparams):
         """Fit sklearn-compatible model. Falls back if random_state unsupported."""

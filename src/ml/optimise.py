@@ -138,11 +138,10 @@ class Optimise:
         param_values = list(param_grid.values())
         combinations = list(itertools.product(*param_values))
 
-        # Recombine train/test to get full dataset
-        X = pd.concat([self.data["X_train"], self.data["X_test"]]).reset_index(drop=True)
-        y = pd.concat([self.data["y_train"], self.data["y_test"]]).reset_index(drop=True)
-        metadata = pd.concat([self.data["metadata_train"],
-                              self.data["metadata_test"]]).reset_index(drop=True)
+        # CV folds over train set only, val/test held out
+        X = self.data["X_train"].reset_index(drop=True)
+        y = self.data["y_train"].reset_index(drop=True)
+        metadata = self.data["metadata_train"].reset_index(drop=True)
 
         # Event-level groups for fold splitting
         groups = metadata["subrun"].astype(str) + "_" + metadata["event"].astype(str)

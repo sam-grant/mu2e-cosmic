@@ -26,11 +26,16 @@ class Validate:
         self.scaler = results.get("scaler", None)
         self.feature_names = results.get("feature_names", None)
         self.y_test = results["y_test"]
+        self.y_val = results.get("y_val", None)
         self.y_train = results["y_train"]
         self.y_pred = results["y_pred"]
         self.y_proba = results["y_proba"]
+        self.y_pred_val = results.get("y_pred_val", None)
+        self.y_proba_val = results.get("y_proba_val", None)
         self.y_proba_train = results["y_proba_train"]
+        self.X_val = results.get("X_val", None)
         self.X_test = results.get("X_test", None)
+        self.metadata_val = results.get("metadata_val", None)
         self.metadata_test = results.get("metadata_test", None)
         self.tag = results["tag"]
 
@@ -48,6 +53,7 @@ class Validate:
 
         # Will be computed
         self._train_auc = None
+        self._val_auc = None
         self._test_auc = None
 
         # Just for styles
@@ -63,24 +69,29 @@ class Validate:
         self.logger.log(f"Saved to {out_path}", "success")
 
     def roc_auc(self):
-        """Compute ROC AUC for train and test sets."""
-        # Test AUC 
+        """Compute ROC AUC for train, val, and test sets."""
+        self._train_auc = roc_auc_score(self.y_train, self.y_proba_train)
         self._test_auc = roc_auc_score(self.y_test, self.y_proba)
 
-        # Train AUC (need to compute probabilities)
-        self._train_auc = roc_auc_score(self.y_train, self.y_proba_train)
-
-        self.logger.log(
+        msg = (
             f"ROC AUC:\n"
-            f"  Train: {self._train_auc:.4f}\n"
-            f"  Test:  {self._test_auc:.4f}",
-            "info"
+            f"  Train: {self._train_auc:.6f}\n"
         )
 
-        return {
+        result = {
             "train_auc": self._train_auc,
             "test_auc": self._test_auc
         }
+
+        if self.y_val is not None and self.y_proba_val is not None:
+            self._val_auc = roc_auc_score(self.y_val, self.y_proba_val)
+            msg += f"  Val:   {self._val_auc:.6f}\n"
+            result["val_auc"] = self._val_auc
+
+        msg += f"  Test:  {self._test_auc:.6f}"
+        self.logger.log(msg, "info")
+
+        return result
 
     def plot_roc(self, out_path=None, show=True):
         """Plot ROC curve for test set."""
@@ -266,7 +277,6 @@ class Validate:
             ax.set_xlabel('Event maximum probability')
             ax.set_ylabel('Fraction')
             ax.set_ylim([0.99, 1.01])
-            # ax.set_xlim([0, 0.10])
             ax.legend(loc='best')
             ax.grid(alpha=0.4)
             ax.set_yscale("log")
@@ -329,7 +339,7 @@ class Validate:
         ax.set_xlabel('Maximum probability / event')
         # ax.set_ylabel('Fraction')
         ax.set_ylim([0.9925, 1.0075])
-        ax.legend(fontsize=12, loc='upper left')
+        ax.legend(fontsize=12, loc='best')
         # ax.grid(alpha=0.4)
         ax.set_yscale("log")
 

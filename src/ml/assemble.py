@@ -186,28 +186,47 @@ class AssembleDataset():
         metadata = df_ml[["event", "subrun"]]
 
         # Split at event level — all coincidences from the same event
-        # stay together in train or test
+        # stay together in the same split
         groups = metadata["subrun"].astype(str) + "_" + metadata["event"].astype(str)
 
-        gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-        train_idx, test_idx = next(gss.split(X, y, groups=groups))
+        # Two-stage split: 70% train, 15% val, 15% test
+        # Stage 1: 70/30 train/temp
+        gss1 = GroupShuffleSplit(n_splits=1, test_size=0.30, random_state=42)
+        train_idx, temp_idx = next(gss1.split(X, y, groups=groups))
 
-        X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
-        y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+        # Stage 2: split temp 50/50 → 15% val, 15% test
+        groups_temp = groups.iloc[temp_idx]
+        gss2 = GroupShuffleSplit(n_splits=1, test_size=0.50, random_state=42)
+        val_idx_rel, test_idx_rel = next(gss2.split(
+            X.iloc[temp_idx], y.iloc[temp_idx], groups=groups_temp
+        ))
+        val_idx = temp_idx[val_idx_rel]
+        test_idx = temp_idx[test_idx_rel]
+
+        X_train, X_val, X_test = X.iloc[train_idx], X.iloc[val_idx], X.iloc[test_idx]
+        y_train, y_val, y_test = y.iloc[train_idx], y.iloc[val_idx], y.iloc[test_idx]
         metadata_train = metadata.iloc[train_idx]
+        metadata_val = metadata.iloc[val_idx]
         metadata_test = metadata.iloc[test_idx]
 
-        self.logger.log("Split data (event-level grouping)", "max")
-
-        self.logger.log("Got ML data", "success") 
+        self.logger.log(
+            f"Split data 70/15/15 (event-level grouping)\n"
+            f"  Train: {len(X_train)} coincidences\n"
+            f"  Val:   {len(X_val)} coincidences\n"
+            f"  Test:  {len(X_test)} coincidences",
+            "success"
+        )
 
         # Return as dictionary
         return {
                 "df_full": df_full,
                 "X_train": X_train,
+                "X_val": X_val,
                 "X_test": X_test,
                 "y_train": y_train,
+                "y_val": y_val,
                 "y_test": y_test,
                 "metadata_train": metadata_train,
+                "metadata_val": metadata_val,
                 "metadata_test": metadata_test,
                 }
