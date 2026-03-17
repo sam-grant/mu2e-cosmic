@@ -246,12 +246,24 @@ class Validate:
         actual_deadtime = deadtime_losses[optimal_idx]
         actual_signal_eff = signal_efficiencies[optimal_idx]
 
+        # Precision, recall, F1 at the operating point
+        event_vetoed = event_max_proba >= optimal_threshold
+        tp = (is_signal & event_vetoed).sum()
+        fp = (is_background & event_vetoed).sum()
+        fn = (is_signal & ~event_vetoed).sum()
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+
         self.logger.log(
             f"Event-level threshold (target {min_eff*100:.2f}% veto efficiency):\n"
             f"  Threshold:         {optimal_threshold:.4f}\n"
             f"  Veto efficiency:   {actual_veto_eff*100:.3f}%\n"
             f"  Signal efficiency: {actual_signal_eff*100:.3f}%\n"
-            f"  Deadtime:          {actual_deadtime*100:.3f}%",
+            f"  Deadtime:          {actual_deadtime*100:.3f}%\n"
+            f"  Precision:         {precision*100:.3f}%\n"
+            f"  Recall:            {recall*100:.3f}%\n"
+            f"  F1:                {f1:.6f}",
             "info"
         )
 
@@ -293,6 +305,9 @@ class Validate:
             "veto_efficiency": actual_veto_eff,
             "deadtime": actual_deadtime,
             "signal_efficiency": actual_signal_eff,
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
             "thresholds": thresholds,
             "veto_efficiencies": veto_efficiencies,
             "signal_efficiencies": signal_efficiencies,
@@ -562,50 +577,50 @@ class Validate:
         veto_eff = tp / (tp + fn) if (tp + fn) > 0 else 0
         deadtime = fp / (tn + fp) if (tn + fp) > 0 else 0
         veto_purity = tp / (tp + fp) if (tp + fp) > 0 else 0
-        accuracy = (tp + tn) / (tp + tn + fp + fn)
+        f1 = 2 * veto_eff * veto_purity / (veto_eff + veto_purity) if (veto_eff + veto_purity) > 0 else 0
         fom = veto_eff * (1 - deadtime)
 
         veto_eff_dt = tp_dt / (tp_dt + fn_dt) if (tp_dt + fn_dt) > 0 else 0
         deadtime_dt = fp_dt / (tn_dt + fp_dt) if (tn_dt + fp_dt) > 0 else 0
         veto_purity_dt = tp_dt / (tp_dt + fp_dt) if (tp_dt + fp_dt) > 0 else 0
-        accuracy_dt = (tp_dt + tn_dt) / (tp_dt + tn_dt + fp_dt + fn_dt)
+        f1_dt = 2 * veto_eff_dt * veto_purity_dt / (veto_eff_dt + veto_purity_dt) if (veto_eff_dt + veto_purity_dt) > 0 else 0
         fom_dt = veto_eff_dt * (1 - deadtime_dt)
 
         # --- Metrics comparison table ---
         metrics_df = pd.DataFrame({
             "Metric": [
-                "Veto efficiency",
+                "Veto efficiency (recall)",
                 "Deadtime",
-                "Veto purity",
-                "Overall accuracy",
+                "Veto purity (precision)",
+                "F1 score",
                 "Figure of merit",
             ],
             "ML model": [
                 f"{veto_eff*100:.3f}%",
                 f"{deadtime*100:.3f}%",
                 f"{veto_purity*100:.3f}%",
-                f"{accuracy*100:.3f}%",
+                f"{f1*100:.3f}%",
                 f"{fom*100:.3f}%",
             ],
             f"dT cut [{dT_min}, {dT_max}] ns": [
                 f"{veto_eff_dt*100:.3f}%",
                 f"{deadtime_dt*100:.3f}%",
                 f"{veto_purity_dt*100:.3f}%",
-                f"{accuracy_dt*100:.3f}%",
+                f"{f1_dt*100:.3f}%",
                 f"{fom_dt*100:.3f}%",
             ],
             "Difference": [
                 f"{(veto_eff - veto_eff_dt)*100:+.3f}%",
                 f"{(deadtime - deadtime_dt)*100:+.3f}%",
                 f"{(veto_purity - veto_purity_dt)*100:+.3f}%",
-                f"{(accuracy - accuracy_dt)*100:+.3f}%",
+                f"{(f1 - f1_dt)*100:+.3f}%",
                 f"{(fom - fom_dt)*100:+.3f}%",
             ],
             "Description": [
-                "Fraction of cosmics vetoed",
-                "Fraction of CE mix vetoed",
-                "Of vetoed events, fraction that are cosmics",
-                "Overall correct classification rate",
+                "Fraction of cosmics vetoed (TP/(TP+FN))",
+                "Fraction of CE mix vetoed (FP/(FP+TN))",
+                "Of vetoed events, fraction that are cosmics (TP/(TP+FP))",
+                "Harmonic mean of precision and recall",
                 "eff_veto * (1 - deadtime)",
             ],
         })
