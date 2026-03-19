@@ -682,6 +682,9 @@ class Validate:
                 "success"
             )
 
+        accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
+        accuracy_dt = (tp_dt + tn_dt) / (tp_dt + tn_dt + fp_dt + fn_dt) if (tp_dt + tn_dt + fp_dt + fn_dt) > 0 else 0
+
         return {
             "metrics": metrics_df,
             "confusion": confusion_df,
@@ -689,13 +692,15 @@ class Validate:
                 "veto_efficiency": veto_eff,
                 "deadtime": deadtime,
                 "veto_purity": veto_purity,
-                # "accuracy": accuracy,
+                "f1": f1,
+                "accuracy": accuracy,
                 "figure_of_merit": fom,
                 "tp": tp, "tn": tn, "fp": fp, "fn": fn,
                 "veto_efficiency_dt": veto_eff_dt,
                 "deadtime_dt": deadtime_dt,
                 "veto_purity_dt": veto_purity_dt,
-                # "accuracy_dt": accuracy_dt,
+                "f1_dt": f1_dt,
+                "accuracy_dt": accuracy_dt,
                 "figure_of_merit_dt": fom_dt,
                 "tp_dt": tp_dt, "tn_dt": tn_dt, "fp_dt": fp_dt, "fn_dt": fn_dt,
             },
