@@ -254,8 +254,9 @@ class Train:
         )
 
         # CV-averaged money table metrics
-        money_keys = ["veto_efficiency", "deadtime", "veto_purity",
-                       "accuracy", "figure_of_merit"]
+        # money_keys = ["veto_efficiency", "deadtime", "veto_purity",
+        #                "accuracy", "figure_of_merit"]
+        money_keys = ["veto_efficiency", "deadtime", "veto_purity", "figure_of_merit"]      
         money_keys_dt = [f"{k}_dt" for k in money_keys]
 
         cv_money = {}
@@ -335,6 +336,10 @@ class Train:
 
     def _fit_model(self, X_train, y_train, random_state=42, **hyperparams):
         """Fit sklearn-compatible model. Falls back if random_state unsupported."""
+        # Default to hist tree method for XGBoost (faster, required for GPU)
+        if self.model_class is xgb.XGBClassifier and "tree_method" not in hyperparams:
+            hyperparams["tree_method"] = "hist"
+
         # Try to pass random_state if model supports it
         try:
             model = self.model_class(random_state=random_state, **hyperparams)
@@ -419,5 +424,11 @@ class Train:
         else:
             # sklearn models can be pickled directly
             joblib.dump(results, file_path)
+
+            # Save XGBoost model in UBJ format for deployment
+            if hasattr(results["model"], "get_booster"):
+                ubj_path = tag_path / "model.ubj"
+                results["model"].get_booster().save_model(str(ubj_path))
+                self.logger.log(f"XGBoost model saved to {ubj_path}", "success")
 
         self.logger.log(f"Results saved to {file_path}", "success")
