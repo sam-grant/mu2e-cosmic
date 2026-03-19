@@ -61,7 +61,7 @@ class AssembleDataset():
         plotter = Plot(verbosity=0)
 
         features = [
-            {"name": "crv_z", "xlabel": "CRV z-position [mm]", "nbins": 100, "xmin": -15000, "xmax": 10000},
+            {"name": "crv_z", "xlabel": "CRV z-position [m]", "nbins": 100, "xmin": -15, "xmax": 10, "scale": 1e-3},
             {"name": "crv_y", "xlabel": "CRV y-position [mm]", "nbins": 100, "xmin": -4000, "xmax": 4000},
             {"name": "crv_x", "xlabel": "CRV x-position [mm]", "nbins": 100, "xmin": -4000, "xmax": 6000},
             {"name": "angle", "xlabel": "Angle [rad]", "nbins": 80, "xmin": -3.14159, "xmax": 3.14159},
@@ -76,20 +76,26 @@ class AssembleDataset():
         fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 6.4, nrows * 4.8))
         axes = np.atleast_2d(axes)
 
-        styles = {"CRY": {"color": "red"}, "CE Mix": {"color": "blue"}}
+        styles = {
+            "CRY": {"histtype": "stepfilled", "color": "C1", "alpha": 0.4, "linewidth": 2},
+            "CE Mix": {"histtype": "step", "color": "C0", "linewidth": 2},
+        }
 
         for i, feat in enumerate(features):
-            ax = axes[i // ncols, i % ncols]
+            row, col = i // ncols, i % ncols
+            ax = axes[row, col]
+
+            scale = feat.get("scale", 1.0)
+            cry_vals = np.array(ak.flatten(self.cry_data["events"][feat["name"]], axis=-1)) * scale
+            ce_vals = np.array(ak.flatten(self.ce_mix_data["events"][feat["name"]], axis=-1)) * scale
+
             plotter.plot_1D_overlay(
-                {
-                    "CRY": ak.flatten(self.cry_data["events"][feat["name"]], axis=-1),
-                    "CE Mix": ak.flatten(self.ce_mix_data["events"][feat["name"]], axis=-1),
-                },
+                {"CRY": cry_vals, "CE Mix": ce_vals},
                 nbins=feat["nbins"],
                 xmin=feat["xmin"],
                 xmax=feat["xmax"],
                 xlabel=feat["xlabel"],
-                ylabel="Normalised coincidences",
+                ylabel="Normalised coincidences" if col == 0 else "",
                 log_y=True,
                 log_x=feat.get("log_x", False),
                 norm_by_area=True,
