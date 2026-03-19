@@ -118,8 +118,17 @@ class Validate:
             plt.show()
 
 
-    def plot_feature_importance(self, feature_names=None, out_path=None, show=True):
-        """Plot feature importance (tree-based or linear models)."""
+    def plot_feature_importance(self, importance_type="gain", feature_names=None,
+                                n_repeats=10, dataset="val", out_path=None, show=True):
+        """Plot feature importance.
+
+        Args:
+            importance_type: "gain", "weight", "cover" (XGBoost built-in),
+                             "perm" (permutation importance).
+            feature_names: List of feature names. Auto-detected if None.
+            n_repeats: Number of repeats for permutation importance.
+            dataset: "val" or "test" — which set to use for permutation importance.
+        """
         # Get feature names: argument > results > model attribute
         if feature_names is None:
             if self.feature_names is not None:
@@ -133,19 +142,36 @@ class Validate:
                 )
                 return None
 
-        # Determine importance type
-        if hasattr(self.model, 'feature_importances_'):
-            # Tree-based models (XGBoost, RandomForest, etc.)
+        errors = None
+
+        if importance_type == "perm":
+            from sklearn.inspection import permutation_importance
+            if dataset == "val" and self.X_val is not None:
+                X_perm, y_perm = self.X_val, self.y_val
+            else:
+                X_perm, y_perm = self.X_test, self.y_test
+            perm = permutation_importance(
+                self.model, X_perm, y_perm,
+                scoring="roc_auc", n_repeats=n_repeats, random_state=42,
+            )
+            importances = perm.importances_mean
+            errors = perm.importances_std
+            label = "Permutation importance ($\\Delta$ AUC)"
+        elif importance_type in ("gain", "weight", "cover") and hasattr(self.model, 'get_booster'):
+            booster = self.model.get_booster()
+            booster.feature_names = feature_names
+            scores = booster.get_score(importance_type=importance_type)
+            importances = np.array([scores.get(f, 0.0) for f in feature_names])
+            label = f"Feature importance ({importance_type})"
+        elif hasattr(self.model, 'feature_importances_'):
             importances = self.model.feature_importances_
-            importance_type = "importance"
+            label = "Feature importance"
         elif hasattr(self.model, 'coef_'):
-            # Linear models (LogisticRegression, etc.)
             coef = self.model.coef_
-            # Handle shape: (1, n_features) for binary classification
             if coef.ndim > 1:
                 coef = coef[0]
             importances = np.abs(coef)
-            importance_type = "coefficient magnitude"
+            label = "Coefficient magnitude"
         else:
             self.logger.log(
                 "Model has neither feature_importances_ nor coef_ attribute",
@@ -154,24 +180,27 @@ class Validate:
             return None
 
         # Sort by importance
-        indices = np.argsort(importances)[::-1]
+        indices = np.argsort(importances)
         sorted_names = [feature_names[i] for i in indices]
         sorted_importances = importances[indices]
+        sorted_errors = errors[indices] if errors is not None else None
 
         # Print feature importance
-        print(f"\nFeature {importance_type}:")
-        for feat, imp in zip(sorted_names, sorted_importances):
-            print(f"  {feat:15s}: {imp:.4f}")
+        print(f"\nFeature importance ({importance_type}):")
+        for i in reversed(range(len(sorted_names))):
+            err_str = f" ± {sorted_errors[i]:.4f}" if sorted_errors is not None else ""
+            print(f"  {sorted_names[i]:15s}: {sorted_importances[i]:.4f}{err_str}")
 
         # Plot
         plt.figure()
-        plt.barh(range(len(sorted_names)), sorted_importances[::-1], height=0.8)
-        plt.yticks(range(len(sorted_names)), sorted_names[::-1])
-        plt.xlabel(f"Feature {importance_type}")
-        plt.grid(alpha=0.4)
+        plt.barh(range(len(sorted_names)), sorted_importances, height=0.8,
+                 xerr=sorted_errors, capsize=3)
+        plt.yticks(range(len(sorted_names)), sorted_names)
+        plt.xlabel(label)
         plt.tight_layout()
 
-        self._save_fig(out_path, "bar_feature_importance.png")
+        fname = f"bar_feature_importance_{importance_type}.png"
+        self._save_fig(out_path, fname)
 
         if show:
             plt.show()
@@ -660,13 +689,13 @@ class Validate:
                 "veto_efficiency": veto_eff,
                 "deadtime": deadtime,
                 "veto_purity": veto_purity,
-                "accuracy": accuracy,
+                # "accuracy": accuracy,
                 "figure_of_merit": fom,
                 "tp": tp, "tn": tn, "fp": fp, "fn": fn,
                 "veto_efficiency_dt": veto_eff_dt,
                 "deadtime_dt": deadtime_dt,
                 "veto_purity_dt": veto_purity_dt,
-                "accuracy_dt": accuracy_dt,
+                # "accuracy_dt": accuracy_dt,
                 "figure_of_merit_dt": fom_dt,
                 "tp_dt": tp_dt, "tn_dt": tn_dt, "fp_dt": fp_dt, "fn_dt": fn_dt,
             },
@@ -674,15 +703,23 @@ class Validate:
 
     def cv_money_table(self, cv_money, save_csv=True):
         """Display CV-averaged money table from results['cv_money_table']."""
-        metrics = ["veto_efficiency", "deadtime", "veto_purity",
-                    "accuracy", "figure_of_merit"]
-        labels = ["Veto efficiency", "Deadtime", "Veto purity",
-                   "Overall accuracy", "Figure of merit"]
+        # metrics = ["veto_efficiency", "deadtime", "veto_purity",
+        #             "accuracy", "figure_of_merit"]
+        # labels = ["Veto efficiency", "Deadtime", "Veto purity",
+        #            "Overall accuracy", "Figure of merit"]
+        # descriptions = [
+        #     "Fraction of cosmics vetoed",
+        #     "Fraction of CE mix vetoed",
+        #     "Of vetoed events, fraction that are cosmics",
+        #     "Overall correct classification rate",
+        #     "eff_veto * (1 - deadtime)",
+        # ]
+        metrics = ["veto_efficiency", "deadtime", "veto_purity", "figure_of_merit"]
+        labels = ["Veto efficiency", "Deadtime", "Veto purity", "Figure of merit"]
         descriptions = [
             "Fraction of cosmics vetoed",
             "Fraction of CE mix vetoed",
             "Of vetoed events, fraction that are cosmics",
-            "Overall correct classification rate",
             "eff_veto * (1 - deadtime)",
         ]
 
