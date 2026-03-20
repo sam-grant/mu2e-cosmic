@@ -117,6 +117,83 @@ class Validate:
         if show:
             plt.show()
 
+    def plot_roc_cv(self, fold_curves, out_path=None, show=True):
+        """Overlay ROC curves from CV folds with transparent lines + bold mean.
+
+        Args:
+            fold_curves: list of dicts with keys "fpr", "tpr", "auc".
+            out_path: optional save path.
+            show: whether to display.
+        """
+        fig, ax = plt.subplots()
+
+        # Interpolate all folds onto common FPR grid for mean
+        mean_fpr = np.linspace(0, 1, 200)
+        interp_tprs = []
+
+        for k, fc in enumerate(fold_curves):
+            label = f"Fold {k}" if k == 0 else None
+            ax.plot(fc["fpr"], fc["tpr"], alpha=0.2, color="blue", label=label)
+            interp_tpr = np.interp(mean_fpr, fc["fpr"], fc["tpr"])
+            interp_tpr[0] = 0.0
+            interp_tprs.append(interp_tpr)
+
+        mean_tpr = np.mean(interp_tprs, axis=0)
+        std_tpr = np.std(interp_tprs, axis=0)
+        mean_auc = np.mean([fc["auc"] for fc in fold_curves])
+        std_auc = np.std([fc["auc"] for fc in fold_curves])
+
+        ax.plot(mean_fpr, mean_tpr, color="blue", linewidth=2.5,
+                label=f"Mean ROC (AUC = {mean_auc:.6f} $\\pm$ {std_auc:.6f})")
+        ax.fill_between(mean_fpr, mean_tpr - std_tpr, mean_tpr + std_tpr,
+                        alpha=0.15, color="blue")
+        ax.plot([0, 1], [0, 1], "k--", linewidth=1.5, label="Random")
+
+        ax.set_xlabel("False positive rate")
+        ax.set_ylabel("True positive rate")
+        ax.legend(loc="lower right")
+        ax.grid(alpha=0.4)
+        plt.tight_layout()
+
+        self._save_fig(out_path, "roc_curve_cv.png")
+
+        if show:
+            plt.show()
+
+    def plot_score_distribution_cv(self, fold_scores, threshold,
+                                   out_path=None, show=True, nbins=100):
+        """Overlay event-level score distributions from CV folds.
+
+        Args:
+            fold_scores: list of dicts with keys "signal" and "background"
+                         (arrays of max-probability-per-event).
+            threshold: CV-averaged threshold to draw.
+            out_path: optional save path.
+            show: whether to display.
+        """
+        fig, ax = plt.subplots(figsize=(6.4, 4.8))
+
+        for k, fs in enumerate(fold_scores):
+            bg_label = "CE mix" if k == 0 else None
+            sig_label = "CRY" if k == 0 else None
+            ax.hist(fs["background"], bins=nbins, range=(0, 1),
+                    alpha=0.1, color="blue", label=bg_label)
+            ax.hist(fs["signal"], bins=nbins, range=(0, 1),
+                    alpha=0.1, color="red", label=sig_label)
+
+        ax.axvline(threshold, color="grey", linestyle="--", alpha=0.8,
+                   linewidth=1.5, label=f"Threshold: {threshold:.4f}")
+        ax.set_xlabel("Maximum probability per event")
+        ax.set_ylabel("Events")
+        ax.legend()
+        ax.set_yscale("log")
+        plt.tight_layout()
+
+        self._save_fig(out_path, "score_distribution_cv.png")
+
+        if show:
+            plt.show()
+
 
     def plot_feature_importance(self, importance_type="gain", feature_names=None,
                                 n_repeats=10, dataset="val", out_path=None, show=True):
@@ -706,38 +783,38 @@ class Validate:
             },
         }
 
-    def cv_money_table(self, cv_money, save_csv=True):
-        """Display CV-averaged money table from results['cv_money_table']."""
-        # metrics = ["veto_efficiency", "deadtime", "veto_purity",
-        #             "accuracy", "figure_of_merit"]
-        # labels = ["Veto efficiency", "Deadtime", "Veto purity",
-        #            "Overall accuracy", "Figure of merit"]
-        # descriptions = [
-        #     "Fraction of cosmics vetoed",
-        #     "Fraction of CE mix vetoed",
-        #     "Of vetoed events, fraction that are cosmics",
-        #     "Overall correct classification rate",
-        #     "eff_veto * (1 - deadtime)",
-        # ]
-        metrics = ["veto_efficiency", "deadtime", "veto_purity", "figure_of_merit"]
-        labels = ["Veto efficiency", "Deadtime", "Veto purity", "Figure of merit"]
+    def cv_money_table(self, fold_raws, save_csv=True):
+        """Display CV-averaged money table from list of fold raw dicts.
+
+        Args:
+            fold_raws: list of raw dicts from money_table()["raw"], one per fold.
+            save_csv: whether to save the table to CSV.
+        """
+        metrics = ["veto_efficiency", "deadtime", "veto_purity",
+                    "f1", "accuracy", "figure_of_merit"]
+        labels = ["Veto efficiency", "Deadtime", "Veto purity",
+                   "F1 score", "Overall accuracy", "Figure of merit"]
         descriptions = [
-            "Fraction of cosmics vetoed",
-            "Fraction of CE mix vetoed",
-            "Of vetoed events, fraction that are cosmics",
+            "Fraction of cosmics vetoed (TP/(TP+FN))",
+            "Fraction of CE mix vetoed (FP/(FP+TN))",
+            "Of vetoed events, fraction that are cosmics (TP/(TP+FP))",
+            "Harmonic mean of precision and recall",
+            "Overall correct classification rate",
             "eff_veto * (1 - deadtime)",
         ]
 
+        ml_strs = []
+        dt_strs = []
+        for k in metrics:
+            vals = np.array([r[k] for r in fold_raws])
+            ml_strs.append(f"{vals.mean()*100:.3f} +/- {vals.std()*100:.3f}%")
+            vals_dt = np.array([r[f"{k}_dt"] for r in fold_raws])
+            dt_strs.append(f"{vals_dt.mean()*100:.3f} +/- {vals_dt.std()*100:.3f}%")
+
         df = pd.DataFrame({
             "Metric": labels,
-            "ML model": [
-                f"{cv_money[k]*100:.3f} +/- {cv_money[f'{k}_std']*100:.3f}%"
-                for k in metrics
-            ],
-            "dT cut": [
-                f"{cv_money[f'{k}_dt']*100:.3f} +/- {cv_money[f'{k}_dt_std']*100:.3f}%"
-                for k in metrics
-            ],
+            "ML model": ml_strs,
+            "dT cut": dt_strs,
             "Description": descriptions,
         })
 
