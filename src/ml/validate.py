@@ -805,16 +805,20 @@ class Validate:
 
         ml_strs = []
         dt_strs = []
+        diff_strs = []
         for k in metrics:
             vals = np.array([r[k] for r in fold_raws])
-            ml_strs.append(f"{vals.mean()*100:.3f} +/- {vals.std()*100:.3f}%")
             vals_dt = np.array([r[f"{k}_dt"] for r in fold_raws])
+            diffs = vals - vals_dt
             dt_strs.append(f"{vals_dt.mean()*100:.3f} +/- {vals_dt.std()*100:.3f}%")
+            ml_strs.append(f"{vals.mean()*100:.3f} +/- {vals.std()*100:.3f}%")
+            diff_strs.append(f"{diffs.mean()*100:+.3f} +/- {diffs.std()*100:.3f}%")
 
         df = pd.DataFrame({
             "Metric": labels,
-            "ML model": ml_strs,
             "dT cut": dt_strs,
+            "ML model": ml_strs,
+            "Improvement": diff_strs,
             "Description": descriptions,
         })
 
