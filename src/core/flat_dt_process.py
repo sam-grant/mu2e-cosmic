@@ -246,11 +246,20 @@ class dTProcessor(Skeleton):
             
             # Calculate PEs/nHits ratio (avoid division by zero)
             processed_data["PEs_per_hit"] = ak.where(
-                processed_data["nHits"] > 0, 
-                processed_data["PEs"] / processed_data["nHits"], 
+                processed_data["nHits"] > 0,
+                processed_data["PEs"] / processed_data["nHits"],
                 0
             )
-            
+
+            # Pad zero-coincidence events with a single NaN slot so that event/subrun/run
+            # keys survive the subsequent broadcast as real integers (length-1 lists).
+            # Without this, groupby(["subrun","event"]) silently drops these rows
+            # (dropna=True default) and inflates veto efficiency.
+            has_coinc = ak.num(processed_data["dT"]) > 0
+            for key in ["dT", "crv_x", "crv_y", "crv_z", "PEs", "nHits", "nLayers",
+                        "angle", "timeStart", "timeEnd", "crv_time", "sector", "PEs_per_hit"]:
+                processed_data[key] = ak.where(has_coinc, processed_data[key], [[np.nan]])
+
             # Tracker parameters (1 track per event after preselection)
             at_trk_front = self.selector.select_surface(data_cut["trkfit"], surface_name="TT_Front") 
             at_trk_mid = self.selector.select_surface(data_cut["trkfit"], surface_name="TT_Mid")
@@ -350,22 +359,11 @@ class dTProcessor(Skeleton):
         # Flatten (after combination!)
         flattened_events = {}
         lengths = {}
-        for field in postprocessed["events"].fields: 
-
-            # First fill None values with nan
+        for field in postprocessed["events"].fields:
+            # Fill None values with NaN. Empty events are already padded with [[nan]]
+            # for per-coincidence fields in the preprocess step, so no further padding needed.
             filled_none = ak.fill_none(postprocessed["events"][field], np.nan)
-            
-            # Then pad empty arrays with a nan 
-            padded_array = ak.where(
-                ak.num(postprocessed["events"][field]) == 0,
-                [[np.nan]], 
-                filled_none
-            )
-
-            # Then flatten
-            flattened_events[field] = ak.flatten(padded_array, axis=None)
-
-            # Record lengths
+            flattened_events[field] = ak.flatten(filled_none, axis=None)
             lengths[field] = len(flattened_events[field])
 
         # # Original method that does not preserve None

@@ -61,7 +61,7 @@ def main():
             run(file_name=config["file_name"], tag=config["tag"], run_str=config["run"])
         return
 
-    run_str = "c"
+    run_str = "k"
 
     configs = [
         {

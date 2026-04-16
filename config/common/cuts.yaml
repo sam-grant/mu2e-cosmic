@@ -147,12 +147,13 @@ cutsets:
             lo_trkqual: 0.2
         active:
             within_lhr_max_lo: false
-            within_coinc_start_time: true # false 
-            within_coinc_end_time: true # false 
+            within_coinc_start_time: false 
+            within_coinc_end_time: false 
             unvetoed: false
             within_wide_win: false 
             within_ext_win: false
             within_sig_win: false
+
     dev:
         description:
             "CRV development cuts"
