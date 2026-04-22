@@ -51,10 +51,15 @@ class AssembleDataset():
         self.df_ce_mix = ak.to_dataframe(self.ce_mix_data["events"])
         self.logger.log("Loaded data", "success")
 
-    def draw_cuts(self):
+    def draw_cuts(self, ml=True):
         draw = Draw(cutset_name=self.cutset_name)
-        draw.plot_summary(self.cry_data["hists"], out_path = self.img_out_path / "h1o_3x3_cuts_CRY.png")
-        draw.plot_summary(self.ce_mix_data["hists"], out_path = self.img_out_path / "h1o_3x3_cuts_CE_mix.png")
+        if not ml:
+            draw.plot_summary(self.cry_data["hists"], out_path = self.img_out_path / "h1o_3x3_cuts_CRY.png")
+            draw.plot_summary(self.ce_mix_data["hists"], out_path = self.img_out_path / "h1o_3x3_cuts_CE_mix.png")
+        else:
+            draw.plot_summary_ml(self.cry_data["hists"], out_path = self.img_out_path / "h1o_3x3_cuts_CRY.png")
+            draw.plot_summary_ml(self.ce_mix_data["hists"], out_path = self.img_out_path / "h1o_3x3_cuts_CE_mix.png")
+
 
     def draw_features(self, out_path=None, show=True):
         """Plot CRV feature distributions for CRY vs CE mix."""
@@ -95,7 +100,7 @@ class AssembleDataset():
                 xmin=feat["xmin"],
                 xmax=feat["xmax"],
                 xlabel=feat["xlabel"],
-                ylabel="Normalised coincidences" if col == 0 else "",
+                ylabel="Normalized coincidences" if col == 0 else "",
                 log_y=True,
                 log_x=feat.get("log_x", False),
                 norm_by_area=True,

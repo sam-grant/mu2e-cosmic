@@ -440,6 +440,77 @@ class Draw():
             self.logger.log(f"\tWrote {out_path}", "success")
         plt.show()
         
+    def plot_summary_ml(self, hists, out_path=None, toggle_lines=None):
+        """Plot summary plot
+        Adjusted for ML section in paper
+        """
+        fig, ax = plt.subplots(2, 4, figsize=(4*6.4, 2*4.8))
+        fig.subplots_adjust(hspace=0.3, wspace=0.25)
+        
+        # selection = ["All", "Preselect", "Select", "Unvetoed"]
+        
+        # Set default toggle_lines if not provided
+        if toggle_lines is None:
+            toggle_lines = {
+                "mom_full": True, "t0": True, "trkqual": True,
+                "nactive": True, "t0err": True, "d0": True, 
+                "maxr": True, "pitch_angle": True,
+            }
+        
+        # Variable info for axis labels
+        var_info = {
+            # 
+            "mom_full": (r"Momentum [MeV/c]", "", "upper right", 20, 1), 
+            "t0": ("Track fit time [ns]", "", "upper center", 20, 1), 
+            "trkqual": ("Track quality", "", "upper right", 5, 2), 
+            "nactive": ("Active tracker hits", "", "upper right", 20, 2), 
+            #
+            "t0err": (r"$\sigma_{t_{0}}$ [ns]", "", "upper right", 1, 1), 
+            "d0": (r"$d_{0}$ [mm]", "", "upper right", 20, 1), 
+            "maxr": (r"$R_{\text{max}}$ [mm]", "", "upper left", 12, 1), 
+            "pitch_angle": (r"$p_{z}/p_{T}$", "", "upper right", 20, 1), 
+        }
+
+        plot_positions = [
+            ("mom_full", (0, 0)), ("t0", (0, 1)), ("trkqual", (0, 2)), ("nactive", (0, 3)), 
+            ("t0err", (1, 0)), ("d0", (1, 1)), ("maxr", (1, 2)), ("pitch_angle", (1, 3)), 
+        ]
+        
+        for var_name, (row, col) in plot_positions:
+            # Plot histograms
+            labels = self._plot_histogram(hists[var_name], ax[row, col], list(hists[var_name].axes["selection"])) # , selection)
+            
+            # Get axis labels and title
+            xlabel, title, loc, y_ext_factor, ncols = var_info[var_name]
+            ylabel = "Tracks" if col==0 else ""
+            
+            # Only show legend on first subplot
+            show_legend = True
+            
+            # Apply formatting
+            self._format_axis(
+                ax[row, col], 
+                labels, 
+                xlabel=xlabel, 
+                ylabel=ylabel, 
+                title=title, 
+                leg=show_legend,
+                loc=loc,
+                y_ext_factor=y_ext_factor,
+                ncols=ncols
+                
+            )
+            
+            # Add threshold lines
+            self._add_threshold_lines(ax[row, col], var_name, toggle_lines, self.line_styles)
+        
+        plt.tight_layout()
+        if out_path:
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            plt.savefig(out_path)
+            self.logger.log(f"\tWrote {out_path}", "success")
+        plt.show()
+
     def plot_mom_summary(self, hists, out_path=None):
         
         fig, ax = plt.subplots(2, 2, figsize=(6.4*2, 2*4.8))        # Variable info for axis labels
@@ -487,83 +558,83 @@ class Draw():
             self.logger.log(f"\tWrote {out_path}", "success")
         plt.show()
         
-    def plot_ml_summary(self, hists, out_path=None, toggle_lines=None):
-        """Plot 4x3 ML summary plot with all parameters (original ML + track quality)"""
+    # def plot_ml_summary(self, hists, out_path=None, toggle_lines=None):
+    #     """Plot 4x3 ML summary plot with all parameters (original ML + track quality)"""
         
-        fig, ax = plt.subplots(4, 3, figsize=(3*6.4, 4*4.8))
-        fig.subplots_adjust(hspace=0.3, wspace=0.25)
+    #     fig, ax = plt.subplots(4, 3, figsize=(3*6.4, 4*4.8))
+    #     fig.subplots_adjust(hspace=0.3, wspace=0.25)
         
-        # Set default toggle_lines if not provided
-        if toggle_lines is None:
-            toggle_lines = {
-                "mom_full": False, "mom_z": True, "pdg": False,
-                "trk_per_event": False, "t0": True, "trkqual": True,
-                "nactive": True, "t0err": True, "d0": True, 
-                "maxr": True, "pitch_angle": True, "dT": True
-            }
+    #     # Set default toggle_lines if not provided
+    #     if toggle_lines is None:
+    #         toggle_lines = {
+    #             "mom_full": False, "mom_z": True, "pdg": False,
+    #             "trk_per_event": False, "t0": True, "trkqual": True,
+    #             "nactive": True, "t0err": True, "d0": True, 
+    #             "maxr": True, "pitch_angle": True, "dT": True
+    #         }
         
-        # Variable info for axis labels
-        var_info = {
-            # Original ML parameters
-            "mom_full": (r"Momentum [MeV/c]", "", "upper right", 1.0, 1), # xlabel, title, loc, y_ext_factor, ncols
-            "mom_z": (r"$p_{z}$ [MeV/c]", "", "upper right", 20, 2), 
-            "pdg": (r"PDG", "", "upper center", 1.0, 1), 
-            "trk_per_event": (r"Tracks per event", "", "upper right", 1.0, 1),
-            # Track quality parameters
-            "t0": ("Track fit time [ns]", "", "upper center", 20, 2), 
-            "trkqual": ("Track quality", "", "upper right", 5, 2), 
-            "nactive": ("Active tracker hits", "", "upper right", 20, 2), 
-            "t0err": (r"$\sigma_{t_{0}}$ [ns]", "", "upper right", 1, 2), 
-            "d0": (r"$d_{0}$ [mm]", "", "upper right", 20, 2), 
-            "maxr": (r"$R_{\text{max}}$ [mm]", "", "upper left", 12, 1), 
-            "pitch_angle": (r"$p_{z}/p_{T}$", "", "upper right", 20, 1), 
-            "dT": (r"$\Delta t$ [ns]", "", "upper left", 5, 1), 
-        }
+    #     # Variable info for axis labels
+    #     var_info = {
+    #         # Original ML parameters
+    #         "mom_full": (r"Momentum [MeV/c]", "", "upper right", 1.0, 1), # xlabel, title, loc, y_ext_factor, ncols
+    #         "mom_z": (r"$p_{z}$ [MeV/c]", "", "upper right", 20, 2), 
+    #         "pdg": (r"PDG", "", "upper center", 1.0, 1), 
+    #         "trk_per_event": (r"Tracks per event", "", "upper right", 1.0, 1),
+    #         # Track quality parameters
+    #         "t0": ("Track fit time [ns]", "", "upper center", 20, 2), 
+    #         "trkqual": ("Track quality", "", "upper right", 5, 2), 
+    #         "nactive": ("Active tracker hits", "", "upper right", 20, 2), 
+    #         "t0err": (r"$\sigma_{t_{0}}$ [ns]", "", "upper right", 1, 2), 
+    #         "d0": (r"$d_{0}$ [mm]", "", "upper right", 20, 2), 
+    #         "maxr": (r"$R_{\text{max}}$ [mm]", "", "upper left", 12, 1), 
+    #         "pitch_angle": (r"$p_{z}/p_{T}$", "", "upper right", 20, 1), 
+    #         "dT": (r"$\Delta t$ [ns]", "", "upper left", 5, 1), 
+    #     }
         
-        # Plot all 12 histograms (4 rows x 3 columns)
-        plot_positions = [
-            # Row 0: Original ML parameters
-            ("mom_full", (0, 0)), ("mom_z", (0, 1)), ("pdg", (0, 2)),
-            # Row 1: ML + track quality
-            ("trk_per_event", (1, 0)), ("t0", (1, 1)), ("trkqual", (1, 2)),
-            # Row 2: Track quality parameters
-            ("nactive", (2, 0)), ("t0err", (2, 1)), ("d0", (2, 2)),
-            # Row 3: Additional track quality
-            ("maxr", (3, 0)), ("pitch_angle", (3, 1)), ("dT", (3, 2))
-        ]
+    #     # Plot all 12 histograms (4 rows x 3 columns)
+    #     plot_positions = [
+    #         # Row 0: Original ML parameters
+    #         ("mom_full", (0, 0)), ("mom_z", (0, 1)), ("pdg", (0, 2)),
+    #         # Row 1: ML + track quality
+    #         ("trk_per_event", (1, 0)), ("t0", (1, 1)), ("trkqual", (1, 2)),
+    #         # Row 2: Track quality parameters
+    #         ("nactive", (2, 0)), ("t0err", (2, 1)), ("d0", (2, 2)),
+    #         # Row 3: Additional track quality
+    #         ("maxr", (3, 0)), ("pitch_angle", (3, 1)), ("dT", (3, 2))
+    #     ]
         
-        for var_name, (row, col) in plot_positions:
-            # Plot histograms
-            labels = self._plot_histogram(hists[var_name], ax[row, col], list(hists[var_name].axes["selection"]))
+    #     for var_name, (row, col) in plot_positions:
+    #         # Plot histograms
+    #         labels = self._plot_histogram(hists[var_name], ax[row, col], list(hists[var_name].axes["selection"]))
             
-            # Get axis labels and title
-            xlabel, title, loc, y_ext_factor, ncols = var_info[var_name]
-            ylabel = "Tracks" if col==0 else ""
+    #         # Get axis labels and title
+    #         xlabel, title, loc, y_ext_factor, ncols = var_info[var_name]
+    #         ylabel = "Tracks" if col==0 else ""
             
-            # Show legend on all subplots
-            show_legend = True
+    #         # Show legend on all subplots
+    #         show_legend = True
             
-            # Apply formatting
-            self._format_axis(
-                ax[row, col], 
-                labels, 
-                xlabel=xlabel, 
-                ylabel=ylabel, 
-                title=title, 
-                leg=show_legend,
-                loc=loc,
-                y_ext_factor=y_ext_factor,
-                ncols=ncols
-            )
+    #         # Apply formatting
+    #         self._format_axis(
+    #             ax[row, col], 
+    #             labels, 
+    #             xlabel=xlabel, 
+    #             ylabel=ylabel, 
+    #             title=title, 
+    #             leg=show_legend,
+    #             loc=loc,
+    #             y_ext_factor=y_ext_factor,
+    #             ncols=ncols
+    #         )
             
-            # Add threshold lines
-            self._add_threshold_lines(ax[row, col], var_name, toggle_lines, self.line_styles)
+    #         # Add threshold lines
+    #         self._add_threshold_lines(ax[row, col], var_name, toggle_lines, self.line_styles)
         
-        plt.tight_layout()
-        if out_path:
-            plt.savefig(out_path)
-            self.logger.log(f"\tWrote {out_path}", "success")
-        plt.show()
+    #     plt.tight_layout()
+    #     if out_path:
+    #         plt.savefig(out_path)
+    #         self.logger.log(f"\tWrote {out_path}", "success")
+    #     plt.show()
         
     def _add_threshold_lines(self, ax, var_name, toggle_lines, line_kwargs):
         """Add threshold lines to plots"""
@@ -571,10 +642,14 @@ class Draw():
             return
             
         # Add threshold lines based on variable
-        if var_name == "pz":
+        if var_name == "mom_full":
+           ax.axvline(self.analyse.thresholds["lo_wide_win_mevc"], **line_kwargs)
+           ax.axvline(self.analyse.thresholds["hi_wide_win_mevc"], **line_kwargs)
+
+        elif var_name == "pz":
             ax.axvline(0, **line_kwargs)
             
-        elif var_name == "t0" and self.analyse.active_cuts["within_t0"] and self.on_spill:
+        elif var_name == "t0" and self.analyse.active_cuts["within_t0"]: # and self.on_spill:
             ax.axvline(self.analyse.thresholds["lo_t0_ns"], **line_kwargs)
             ax.axvline(self.analyse.thresholds["hi_t0_ns"], **line_kwargs)
             
